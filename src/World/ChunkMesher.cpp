@@ -197,12 +197,79 @@ namespace
         return info.tileSide;
     }
 
+    struct CrafterSide { int part; int quarter; };
+
+    const CrafterSide& crafterSide(int orient, int faceIndex)
+    {
+        static CrafterSide table[12][6];
+        static bool built = false;
+        if (!built)
+        {
+            const glm::ivec3 DIR[6] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 } };
+            for (int o = 0; o < 12; ++o)
+            {
+                const int front = o < 4 ? o : o < 8 ? 4 : 5;
+                const int top = o < 4 ? 4 : (o & 3);
+                const glm::ivec3 f = DIR[front], t = DIR[top];
+                const glm::ivec3 e(f.y * t.z - f.z * t.y, f.z * t.x - f.x * t.z, f.x * t.y - f.y * t.x);
+                const glm::ivec3 partDir[6] = { f, -f, e, -e, t, -t };
+                const glm::ivec3 partUp[6] = { t, t, t, t, f, -f };
+                for (int fi = 0; fi < 6; ++fi)
+                {
+                    const FaceDef& face = FACES[fi];
+                    const glm::ivec3 n(face.nx, face.ny, face.nz);
+                    int part = 0;
+                    for (int p = 0; p < 6; ++p)
+                        if (partDir[p] == n) part = p;
+                    int best = 0;
+                    for (int q = 0; q < 4; ++q)
+                    {
+                        glm::vec3 up(0.0f);
+                        for (int c = 0; c < 4; ++c)
+                        {
+                            float su = face.uv[c][0], sv = face.uv[c][1];
+                            for (int k = 0; k < q; ++k)
+                            {
+                                const float ou = su;
+                                su = sv;
+                                sv = 1.0f - ou;
+                            }
+                            const glm::vec3 corner(face.corner[c][0], face.corner[c][1], face.corner[c][2]);
+                            up += sv == 0.0f ? corner : -corner;
+                        }
+                        if (glm::dot(up, glm::vec3(partUp[part])) > 0.5f) best = q;
+                    }
+                    table[o][fi] = { part, best };
+                }
+            }
+            built = true;
+        }
+        return table[orient % 12][faceIndex];
+    }
+
+    int crafterTile(BlockId id, int faceIndex)
+    {
+        const int part = crafterSide(crafterOrient(id), faceIndex).part;
+        const bool crafting = crafterCrafting(id);
+        const bool triggered = crafterLit(id);
+        switch (part)
+        {
+            case 0: return crafting ? Tiles::CrafterNorthCrafting : Tiles::CrafterNorth;
+            case 1: return triggered ? Tiles::CrafterSouthTriggered : Tiles::CrafterSouth;
+            case 2: return crafting ? Tiles::CrafterEastCrafting : triggered ? Tiles::CrafterEastTriggered : Tiles::CrafterSide;
+            case 3: return crafting ? Tiles::CrafterWestCrafting : triggered ? Tiles::CrafterWestTriggered : Tiles::CrafterWest;
+            case 4: return crafting ? Tiles::CrafterTopCrafting : triggered ? Tiles::CrafterTopLit : Tiles::CrafterTop;
+            default: return Tiles::CrafterBottom;
+        }
+    }
+
     // The same, for a block that points: the one side it points at
     // gets its own texture. Which side that is comes off the face's
     // own normal rather than a table, so it cannot drift out of step
     // with the mesher's face order.
     int tileForFace(const BlockInfo& info, int faceIndex, BlockId id)
     {
+        if (isCrafter(id)) return crafterTile(id, faceIndex);
         if (isBarrel(id))
         {
             static const int BARREL_DIR[6] = { 1, 3, 4, 5, 2, 0 };
@@ -457,7 +524,7 @@ namespace
             const int axis = blockAxis(id);
             int faceTile = tileForFace(info, f, id);
             bool turned = false;
-            const int quarter = glazedTurn(id);
+            const int quarter = isCrafter(id) ? crafterSide(crafterOrient(id), f).quarter : glazedTurn(id);
             if (axis == 1)
             {
                 faceTile = f == 0 ? info.tileTop : f == 1 ? info.tileBottom : info.tileSide;
@@ -867,11 +934,20 @@ namespace
     void emitPot(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const int pot = Tiles::FlowerPotTile;
-        const PartFace walls[6] = {
-            { pot, 5.0f, 10.0f, 11.0f, 16.0f }, { pot, 5.0f, 10.0f, 11.0f, 16.0f },
-            { pot, 5.0f, 5.0f, 11.0f, 11.0f }, { pot, 5.0f, 10.0f, 11.0f, 16.0f },
-            { pot, 5.0f, 10.0f, 11.0f, 16.0f }, { pot, 5.0f, 10.0f, 11.0f, 16.0f } };
-        emitPart(snap, lx, y, lz, id, glm::vec3(5.0f, 0.0f, 5.0f) / 16.0f, glm::vec3(11.0f, 6.0f, 11.0f) / 16.0f, walls, out);
+        const PartFace none{ -1, 0, 0, 0, 0 };
+        auto part = [&](glm::vec3 lo, glm::vec3 hi, const PartFace (&f)[6]) {
+            emitPart(snap, lx, y, lz, id, lo / 16.0f, hi / 16.0f, f, out);
+        };
+        part({ 5, 0, 5 }, { 6, 6, 11 }, { { pot, 5, 10, 11, 16 }, { pot, 5, 10, 11, 16 }, { pot, 5, 5, 6, 11 }, { pot, 5, 5, 6, 11 },
+                                          { pot, 5, 10, 6, 16 }, { pot, 10, 10, 11, 16 } });
+        part({ 10, 0, 5 }, { 11, 6, 11 }, { { pot, 5, 10, 11, 16 }, { pot, 5, 10, 11, 16 }, { pot, 10, 5, 11, 11 }, { pot, 10, 5, 11, 11 },
+                                            { pot, 10, 10, 11, 16 }, { pot, 5, 10, 6, 16 } });
+        part({ 6, 0, 5 }, { 10, 6, 6 }, { none, none, { pot, 6, 5, 10, 6 }, { pot, 6, 10, 10, 11 },
+                                          { pot, 6, 10, 10, 16 }, { pot, 6, 10, 10, 16 } });
+        part({ 6, 0, 10 }, { 10, 6, 11 }, { none, none, { pot, 6, 10, 10, 11 }, { pot, 6, 5, 10, 6 },
+                                            { pot, 6, 10, 10, 16 }, { pot, 6, 10, 10, 16 } });
+        part({ 6, 0, 6 }, { 10, 4, 10 }, { none, none, { Tiles::Dirt, 6, 6, 10, 10 }, { pot, 6, 12, 10, 16 }, none, none });
+
         const BlockId plant = pottedPlant(id);
         if (plant == Blocks::Air) return;
         const BlockInfo& info = blockInfo(plant);
@@ -883,7 +959,25 @@ namespace
             emitPart(snap, lx, y, lz, id, glm::vec3(6.0f, 4.0f, 6.0f) / 16.0f, glm::vec3(10.0f, 16.0f, 10.0f) / 16.0f, sides, out);
             return;
         }
-        emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.25f, 1.25f, 0.42f, info.tileSide, 0.0f, 0.0f, 16.0f, 16.0f, out);
+        if (isAzaleaBush(plant))
+        {
+            const bool flowering = plant == Blocks::FloweringAzalea;
+            const int top = flowering ? Tiles::PottedFloweringAzaleaTop : Tiles::PottedAzaleaTop;
+            const int side = flowering ? Tiles::PottedFloweringAzaleaSide : Tiles::PottedAzaleaSide;
+            const int stem = flowering ? Tiles::PottedFloweringAzaleaPlant : Tiles::PottedAzaleaPlant;
+            part({ 4, 15.9f, 4 }, { 12, 16, 12 }, { none, none, { top, 4, 4, 12, 12 }, { top, 4, 12, 12, 4 }, none, none });
+            const PartFace face{ side, 4, 5, 12, 13 }, back{ side, 12, 5, 4, 13 };
+            part({ 4, 8, 4 }, { 12, 16, 4 }, { none, none, none, none, back, face });
+            part({ 4, 8, 12 }, { 12, 16, 12 }, { none, none, none, none, face, back });
+            part({ 4, 8, 4 }, { 4, 16, 12 }, { back, face, none, none, none, none });
+            part({ 12, 8, 4 }, { 12, 16, 12 }, { face, back, none, none, none, none });
+            emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.25f, 1.0f, 0.477f, stem, 0.0f, 4.0f, 16.0f, 16.0f, out);
+            return;
+        }
+        int tile = info.tileSide;
+        if (plant == Blocks::CrimsonRoots) tile = Tiles::CrimsonRootsPotTile;
+        else if (plant == Blocks::WarpedRoots) tile = Tiles::WarpedRootsPotTile;
+        emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.25f, 1.0f, 0.477f, tile, 0.0f, 0.0f, 16.0f, 16.0f, out);
     }
 
     void pushQuad(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, const glm::vec3 corner[4], int tile,
@@ -1542,20 +1636,72 @@ namespace
         const int facing = gateFacing(id);
         const bool across = (facing & 1) == 0;
         const bool flip = facing == 0 || facing == 3;
-        auto box = [&](float x0, float y0, float z0, float x1, float y1, float z1) {
+        const bool inWall = across ? (isWall(snap.block(lx - 1, y, lz)) || isWall(snap.block(lx + 1, y, lz)))
+                                   : (isWall(snap.block(lx, y, lz - 1)) || isWall(snap.block(lx, y, lz + 1)));
+        const float drop = inWall ? 3.0f : 0.0f;
+        auto place = [&](float x0, float y0, float z0, float x1, float y1, float z1, PartFace* faces) {
             if (flip)
             {
                 const float a = 16.0f - z1, b = 16.0f - z0;
                 z0 = a;
                 z1 = b;
+                if (faces) std::swap(faces[4], faces[5]);
             }
-            glm::vec3 lo(x0, y0, z0), hi(x1, y1, z1);
+            glm::vec3 lo(x0, y0 - drop, z0), hi(x1, y1 - drop, z1);
             if (!across)
             {
-                lo = glm::vec3(z0, y0, x0);
-                hi = glm::vec3(z1, y1, x1);
+                lo = glm::vec3(z0, y0 - drop, x0);
+                hi = glm::vec3(z1, y1 - drop, x1);
+                if (faces)
+                {
+                    const PartFace turned[6] = { faces[4], faces[5], faces[2], faces[3], faces[0], faces[1] };
+                    for (int f = 0; f < 6; ++f) faces[f] = turned[f];
+                    faces[2].turn = (faces[2].turn + 1) & 3;
+                    faces[3].turn = (faces[3].turn + 1) & 3;
+                }
             }
-            emitBox(snap, lx, y, lz, id, lo / 16.0f, hi / 16.0f, out);
+            if (faces) emitPart(snap, lx, y, lz, id, lo / 16.0f, hi / 16.0f, faces, out);
+            else emitBox(snap, lx, y, lz, id, lo / 16.0f, hi / 16.0f, out);
+        };
+        if (gateWood(id) == 8)
+        {
+            const int T = Tiles::BambooFenceGateTile;
+            auto el = [&](float x0, float y0, float z0, float x1, float y1, float z1,
+                          PartFace east, PartFace west, PartFace up, PartFace down, PartFace south, PartFace north) {
+                PartFace faces[6] = { east, west, up, down, south, north };
+                place(x0, y0, z0, x1, y1, z1, faces);
+            };
+            const PartFace none{ -1, 0, 0, 0, 0 };
+            const PartFace postL{ T, 14, 2, 16, 13 }, postR{ T, 0, 2, 2, 13 };
+            el(0, 5, 7, 2, 16, 9, postL, postL, { T, 14, 0, 16, 2 }, { T, 16, 13, 14, 15 }, postL, postL);
+            el(14, 5, 7, 16, 16, 9, postR, postR, { T, 0, 0, 2, 2 }, { T, 2, 13, 0, 15 }, postR, postR);
+            if (!gateOpen(id))
+            {
+                el(6, 6, 7, 8, 15, 9, none, { T, 8, 3, 10, 12 }, { T, 8, 1, 10, 3 }, { T, 8, 14, 10, 12 }, { T, 6, 3, 8, 12 }, { T, 8, 3, 10, 12 });
+                el(8, 6, 7, 10, 15, 9, { T, 6, 3, 8, 12 }, none, { T, 6, 1, 8, 3 }, { T, 6, 14, 8, 12 }, { T, 8, 3, 10, 12 }, { T, 6, 3, 8, 12 });
+                const PartFace railUpL{ T, 10, 1, 14, 3 }, railDownL{ T, 10, 14, 14, 12 };
+                const PartFace railUpR{ T, 2, 1, 6, 3 }, railDownR{ T, 2, 14, 6, 12 };
+                el(2, 6, 7, 6, 9, 9, none, none, railUpL, railDownL, { T, 10, 9, 14, 12 }, { T, 10, 3, 14, 6 });
+                el(2, 12, 7, 6, 15, 9, none, none, railUpL, railDownL, { T, 10, 9, 14, 12 }, { T, 10, 3, 14, 6 });
+                el(10, 6, 7, 14, 9, 9, none, none, railUpR, railDownR, { T, 2, 9, 6, 12 }, { T, 2, 3, 6, 6 });
+                el(10, 12, 7, 14, 15, 9, none, none, railUpR, railDownR, { T, 2, 9, 6, 12 }, { T, 2, 3, 6, 6 });
+            }
+            else
+            {
+                const PartFace stileL{ T, 8, 3, 10, 12 }, stileR{ T, 6, 3, 8, 12 };
+                el(0, 6, 13, 2, 15, 15, stileL, stileL, { T, 8, 1, 10, 3 }, { T, 8, 14, 10, 12 }, stileL, stileL);
+                el(14, 6, 13, 16, 15, 15, stileR, stileR, { T, 6, 1, 8, 3 }, { T, 6, 14, 8, 12 }, stileR, stileR);
+                const PartFace upL{ T, 2, 1, 6, 3, 1 }, downL{ T, 2, 12, 6, 14, 1 };
+                const PartFace upR{ T, 10, 1, 14, 3, 1 }, downR{ T, 10, 12, 14, 14, 1 };
+                el(0, 6, 9, 2, 9, 13, { T, 2, 9, 6, 12 }, { T, 2, 3, 6, 6 }, upL, downL, none, none);
+                el(0, 12, 9, 2, 15, 13, { T, 2, 9, 6, 12 }, { T, 2, 3, 6, 6 }, upL, downL, none, none);
+                el(14, 6, 9, 16, 9, 13, { T, 10, 9, 14, 12 }, { T, 10, 3, 14, 6 }, upR, downR, none, none);
+                el(14, 12, 9, 16, 15, 13, { T, 10, 9, 14, 12 }, { T, 14, 3, 10, 6 }, upR, downR, none, none);
+            }
+            return;
+        }
+        auto box = [&](float x0, float y0, float z0, float x1, float y1, float z1) {
+            place(x0, y0, z0, x1, y1, z1, nullptr);
         };
         box(0, 5, 7, 2, 16, 9);
         box(14, 5, 7, 16, 16, 9);
@@ -1651,13 +1797,48 @@ namespace
         constexpr float POST_LO = 0.375f, POST_HI = 0.625f;
         constexpr float RAIL_LO = 0.4375f, RAIL_HI = 0.5625f;
 
-        emitBox(snap, lx, y, lz, id, glm::vec3(POST_LO, 0.0f, POST_LO),
-                glm::vec3(POST_HI, 1.0f, POST_HI), out);
-
         auto joins = [&](int dx, int dz) { return fenceJoins(id, snap.block(lx + dx, y, lz + dz)); };
 
-        // The two rails of an arm, at the heights Minecraft puts them.
-        const float railY[2][2] = { { 0.375f, 0.5625f }, { 0.8125f, 1.0f } };
+        const float railY[2][2] = { { 0.375f, 0.5625f }, { 0.75f, 0.9375f } };
+
+        if (fenceWood(id) == 8)
+        {
+            const int T = Tiles::BambooFenceTile;
+            const PartFace side{ T, 0, 0, 4, 16 }, cap{ T, 4, 0, 8, 4 };
+            const PartFace post[6] = { side, side, cap, cap, side, side };
+            emitPart(snap, lx, y, lz, id, glm::vec3(POST_LO, 0.0f, POST_LO), glm::vec3(POST_HI, 1.0f, POST_HI), post, out);
+            const PartFace none{ -1, 0, 0, 0, 0 };
+            const PartFace length{ T, 4, 4, 13, 7 }, end{ T, 13, 4, 15, 7, 2 };
+            const PartFace flat{ T, 13, 7, 15, 16 }, flatTurned{ T, 13, 7, 15, 16, 1 };
+            for (int rail = 0; rail < 2; ++rail)
+            {
+                const float lo = railY[rail][0], hi = railY[rail][1];
+                if (joins(0, -1))
+                {
+                    const PartFace f[6] = { length, length, flat, flat, none, end };
+                    emitPart(snap, lx, y, lz, id, glm::vec3(RAIL_LO, lo, 0.0f), glm::vec3(RAIL_HI, hi, 0.5625f), f, out);
+                }
+                if (joins(0, 1))
+                {
+                    const PartFace f[6] = { length, length, flat, flat, end, none };
+                    emitPart(snap, lx, y, lz, id, glm::vec3(RAIL_LO, lo, 0.4375f), glm::vec3(RAIL_HI, hi, 1.0f), f, out);
+                }
+                if (joins(-1, 0))
+                {
+                    const PartFace f[6] = { none, end, flatTurned, flatTurned, length, length };
+                    emitPart(snap, lx, y, lz, id, glm::vec3(0.0f, lo, RAIL_LO), glm::vec3(0.5625f, hi, RAIL_HI), f, out);
+                }
+                if (joins(1, 0))
+                {
+                    const PartFace f[6] = { end, none, flatTurned, flatTurned, length, length };
+                    emitPart(snap, lx, y, lz, id, glm::vec3(0.4375f, lo, RAIL_LO), glm::vec3(1.0f, hi, RAIL_HI), f, out);
+                }
+            }
+            return;
+        }
+
+        emitBox(snap, lx, y, lz, id, glm::vec3(POST_LO, 0.0f, POST_LO),
+                glm::vec3(POST_HI, 1.0f, POST_HI), out);
 
         for (int rail = 0; rail < 2; ++rail)
         {
@@ -2289,6 +2470,78 @@ namespace
         pushQuad(snap, lx, y, lz, id, b, fire, 0.0f, 0.0f, 16.0f, 16.0f, 1.0f, true, out);
     }
 
+    void projectedBox(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, glm::vec3 lo, glm::vec3 hi,
+                      int tile, int skipMask, std::vector<float>& out)
+    {
+        PartFace f[6] = { { tile, 16.0f - hi.z, 16.0f - hi.y, 16.0f - lo.z, 16.0f - lo.y },
+                          { tile, lo.z, 16.0f - hi.y, hi.z, 16.0f - lo.y },
+                          { tile, lo.x, lo.z, hi.x, hi.z },
+                          { tile, lo.x, 16.0f - hi.z, hi.x, 16.0f - lo.z },
+                          { tile, lo.x, 16.0f - hi.y, hi.x, 16.0f - lo.y },
+                          { tile, 16.0f - hi.x, 16.0f - hi.y, 16.0f - lo.x, 16.0f - lo.y } };
+        for (int i = 0; i < 6; ++i)
+            if (skipMask & (1 << i)) f[i].tile = -1;
+        emitPart(snap, lx, y, lz, id, lo / 16.0f, hi / 16.0f, f, out);
+    }
+
+    void emitPitcherCrop(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int stage = pitcherCropStage(id);
+        if (pitcherCropUpper(id))
+        {
+            emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, 0.0f, 1.0f, 0.5f, Tiles::PitcherTopTile + (stage >= 4 ? 1 : 0),
+                          0.0f, 0.0f, 16.0f, 16.0f, out);
+            return;
+        }
+        const int side = Tiles::PitcherCropSideTile, top = Tiles::PitcherCropTopTile, bottom = Tiles::PitcherBottomTile;
+        if (stage == 0)
+        {
+            const PartFace f[6] = { { side, 3, 10, 9, 14 }, { side, 3, 10, 9, 14 }, { top, 5, 5, 11, 11 },
+                                    { bottom, 5, 5, 11, 11 }, { side, 3, 10, 9, 14 }, { side, 3, 10, 9, 14 } };
+            emitPart(snap, lx, y, lz, id, glm::vec3(5.0f, -1.0f, 5.0f) / 16.0f, glm::vec3(11.0f, 3.0f, 11.0f) / 16.0f, f, out);
+            return;
+        }
+        const PartFace f[6] = { { side, 3, 10, 13, 16 }, { side, 3, 10, 13, 16 }, { top, 3, 3, 13, 13 },
+                                { bottom, 3, 3, 13, 13 }, { side, 3, 10, 13, 16 }, { side, 3, 10, 13, 16 } };
+        emitPart(snap, lx, y, lz, id, glm::vec3(3.0f, -1.0f, 3.0f) / 16.0f, glm::vec3(13.0f, 5.0f, 13.0f) / 16.0f, f, out);
+        const float lift = stage <= 2 ? 5.0f / 16.0f : 0.0f;
+        emitTinyCross(snap, lx, y, lz, id, 0.5f, 0.5f, lift, lift + 1.0f, 0.5f, Tiles::PitcherBottomTile + stage,
+                      0.0f, 0.0f, 16.0f, 16.0f, out);
+    }
+
+    void emitChorusPlant(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const int tile = blockInfo(id).tileSide;
+        auto joins = [&](int dx, int dy, int dz) {
+            const BlockId other = snap.block(lx + dx, y + dy, lz + dz);
+            return other == Blocks::ChorusPlant || isChorusFlower(other) || (dy < 0 && other == Blocks::EndStone);
+        };
+        const bool link[6] = { joins(1, 0, 0), joins(-1, 0, 0), joins(0, 1, 0), joins(0, -1, 0), joins(0, 0, 1), joins(0, 0, -1) };
+        int mask = 0;
+        for (int i = 0; i < 6; ++i)
+            if (link[i]) mask |= 1 << i;
+        projectedBox(snap, lx, y, lz, id, glm::vec3(4.0f), glm::vec3(12.0f), tile, mask, out);
+        if (link[0]) projectedBox(snap, lx, y, lz, id, glm::vec3(12, 4, 4), glm::vec3(16, 12, 12), tile, 1 << 1, out);
+        if (link[1]) projectedBox(snap, lx, y, lz, id, glm::vec3(0, 4, 4), glm::vec3(4, 12, 12), tile, 1 << 0, out);
+        if (link[2]) projectedBox(snap, lx, y, lz, id, glm::vec3(4, 12, 4), glm::vec3(12, 16, 12), tile, 1 << 3, out);
+        if (link[3]) projectedBox(snap, lx, y, lz, id, glm::vec3(4, 0, 4), glm::vec3(12, 4, 12), tile, 1 << 2, out);
+        if (link[4]) projectedBox(snap, lx, y, lz, id, glm::vec3(4, 4, 12), glm::vec3(12, 12, 16), tile, 1 << 5, out);
+        if (link[5]) projectedBox(snap, lx, y, lz, id, glm::vec3(4, 4, 0), glm::vec3(12, 12, 4), tile, 1 << 4, out);
+    }
+
+    void emitChorusFlower(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const BlockInfo& info = blockInfo(id);
+        const int petal = info.tileTop;
+        const int core = Tiles::ChorusPlantTile;
+        projectedBox(snap, lx, y, lz, id, glm::vec3(2, 0, 2), glm::vec3(14, 14, 14), core, 1 << 2, out);
+        projectedBox(snap, lx, y, lz, id, glm::vec3(2, 14, 2), glm::vec3(14, 16, 14), petal, 1 << 3, out);
+        projectedBox(snap, lx, y, lz, id, glm::vec3(0, 2, 2), glm::vec3(2, 14, 14), petal, 1 << 0, out);
+        projectedBox(snap, lx, y, lz, id, glm::vec3(14, 2, 2), glm::vec3(16, 14, 14), petal, 1 << 1, out);
+        projectedBox(snap, lx, y, lz, id, glm::vec3(2, 2, 0), glm::vec3(14, 14, 2), petal, 1 << 4, out);
+        projectedBox(snap, lx, y, lz, id, glm::vec3(2, 2, 14), glm::vec3(14, 14, 16), petal, 1 << 5, out);
+    }
+
     void emitCactus(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const BlockInfo& info = blockInfo(id);
@@ -2704,6 +2957,14 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 {
                     emitCactus(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
+                else if (id == Blocks::ChorusPlant)
+                {
+                    emitChorusPlant(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isChorusFlower(id))
+                {
+                    emitChorusFlower(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
                 else if (isAnvil(id) || id == Blocks::EnchantingTable || id == Blocks::EndPortalFrame || isLectern(id) || isGrindstone(id) ||
                          id == Blocks::EndPortalFrameFilled || isHopper(id) || isComposter(id) || id == Blocks::BrewingStand)
                 {
@@ -2751,6 +3012,10 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (isCocoa(id))
                 {
                     emitCocoa(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isPitcherCrop(id))
+                {
+                    emitPitcherCrop(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isCross(id))
                 {

@@ -1422,6 +1422,7 @@ private:
     // What a crafter does when something tells it to: makes one of
     // whatever its grid spells and puts it out on top.
     bool fireCrafter(const glm::ivec3& block);
+    bool feedCrafter(const glm::ivec3& at, ItemStack& item);
     // Fills a chest standing in a village building the first time it
     // is opened. Does nothing to one the player built.
     void fillVillageChest(const glm::ivec3& block);

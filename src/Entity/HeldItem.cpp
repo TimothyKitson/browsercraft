@@ -218,6 +218,7 @@ namespace
     const Display ITEM_DISPLAY{ { 0.0f, -90.0f, 25.0f }, { 1.13f, 3.2f, 1.13f }, glm::vec3(0.68f) };
     const Display MACE_DISPLAY{ { 0.0f, -90.0f, 25.0f }, { 0.0f, 3.0f, 0.8f }, glm::vec3(0.9f) };
     const Display SHIELD_DISPLAY{ { 0.0f, 180.0f, 5.0f }, { -10.0f, 2.0f, -10.0f }, glm::vec3(1.25f) };
+    const Display SPYGLASS_DISPLAY{ { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, glm::vec3(1.0f) };
     const Display SHIELD_BLOCKING_DISPLAY{ { 0.0f, 180.0f, -5.0f }, { -15.0f, 5.0f, -11.0f },
                                            glm::vec3(1.25f) };
 
@@ -700,6 +701,41 @@ void HeldItem::renderGlint(Shader& chunkShader, unsigned int glint, const glm::v
     chunkShader.setInt("uGlint", 0);
 }
 
+void HeldItem::appendSpyglass(const glm::mat4& toWorld, float sky, float blockLight)
+{
+    const TileUV uv = tileUV(Tiles::ItemSpyglassModel);
+    const glm::mat4 model = toWorld * displayMatrix(SPYGLASS_DISPLAY);
+    auto box = [&](glm::vec3 a, glm::vec3 b, const glm::vec4& side, const glm::vec4& up, const glm::vec4* down) {
+        a /= 16.0f;
+        b /= 16.0f;
+        const glm::vec3 mid = (a + b) * 0.5f;
+        const glm::vec3 centre = place(model, mid.x, mid.y, mid.z);
+        auto quad = [&](glm::vec3 c0, glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, const glm::vec4& r, float shade) {
+            const glm::vec3 cs[4] = { c0, c1, c2, c3 };
+            const float us[4] = { r.x, r.z, r.z, r.x };
+            const float vs[4] = { r.w, r.w, r.y, r.y };
+            Quad q;
+            q.shade = shade;
+            for (int k = 0; k < 4; ++k)
+            {
+                q.corner[k] = place(model, cs[k].x, cs[k].y, cs[k].z);
+                q.u[k] = uv.u0 + (uv.u1 - uv.u0) * us[k] / 16.0f;
+                q.v[k] = uv.vTop + (uv.vBottom - uv.vTop) * vs[k] / 16.0f;
+            }
+            pushFacing(m_vertices, q, centre, sky, blockLight);
+        };
+        quad({ b.x, a.y, a.z }, { a.x, a.y, a.z }, { a.x, b.y, a.z }, { b.x, b.y, a.z }, side, 0.8f);
+        quad({ a.x, a.y, b.z }, { b.x, a.y, b.z }, { b.x, b.y, b.z }, { a.x, b.y, b.z }, side, 0.8f);
+        quad({ a.x, a.y, a.z }, { a.x, a.y, b.z }, { a.x, b.y, b.z }, { a.x, b.y, a.z }, side, 0.6f);
+        quad({ b.x, a.y, b.z }, { b.x, a.y, a.z }, { b.x, b.y, a.z }, { b.x, b.y, b.z }, side, 0.6f);
+        quad({ a.x, b.y, b.z }, { b.x, b.y, b.z }, { b.x, b.y, a.z }, { a.x, b.y, a.z }, up, 1.0f);
+        if (down) quad({ a.x, a.y, a.z }, { b.x, a.y, a.z }, { b.x, a.y, b.z }, { a.x, a.y, b.z }, *down, 0.5f);
+    };
+    box({ 7.0f, 8.5f, 7.0f }, { 9.0f, 13.5f, 9.0f }, { 0.0f, 2.0f, 2.0f, 7.0f }, { 0.0f, 0.0f, 2.0f, 2.0f }, nullptr);
+    const glm::vec4 eyepiece{ 0.0f, 13.0f, 2.0f, 15.0f };
+    box({ 6.9f, 2.4f, 6.9f }, { 9.1f, 8.6f, 9.1f }, { 0.0f, 7.0f, 2.0f, 13.0f }, { 0.0f, 5.0f, 2.0f, 7.0f }, &eyepiece);
+}
+
 void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, float blockLight)
 {
     const TileUV uv = tileUV(m_tileOverride >= 0 ? m_tileOverride : atlasTileFor(stack));
@@ -836,7 +872,8 @@ void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSki
         return;
     }
 
-    if (drawsFlat(showing)) appendSprite(held, showing, sky, blockLight);
+    if (showing == Items::Spyglass) appendSpyglass(held, sky, blockLight);
+    else if (drawsFlat(showing)) appendSprite(held, showing, sky, blockLight);
     else                    appendBlock(held, showing, sky, blockLight);
 
     atlas.bind(0, 1, 2);

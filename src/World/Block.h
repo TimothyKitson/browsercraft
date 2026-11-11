@@ -726,6 +726,8 @@ namespace Blocks
         LichenMaskFirst, LichenMaskLast = LichenMaskFirst + 63,
         VeinMaskFirst, VeinMaskLast = VeinMaskFirst + 63,
         FrameFloor, FrameCeiling, GlowFrameFloor, GlowFrameCeiling,
+        CrafterTurnFirst, CrafterTurnLast = CrafterTurnFirst + 35,
+        ChorusFlowerDead,
         ExtCount
     };
 }
@@ -1903,7 +1905,52 @@ inline bool isSculkCatalyst(BlockId id)
 
 inline bool isCrafter(BlockId id)
 {
-    return id == Blocks::Crafter || id == Blocks::CrafterLit;
+    return id == Blocks::Crafter || id == Blocks::CrafterLit || (id >= Blocks::CrafterTurnFirst && id <= Blocks::CrafterTurnLast);
+}
+
+inline bool isChorusFlower(BlockId id) { return id == Blocks::ChorusFlower || id == Blocks::ChorusFlowerDead; }
+
+inline bool crafterLit(BlockId id)
+{
+    return id == Blocks::CrafterLit || (id >= Blocks::CrafterTurnFirst + 12 && id <= Blocks::CrafterTurnLast);
+}
+
+inline bool crafterCrafting(BlockId id)
+{
+    return id >= Blocks::CrafterTurnFirst + 24 && id <= Blocks::CrafterTurnLast;
+}
+
+inline int crafterOrient(BlockId id)
+{
+    return id >= Blocks::CrafterTurnFirst && id <= Blocks::CrafterTurnLast ? (id - Blocks::CrafterTurnFirst) % 12 : 4;
+}
+
+inline BlockId crafterOf(int orient, bool lit, bool crafting = false)
+{
+    orient = ((orient % 12) + 12) % 12;
+    if (crafting) return static_cast<BlockId>(Blocks::CrafterTurnFirst + 24 + orient);
+    if (orient == 4) return lit ? Blocks::CrafterLit : Blocks::Crafter;
+    return static_cast<BlockId>(Blocks::CrafterTurnFirst + (lit ? 12 : 0) + orient);
+}
+
+inline BlockId crafterWith(BlockId id, bool lit, bool crafting = false) { return crafterOf(crafterOrient(id), lit, crafting); }
+
+inline int crafterFront(BlockId id)
+{
+    const int o = crafterOrient(id);
+    return o < 4 ? o : o < 8 ? 4 : 5;
+}
+
+inline int crafterTop(BlockId id)
+{
+    const int o = crafterOrient(id);
+    return o < 4 ? 4 : (o & 3);
+}
+
+inline int crafterOrientFor(int front, int top)
+{
+    if (front < 4) return front;
+    return (front == 4 ? 4 : 8) + (top & 3);
 }
 
 inline bool isVault(BlockId id)

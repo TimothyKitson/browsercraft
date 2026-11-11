@@ -123,6 +123,7 @@ private:
     // own sheet. Drawn as a panel because a shield seen edge-on while
     // you block should have an edge.
     void appendShield(const glm::mat4& toWorld, float sky, float blockLight);
+    void appendSpyglass(const glm::mat4& toWorld, float sky, float blockLight);
     void appendShieldBox(const glm::mat4& toWorld, int u, int v,
                          float w, float h, float d,
                          float ox, float oy, float oz, float sky, float blockLight);

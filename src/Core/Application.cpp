@@ -3310,7 +3310,7 @@ bool Application::frame()
             m_startupScreen == "boom" || m_startupScreen == "tnt" ||
             m_startupScreen == "portal" || m_startupScreen == "nether" ||
             m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
-            m_startupScreen == "stairs" || m_startupScreen == "fence" || m_startupScreen == "shapes" ||
+            m_startupScreen == "stairs" || m_startupScreen == "fence" || m_startupScreen == "models" || m_startupScreen == "shapes" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
             m_startupScreen == "handempty" || m_startupScreen == "handitem" ||
             m_startupScreen == "creativeinv" || m_startupScreen == "creativesearch" || m_startupScreen == "eggs" || m_startupScreen == "potions" ||
@@ -3380,6 +3380,7 @@ bool Application::frame()
                                   m_startupScreen != "stairs" &&
                                   m_startupScreen != "shapes" &&
                                   m_startupScreen != "fence" &&
+                                  m_startupScreen != "models" &&
                                   m_startupScreen != "door" &&
                                   m_startupScreen != "hand" &&
                                   m_startupScreen != "handempty" &&
@@ -8151,6 +8152,64 @@ bool Application::frame()
                 m_world->setBlock(bx + 4, by, bz + 1, Blocks::OakFence);
             }
 
+            if (m_startupScreen == "models")
+            {
+                m_camera.setOrientation(90.0f, -24.0f);
+                m_showDebug = false;
+                const int bx = static_cast<int>(std::floor(m_player.position.x));
+                const int by = static_cast<int>(std::floor(m_player.position.y));
+                const int bz = static_cast<int>(std::floor(m_player.position.z));
+                for (int dx = -10; dx <= 10; ++dx)
+                    for (int dy = -1; dy <= 8; ++dy)
+                        for (int d = 1; d <= 14; ++d)
+                            m_world->setBlock(bx + dx, by + dy, bz + d, dy < 0 ? Blocks::Stone : Blocks::Air);
+
+                for (int a = 0; a < 5; ++a) m_world->setBlock(bx + 6 - a, by, bz + 3, fenceOfWood(8));
+                m_world->setBlock(bx + 6, by, bz + 4, fenceOfWood(8));
+                m_world->setBlock(bx + 1, by, bz + 3, gateOf(8, false, 0));
+                m_world->setBlock(bx, by, bz + 3, fenceOfWood(8));
+                m_world->setBlock(bx - 1, by, bz + 3, gateOf(8, true, 0));
+                m_world->setBlock(bx - 2, by, bz + 3, fenceOfWood(8));
+                m_world->setBlock(bx - 4, by, bz + 3, Blocks::OakFence);
+                m_world->setBlock(bx - 5, by, bz + 3, Blocks::OakFence);
+                m_world->setBlock(bx - 7, by, bz + 3, Blocks::WallRunFirst);
+                m_world->setBlock(bx - 8, by, bz + 3, gateOf(0, false, 0));
+                m_world->setBlock(bx - 9, by, bz + 3, Blocks::WallRunFirst);
+
+                const int orients[6] = { 2, 1, 3, 0, 6, 10 };
+                for (int k = 0; k < 6; ++k)
+                    m_world->setBlock(bx + 7 - k * 2, by, bz + 6, crafterOf(orients[k], k == 2, k == 3));
+
+                for (int dx = 4; dx <= 8; ++dx)
+                    for (int dz = 8; dz <= 11; ++dz) m_world->setBlock(bx + dx, by - 1, bz + dz, Blocks::EndStone);
+                for (int h = 0; h < 3; ++h) m_world->setBlock(bx + 6, by + h, bz + 9, Blocks::ChorusPlant);
+                m_world->setBlock(bx + 5, by + 2, bz + 9, Blocks::ChorusPlant);
+                m_world->setBlock(bx + 5, by + 3, bz + 9, Blocks::ChorusFlower);
+                m_world->setBlock(bx + 6, by + 3, bz + 9, Blocks::ChorusFlowerDead);
+                m_world->setBlock(bx + 4, by, bz + 9, Blocks::ChorusFlower);
+
+                m_world->setBlock(bx + 1, by, bz + 9, Blocks::PottedAzalea);
+                m_world->setBlock(bx, by, bz + 9, Blocks::PottedFloweringAzalea);
+                m_world->setBlock(bx - 1, by, bz + 9, pottedOf(Blocks::CrimsonRoots));
+                m_world->setBlock(bx - 2, by, bz + 9, pottedOf(Blocks::WarpedRoots));
+                m_world->setBlock(bx - 3, by, bz + 9, Blocks::FlowerPot);
+                m_world->setBlock(bx - 5, by - 1, bz + 9, Blocks::SoulSoil);
+                m_world->setBlock(bx - 5, by, bz + 9, Blocks::SoulFire);
+                for (int stage = 0; stage < 5; ++stage)
+                {
+                    m_world->setBlock(bx - 3 - stage * 1, by - 1, bz + 12, Blocks::Farmland);
+                    m_world->setBlock(bx - 3 - stage * 1, by, bz + 12, pitcherCropOf(stage, false));
+                    if (stage >= 3) m_world->setBlock(bx - 3 - stage, by + 1, bz + 12, pitcherCropOf(stage, true));
+                }
+
+                m_world->setBlock(bx + 9, by, bz + 13, Blocks::Bookshelf);
+                m_world->setBlock(bx, by, bz + 13, Blocks::DiamondOre);
+                m_world->setBlock(bx - 9, by, bz + 13, Blocks::EndPortalFrame);
+                m_inventory.selected() = ItemStack{};
+                m_inventory.selected().id = Items::Spyglass;
+                m_inventory.selected().count = 1;
+            }
+
             if (m_startupScreen == "ladder")
             {
                 m_camera.pitch = -8.0f;
@@ -10741,6 +10800,43 @@ namespace
 // chests use, and what it makes goes out on top of the block rather
 // than into whatever is next to it: nothing here has a facing to put it
 // through.
+bool Application::feedCrafter(const glm::ivec3& at, ItemStack& item)
+{
+    if (item.empty()) return false;
+    const ItemStack& marker = m_chests.at(at)[CRAFTER_MASK_SLOT];
+    const int mask = marker.id == Blocks::Bedrock && marker.count > 0 ? marker.count - 1 : 0;
+    const bool open = m_crafterOpen && m_crafterBlock == at;
+    ItemStack* grid[CRAFTER_SLOTS];
+    for (int c = 0; c < CRAFTER_SLOTS; ++c)
+        grid[c] = open ? &m_inventory.slot(Inventory::CHEST_FIRST + c) : &m_chests.at(at)[static_cast<size_t>(c)];
+    for (int c = 0; c < CRAFTER_SLOTS; ++c)
+    {
+        if ((mask >> c) & 1) continue;
+        ItemStack& cell = *grid[c];
+        if (!cell.empty())
+        {
+            if (cell.id != item.id || cell.damage != item.damage || cell.count >= maxStackOf(cell.id)) continue;
+            bool smaller = false;
+            for (int k = c + 1; k < CRAFTER_SLOTS && !smaller; ++k)
+            {
+                if ((mask >> k) & 1) continue;
+                const ItemStack& other = *grid[k];
+                smaller = other.empty() || (other.id == cell.id && other.count < cell.count);
+            }
+            if (smaller) continue;
+        }
+        if (cell.empty())
+        {
+            cell = item;
+            cell.count = 0;
+        }
+        ++cell.count;
+        if (--item.count <= 0) item.clear();
+        return true;
+    }
+    return false;
+}
+
 bool Application::fireCrafter(const glm::ivec3& block)
 {
     if (!m_chests.has(block)) return false;
@@ -10763,7 +10859,10 @@ bool Application::fireCrafter(const glm::ivec3& block)
         for (int i = 0; i < CRAFTER_SLOTS; ++i)
             m_inventory.slot(Inventory::CHEST_FIRST + i) = held[i];
 
-    const glm::vec3 out = glm::vec3(block) + glm::vec3(0.5f, 1.2f, 0.5f);
+    static const glm::vec3 FRONT[6] = { { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },
+                                        { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } };
+    const glm::vec3 front = FRONT[crafterFront(m_world->getBlock(block.x, block.y, block.z))];
+    const glm::vec3 out = glm::vec3(block) + glm::vec3(0.5f) + front * 0.75f - glm::vec3(0.0f, front.y < 0.0f ? 0.25f : 0.0f, 0.0f);
     for (int i = 0; i < made.count; ++i)
     {
         ItemStack one;
@@ -11002,6 +11101,13 @@ void Application::fireThrower(const glm::ivec3& at, bool dispenser)
             if (Hopper::give(m_chests.at(front).data(), slots, item)) spend();
             m_audio.play(Sound::Click, 0.5f, 1.2f);
         }
+        else if (isCrafter(ahead))
+        {
+            ItemStack one = stack;
+            one.count = 1;
+            if (feedCrafter(front, one)) spend();
+            m_audio.play(Sound::Click, 0.5f, 1.2f);
+        }
         else dropOne();
     }
     else if (item == Items::Arrow || item == Items::SpectralArrow || item == Items::TippedArrow)
@@ -11189,6 +11295,9 @@ void Application::tickHoppers(float deltaTime)
                 break;
             }
         }
+        if (isCrafter(target))
+            for (int i = 0; i < Hopper::HOPPER_SLOTS; ++i)
+                if (!slots[i].empty() && feedCrafter(out, slots[i])) break;
         const BlockId above = m_world->getBlock(x, y + 1, z);
         if (isFurnaceBlock(above))
         {
@@ -13801,10 +13910,12 @@ void Application::settleRedstone(const glm::ivec3& at)
                 if (isCrafter(here))
                 {
                     const bool live = Redstone::poweredAt(cells, x, y, z);
-                    if (live == (here == Blocks::CrafterLit)) continue;
+                    if (live == crafterLit(here)) continue;
 
-                    if (live) fireCrafter(glm::ivec3(x, y, z));
-                    cells.set(x, y, z, live ? Blocks::CrafterLit : Blocks::Crafter);
+                    const bool made = live && fireCrafter(glm::ivec3(x, y, z));
+                    const BlockId next = made ? crafterWith(here, true, true) : crafterWith(here, live);
+                    cells.set(x, y, z, next);
+                    if (made) setBlockFor(glm::ivec3(x, y, z), next, crafterWith(here, true), 0.3f);
                     continue;
                 }
 
@@ -13848,6 +13959,15 @@ bool Application::containerSignal(const glm::ivec3& at)
     if (isHive(here)) return hiveHoney(here) > 0;
     if (isChiseledBookshelf(here)) return shelfBooks(here) > 0;
     if (isDecoratedPot(here)) return m_chests.has(at) && !m_chests.at(at)[0].empty();
+    if (isCrafter(here))
+    {
+        if (!m_chests.has(at)) return false;
+        const Chests::Contents& grid = m_chests.at(at);
+        if (grid[CRAFTER_MASK_SLOT].id == Blocks::Bedrock && grid[CRAFTER_MASK_SLOT].count > 1) return true;
+        for (int c = 0; c < CRAFTER_SLOTS; ++c)
+            if (!grid[static_cast<size_t>(c)].empty()) return true;
+        return false;
+    }
     if (isFurnaceBlock(here))
     {
         if (!m_furnaces.has(at)) return false;
@@ -19765,6 +19885,15 @@ void Application::handlePlacement()
             else if (hit.normal.y < 0) placing = grindstoneOf(2, toward);
             else placing = grindstoneOf(1, wall);
         }
+    }
+
+    if (placing == Blocks::Crafter)
+    {
+        const glm::vec3 look = m_camera.front;
+        const int horizontal = std::fabs(look.x) > std::fabs(look.z) ? (look.x > 0.0f ? 1 : 3) : (look.z > 0.0f ? 2 : 0);
+        if (look.y < -0.7f) placing = crafterOf(crafterOrientFor(4, horizontal), false);
+        else if (look.y > 0.7f) placing = crafterOf(crafterOrientFor(5, (horizontal + 2) & 3), false);
+        else placing = crafterOf(crafterOrientFor((horizontal + 2) & 3, 4), false);
     }
 
     if (placing == Blocks::Dispenser || placing == Blocks::Dropper || placing == Blocks::Observer)

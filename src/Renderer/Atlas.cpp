@@ -2117,6 +2117,15 @@ namespace
         t.speckle(6, 441);
     }
 
+    void paintChorusFlowerDead(Tile& t)
+    {
+        t.fill(Color{ 150, 128, 150 });
+        for (int y = 5; y < 11; ++y)
+            for (int x = 5; x < 11; ++x)
+                t.set(x, y, Color{ 92, 70, 92 });
+        t.speckle(6, 442);
+    }
+
     // The Nether's bastion. Blackstone is darker than netherrack and
     // has no red in it, which is the whole of how you tell a bastion
     // from the rock it stands in.
@@ -6149,6 +6158,7 @@ namespace
     void paintFireTile(Tile& t) { paintSoulFlameIn(t, 2001, false); }
     void paintFireAltTile(Tile& t) { paintSoulFlameIn(t, 2003, false); }
     void paintSoulFireTile(Tile& t) { paintSoulFlameIn(t, 2005, true); }
+    void paintSoulFireAltTile(Tile& t) { paintSoulFlameIn(t, 2007, true); }
     void paintSoulTorchTile(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9126,6 +9136,7 @@ namespace
         { Tiles::ItemNameTag, paintItemNameTag },
         { Tiles::ItemLead, paintItemLead },
         { Tiles::ItemSpyglass, paintItemSpyglass },
+        { Tiles::ItemSpyglassModel, paintItemSpyglass },
         { Tiles::ItemEchoShard, paintItemEchoShard },
         { Tiles::ItemGoatHorn, paintItemGoatHorn },
         { Tiles::ItemBundle, paintItemBundle },
@@ -9287,6 +9298,25 @@ namespace
         { Tiles::CrafterSouthTriggered, paintCrafterSide },
         { Tiles::CrafterEastTriggered, paintCrafterSide },
         { Tiles::CrafterBottom, paintCrafterSide },
+        { Tiles::CrafterWest, paintCrafterSide },
+        { Tiles::CrafterWestTriggered, paintCrafterSide },
+        { Tiles::CrafterEastCrafting, paintCrafterSide },
+        { Tiles::CrafterWestCrafting, paintCrafterSide },
+        { Tiles::CrafterTopCrafting, paintCrafterTopLit },
+        { Tiles::BambooFenceTile, paintBambooPlanksTile },
+        { Tiles::BambooFenceGateTile, paintBambooPlanksTile },
+        { Tiles::ChorusFlowerDeadTile, paintChorusFlowerDead },
+        { Tiles::PottedAzaleaTop, paintAzaleaTopTile },
+        { Tiles::PottedAzaleaSide, paintAzaleaSideTile },
+        { Tiles::PottedAzaleaPlant, paintAzaleaPlantTile },
+        { Tiles::PottedFloweringAzaleaTop, paintFloweringAzaleaTopTile },
+        { Tiles::PottedFloweringAzaleaSide, paintFloweringAzaleaSideTile },
+        { Tiles::PottedFloweringAzaleaPlant, paintAzaleaPlantTile },
+        { Tiles::CrimsonRootsPotTile, paintCrimsonRootsTile },
+        { Tiles::WarpedRootsPotTile, paintWarpedRootsTile },
+        { Tiles::PitcherCropSideTile, paintTorchflowerCrop0Tile },
+        { Tiles::PitcherCropTopTile, paintTorchflowerCrop0Tile },
+        { Tiles::SoulFireAltTile, paintSoulFireAltTile },
         { Tiles::BarrelBottom, paintBarrelTop },
         { Tiles::BarrelTopOpen, paintBarrelTop },
         { Tiles::EnchantTableBottom, paintObsidian },
@@ -10050,6 +10080,7 @@ namespace
         { Tiles::ItemNameTag, { "name_tag", nullptr, nullptr } },
         { Tiles::ItemLead, { "lead", nullptr, nullptr } },
         { Tiles::ItemSpyglass, { "spyglass", nullptr, nullptr } },
+        { Tiles::ItemSpyglassModel, { "spyglass_model", nullptr, nullptr } },
         { Tiles::ItemEchoShard, { "echo_shard", nullptr, nullptr } },
         { Tiles::ItemGoatHorn, { "goat_horn", nullptr, nullptr } },
         { Tiles::ItemBundle, { "bundle", nullptr, nullptr } },
@@ -10455,6 +10486,25 @@ namespace
         { Tiles::CrafterSouthTriggered, { "crafter_south_triggered", nullptr }, Tinting::None, 0, false },
         { Tiles::CrafterEastTriggered, { "crafter_east_triggered", nullptr }, Tinting::None, 0, false },
         { Tiles::CrafterBottom, { "crafter_bottom", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterWest, { "crafter_west", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterWestTriggered, { "crafter_west_triggered", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterEastCrafting, { "crafter_east_crafting", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterWestCrafting, { "crafter_west_crafting", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrafterTopCrafting, { "crafter_top_crafting", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooFenceTile, { "bamboo_fence", nullptr }, Tinting::None, 0, false },
+        { Tiles::BambooFenceGateTile, { "bamboo_fence_gate", nullptr }, Tinting::None, 0, false },
+        { Tiles::ChorusFlowerDeadTile, { "chorus_flower_dead", nullptr }, Tinting::None, 0, false },
+        { Tiles::PottedAzaleaTop, { "potted_azalea_bush_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::PottedAzaleaSide, { "potted_azalea_bush_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::PottedAzaleaPlant, { "potted_azalea_bush_plant", nullptr }, Tinting::None, 0, false },
+        { Tiles::PottedFloweringAzaleaTop, { "potted_flowering_azalea_bush_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::PottedFloweringAzaleaSide, { "potted_flowering_azalea_bush_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::PottedFloweringAzaleaPlant, { "potted_flowering_azalea_bush_plant", nullptr }, Tinting::None, 0, false },
+        { Tiles::CrimsonRootsPotTile, { "crimson_roots_pot", nullptr }, Tinting::None, 0, false },
+        { Tiles::WarpedRootsPotTile, { "warped_roots_pot", nullptr }, Tinting::None, 0, false },
+        { Tiles::PitcherCropSideTile, { "pitcher_crop_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::PitcherCropTopTile, { "pitcher_crop_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::SoulFireAltTile, { "soul_fire_1", nullptr }, Tinting::None, 0, true },
         { Tiles::BarrelBottom, { "barrel_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::BarrelTopOpen, { "barrel_top_open", nullptr }, Tinting::None, 0, false },
         { Tiles::EnchantTableBottom, { "enchanting_table_bottom", nullptr }, Tinting::None, 0, false },
@@ -11448,8 +11498,8 @@ namespace
         { Tiles::PistonBack,    { "piston_bottom", nullptr },                          Tinting::None,    0,   false },
         { Tiles::PistonArm,     { "piston_inner", nullptr },                           Tinting::None,    0,   false },
         { Tiles::CrafterTop,    { "crafter_top", nullptr },                            Tinting::None,    0,   false },
-        { Tiles::CrafterTopLit, { "crafter_top_triggered", "crafter_top_crafting", nullptr },                   Tinting::None,    0,   false },
-        { Tiles::CrafterSide,   { "crafter_east", "crafter_west", nullptr },          Tinting::None,    0,   false },
+        { Tiles::CrafterTopLit, { "crafter_top_triggered", nullptr },                   Tinting::None,    0,   false },
+        { Tiles::CrafterSide,   { "crafter_east", nullptr },          Tinting::None,    0,   false },
         { Tiles::CopperOre,     { "copper_ore", nullptr },                             Tinting::None,    0,   false },
         { Tiles::CopperBlock,   { "copper_block", nullptr },                           Tinting::None,    0,   false },
         { Tiles::ExposedCopper, { "exposed_copper", nullptr },                         Tinting::None,    0,   false },

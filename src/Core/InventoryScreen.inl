@@ -1437,6 +1437,36 @@ void Application::renderContainerScreen(float w, float h)
         drawSlot(Inventory::SMITH_TEMPLATE, panelX + 8.0f, panelY + 48.0f);
         drawSlot(Inventory::SMITH_BASE, panelX + 26.0f, panelY + 48.0f);
         drawSlot(Inventory::SMITH_ADDITION, panelX + 44.0f, panelY + 48.0f);
+        {
+            const int beat = static_cast<int>(m_elapsedSeconds / 1.5f);
+            const StackId held = m_inventory.slot(Inventory::SMITH_TEMPLATE).id;
+            const bool upgrade = held == Items::NetheriteUpgradeTemplate;
+            const bool trim = !upgrade && Smithing::patternOfTemplate(held) >= 0;
+            auto ghost = [&](int slot, float gx, const std::vector<const char*>& icons) {
+                if (icons.empty() || !m_inventory.slot(slot).empty()) return;
+                guiSprite(icons[static_cast<size_t>(beat) % icons.size()], gx, panelY + 48.0f, SLOT, SLOT);
+            };
+            ghost(Inventory::SMITH_TEMPLATE, panelX + 8.0f,
+                  { "../item/empty_slot_smithing_template_armor_trim", "../item/empty_slot_smithing_template_netherite_upgrade" });
+            if (trim)
+            {
+                ghost(Inventory::SMITH_BASE, panelX + 26.0f,
+                      { "../item/empty_armor_slot_helmet", "../item/empty_armor_slot_chestplate",
+                        "../item/empty_armor_slot_leggings", "../item/empty_armor_slot_boots" });
+                ghost(Inventory::SMITH_ADDITION, panelX + 44.0f,
+                      { "../item/empty_slot_ingot", "../item/empty_slot_redstone_dust", "../item/empty_slot_lapis_lazuli",
+                        "../item/empty_slot_quartz", "../item/empty_slot_diamond", "../item/empty_slot_emerald",
+                        "../item/empty_slot_amethyst_shard" });
+            }
+            else if (upgrade)
+            {
+                ghost(Inventory::SMITH_BASE, panelX + 26.0f,
+                      { "../item/empty_armor_slot_helmet", "../item/empty_slot_sword", "../item/empty_armor_slot_chestplate",
+                        "../item/empty_slot_pickaxe", "../item/empty_armor_slot_leggings", "../item/empty_slot_axe",
+                        "../item/empty_armor_slot_boots", "../item/empty_slot_hoe", "../item/empty_slot_shovel" });
+                ghost(Inventory::SMITH_ADDITION, panelX + 44.0f, { "../item/empty_slot_ingot" });
+            }
+        }
         const Smithing::Result made = Smithing::combine(m_inventory.slot(Inventory::SMITH_TEMPLATE), m_inventory.slot(Inventory::SMITH_BASE),
                                                         m_inventory.slot(Inventory::SMITH_ADDITION));
         const float rx = panelX + 98.0f, ry = panelY + 48.0f;
@@ -1637,8 +1667,8 @@ void Application::renderContainerScreen(float w, float h)
                     addHint(sx - 1.0f, sy - 1.0f, PITCH, PITCH, "Click to disable this slot");
             }
 
-        const bool powered = m_world->getBlock(m_crafterBlock.x, m_crafterBlock.y,
-                                              m_crafterBlock.z) == Blocks::CrafterLit;
+        const bool powered = crafterLit(m_world->getBlock(m_crafterBlock.x, m_crafterBlock.y,
+                                                          m_crafterBlock.z));
         if (skin)
         {
             guiSprite(powered ? "sprites/container/crafter/powered_redstone"

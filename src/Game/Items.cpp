@@ -535,6 +535,8 @@ StackId blockDrop(BlockId id)
     if (isFurnaceBlock(id)) return furnaceCold(furnaceBase(id));
     if (id == Blocks::BarrelOpen) return Blocks::Barrel;
     if (id == Blocks::ObserverLit) return Blocks::Observer;
+    if (isCrafter(id)) return Blocks::Crafter;
+    if (id == Blocks::ChorusFlowerDead) return Blocks::ChorusFlower;
     if (isAmethystGrowth(id) && id != Blocks::AmethystCluster) return Blocks::Air;
     if (id == Blocks::AmethystCluster) return Items::AmethystShard;
     if (id == Blocks::NetherWart0 || id == Blocks::NetherWart1) return Items::NetherWart;

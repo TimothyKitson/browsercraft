@@ -193,8 +193,8 @@ namespace
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
         { "Sticky Piston Head",PistonTop, PistonTop,  PistonArm,      true,  true,  RenderType::Cube,   0,   0.5f, StickyPistonFace },
-        { "Crafter",      CrafterNorth,  CrafterSouth,   CrafterSide,    true,  true,  RenderType::Cube,   0,   2.5f, CrafterTop, CrafterBottom },
-        { "Crafter",      CrafterNorthCrafting, CrafterSouthTriggered, CrafterEastTriggered, true, true, RenderType::Cube, 6, 2.5f, CrafterTopLit, CrafterBottom },
+        { "Crafter",      CrafterTop,    CrafterBottom,  CrafterSide,    true,  true,  RenderType::Cube,   0,   2.5f, CrafterNorth, CrafterSouth },
+        { "Crafter",      CrafterTopLit, CrafterBottom,  CrafterEastTriggered, true, true, RenderType::Cube, 6, 2.5f, CrafterNorth, CrafterSouthTriggered },
         { "Copper Ore",   CopperOre,     CopperOre,      CopperOre,      true,  true,  RenderType::Cube,   0,   3.0f },
         { "Block of Copper",CopperBlock, CopperBlock,    CopperBlock,    true,  true,  RenderType::Cube,   0,   3.0f },
         { "Exposed Copper",ExposedCopper,ExposedCopper,  ExposedCopper,  true,  true,  RenderType::Cube,   0,   3.0f },
@@ -243,8 +243,8 @@ namespace
         { "Purpur Block", PurpurTile,    PurpurTile,     PurpurTile,     true,  true,  RenderType::Cube,   0,   1.5f },
         { "Purpur Pillar",PurpurPillarTop,PurpurPillarTop,PurpurPillarSide,true,true,  RenderType::Cube,   0,   1.5f },
         { "End Stone Bricks",EndBricksTile,EndBricksTile,EndBricksTile,  true,  true,  RenderType::Cube,   0,   3.0f },
-        { "Chorus Plant", ChorusPlantTile,ChorusPlantTile,ChorusPlantTile,true, true,  RenderType::Cube,   0,   0.4f },
-        { "Chorus Flower",ChorusFlowerTile,ChorusFlowerTile,ChorusFlowerTile,true,true, RenderType::Cube,  0,   0.4f },
+        { "Chorus Plant", ChorusPlantTile,ChorusPlantTile,ChorusPlantTile,true, false, RenderType::Cube,   0,   0.4f },
+        { "Chorus Flower",ChorusFlowerTile,ChorusPlantTile,ChorusFlowerTile,true,false, RenderType::Cube,  0,   0.4f },
         { "Blackstone",   BlackstoneTop, BlackstoneTop,  BlackstoneTile, true,  true,  RenderType::Cube,   0,   1.5f },
         { "Polished Blackstone Bricks",PolishedBlackstoneTile,PolishedBlackstoneTile,PolishedBlackstoneTile,true,true,RenderType::Cube,0,2.0f },
         { "Gilded Blackstone",GildedBlackstoneTile,GildedBlackstoneTile,GildedBlackstoneTile,true,true,RenderType::Cube,0,1.5f },
@@ -2142,7 +2142,7 @@ namespace
         { "Fire", FireTile, FireAltTile, FireTile, false, false, RenderType::Lush, 15, 0.0f },
         { "Fire", FireTile, FireAltTile, FireTile, false, false, RenderType::Lush, 15, 0.0f },
         { "Fire", FireTile, FireAltTile, FireTile, false, false, RenderType::Lush, 15, 0.0f },
-        { "Soul Fire", SoulFireTile, SoulFireTile, SoulFireTile, false, false, RenderType::Lush, 10, 0.0f },
+        { "Soul Fire", SoulFireTile, SoulFireAltTile, SoulFireTile, false, false, RenderType::Lush, 10, 0.0f },
         { "Magma Block", MagmaTile, MagmaTile, MagmaTile, true, true, RenderType::Cube, 3, 0.5f },
         { "Crying Obsidian", CryingObsidianTile, CryingObsidianTile, CryingObsidianTile, true, true, RenderType::Cube, 10, 50.0f },
         { "Lodestone", LodestoneTopTile, LodestoneTopTile, LodestoneSideTile, true, true, RenderType::Cube, 0, 3.5f },
@@ -4984,6 +4984,43 @@ namespace
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "Chorus Flower", ChorusFlowerDeadTile, ChorusPlantTile, ChorusFlowerDeadTile, true, false, RenderType::Cube, 0, 0.4f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -5215,6 +5252,8 @@ BlockId axisBase(BlockId id)
         return id < Blocks::ThrowerTurnFirst + 6 ? Blocks::Dispenser : Blocks::Dropper;
     if (id >= Blocks::ObserverTurnFirst && id <= Blocks::ObserverTurnLast)
         return id < Blocks::ObserverTurnFirst + 6 ? Blocks::Observer : Blocks::ObserverLit;
+    if (id >= Blocks::CrafterTurnFirst && id <= Blocks::CrafterTurnLast)
+        return id < Blocks::CrafterTurnFirst + 12 ? Blocks::Crafter : Blocks::CrafterLit;
     if (id >= Blocks::PistonVertFirst && id <= Blocks::PistonVertLast)
     {
         const int part = (id - Blocks::PistonVertFirst) % 6 / 2;
@@ -5295,7 +5334,8 @@ const BlockInfo& blockInfo(BlockId id)
     if ((id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) || (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast) ||
         (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || (id >= Blocks::ThrowerTurnFirst && id <= Blocks::VineMaskLast) ||
         (id >= Blocks::LichenMaskFirst && id <= Blocks::VeinMaskLast) ||
-        (id >= Blocks::FrameFloor && id <= Blocks::GlowFrameCeiling))
+        (id >= Blocks::FrameFloor && id <= Blocks::GlowFrameCeiling) ||
+        (id >= Blocks::CrafterTurnFirst && id <= Blocks::CrafterTurnLast))
         return blockInfo(axisBase(id));
     if (id >= Blocks::ExtFirst && id < Blocks::ExtCount) return EXT_TABLE[id - Blocks::ExtFirst];
     return TABLE[Blocks::Air];

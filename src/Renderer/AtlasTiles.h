@@ -276,6 +276,14 @@ namespace Tiles
         ObserverBack, ObserverBackLit, ObserverArrow,
         CrafterNorth, CrafterNorthCrafting, CrafterSouth, CrafterSouthTriggered,
         CrafterEastTriggered, CrafterBottom,
+        CrafterWest, CrafterWestTriggered, CrafterEastCrafting, CrafterWestCrafting, CrafterTopCrafting,
+        BambooFenceTile, BambooFenceGateTile,
+        ChorusFlowerDeadTile,
+        PottedAzaleaTop, PottedAzaleaSide, PottedAzaleaPlant,
+        PottedFloweringAzaleaTop, PottedFloweringAzaleaSide, PottedFloweringAzaleaPlant,
+        CrimsonRootsPotTile, WarpedRootsPotTile,
+        PitcherCropSideTile, PitcherCropTopTile,
+        SoulFireAltTile,
         BarrelBottom, BarrelTopOpen,
         EnchantTableBottom, CactusBottom, SandstoneBottom, CampfireLogLit, ReinforcedDeepslateBottom,
         TrialSpawnerBottom, TrialSpawnerTopEjecting, TrialSpawnerTopEjectingOminous,
@@ -631,8 +639,9 @@ namespace Tiles
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,
         ItemDebugStick,
+        ItemSpyglassModel,
 
-        ItemTileEnd = ItemDebugStick + 1
+        ItemTileEnd = ItemSpyglassModel + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

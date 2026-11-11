@@ -9644,7 +9644,7 @@ namespace
                                 {
                                     const BlockId block = chunk.getBlock(lx, y, lz);
                                     if (block == Blocks::ChorusPlant ||
-                                        block == Blocks::ChorusFlower) ++chorus;
+                                        isChorusFlower(block)) ++chorus;
                                     else if (isEndCityBlock(block)) ++purpur;
                                     if (block == Blocks::Chest) ++chests;
                                 }

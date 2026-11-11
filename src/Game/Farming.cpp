@@ -492,7 +492,12 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             int stalk = 0;
             while (stalk < 5 && world.getBlock(x, y - 1 - stalk, z) == Blocks::ChorusPlant) ++stalk;
             const BlockId root = world.getBlock(x, y - 1 - stalk, z);
-            if ((root == Blocks::EndStone || stalk > 0) && stalk < 4 && nextRandom(seed) % 6u == 0u)
+            if (nextRandom(seed) % 6u != 0u) continue;
+            if (stalk >= 4 || (root != Blocks::EndStone && stalk == 0))
+            {
+                world.setBlock(x, y, z, Blocks::ChorusFlowerDead);
+                continue;
+            }
             {
                 world.setBlock(x, y, z, Blocks::ChorusPlant);
                 world.setBlock(x, y + 1, z, Blocks::ChorusFlower);

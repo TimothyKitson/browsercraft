@@ -7108,7 +7108,7 @@ void WorldGen::stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const
     // without one standing near it looks dropped there.
     for (int dy = 0; dy < 4; ++dy)
         put(chunk, midX + HALF + 3, ground + 1 + dy, midZ,
-            (dy == 3) ? Blocks::ChorusFlower : Blocks::ChorusPlant);
+            (dy == 3) ? Blocks::ChorusFlowerDead : Blocks::ChorusPlant);
 }
 
 // Minecraft keeps a bastion and a fortress out of each other's way by
@@ -7520,7 +7520,7 @@ void WorldGen::plantChorus(Chunk& chunk) const
                     stems.push_back({ bx, top + 1, bz, stem.depth + 1 });
                     grew = true;
                 }
-                if (!grew && free(stem.x, top + 1, stem.z)) chunk.setBlockRaw(stem.x, top + 1, stem.z, Blocks::ChorusFlower);
+                if (!grew && free(stem.x, top + 1, stem.z)) chunk.setBlockRaw(stem.x, top + 1, stem.z, Blocks::ChorusFlowerDead);
             }
         }
 }
