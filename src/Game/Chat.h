@@ -58,6 +58,7 @@ namespace Chat
         Locate,
         Damage,
         ScoreboardCommand,
+        AttributeCommand,
     };
 
     struct Command

@@ -513,7 +513,7 @@ void Application::saveOptions()
 
 float Application::attackPeriod() const
 {
-    return 1.0f / Tools::attackSpeed(m_inventory.selected().id);
+    return 1.0f / (Tools::attackSpeed(m_inventory.selected().id) * static_cast<float>(m_player.attributes.ratio(Attributes::Kind::AttackSpeed)));
 }
 
 float Application::attackStrength() const
@@ -902,6 +902,12 @@ void Application::loadLevel()
         }
     }
     m_seenEndPoem = std::filesystem::exists(m_savePath + "/seen_credits.txt");
+    {
+        std::ifstream traits(m_savePath + "/attributes.txt");
+        std::stringstream text;
+        if (traits) text << traits.rdbuf();
+        m_player.attributes.load(text.str());
+    }
     {
         std::ifstream board(m_savePath + "/scoreboard.txt");
         std::stringstream text;
@@ -1344,6 +1350,10 @@ void Application::saveLevel()
                 for (const ItemStack& one : inside) boxes << one.id << ' ' << one.count << ' ' << one.damage << ' ' << one.enchantments << ' ';
                 boxes << '\n';
             }
+    }
+    {
+        std::ofstream traits(m_savePath + "/attributes.txt");
+        if (traits) traits << m_player.attributes.save();
     }
     {
         std::ofstream board(m_savePath + "/scoreboard.txt");
@@ -2965,6 +2975,15 @@ bool Application::frame()
         // between one blow and the next.
         m_player.armourPoints = armourPoints();
         m_player.protection = armourProtection();
+        m_player.armourToughness = 0;
+        m_player.knockbackResistance = 0.0f;
+        for (int i = 0; i < Inventory::ARMOR_SLOTS; ++i)
+        {
+            const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + i);
+            if (worn.empty()) continue;
+            m_player.armourToughness += Armour::toughnessOf(worn.id);
+            m_player.knockbackResistance += Armour::knockbackResistanceOf(worn.id);
+        }
         {
             Scoreboard::Live live;
             live.health = m_player.health;
@@ -9210,7 +9229,8 @@ void Application::updateMovementAudio(const glm::vec3& positionBefore, bool jump
 
 void Application::updateMining(float deltaTime)
 {
-    const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+    const float blockReach = REACH_DISTANCE * static_cast<float>(m_player.attributes.ratio(Attributes::Kind::BlockInteractionRange));
+    const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, blockReach);
 
     // A mob standing between you and the block takes the hit instead.
     // Minecraft's reach is shorter for something living than for stone,
@@ -9228,7 +9248,7 @@ void Application::updateMining(float deltaTime)
         return;
     }
 
-    if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+    if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH * static_cast<float>(m_player.attributes.ratio(Attributes::Kind::EntityInteractionRange))))
     {
         const float toMob = glm::length(target->position() - m_camera.position);
         const float toBlock = hit.hit ? glm::length(glm::vec3(hit.block) + glm::vec3(0.5f) - m_camera.position)
@@ -9264,7 +9284,8 @@ void Application::updateMining(float deltaTime)
                 const MobId struck = target->typeId();
                 const bool arthropod = struck == MobId::Spider || struck == MobId::CaveSpider || struck == MobId::Silverfish ||
                                        struck == MobId::Endermite || struck == MobId::Bee;
-                float base = static_cast<float>(Tools::attackDamage(weapon) + Effects::attackBonus(m_player.effects));
+                float base = static_cast<float>(Tools::attackDamage(weapon) + Effects::attackBonus(m_player.effects)) +
+                             static_cast<float>(m_player.attributes.value(Attributes::Kind::AttackDamage) - 1.0);
                 base *= 0.2f + strength * strength * 0.8f;
                 if (critical) base *= 1.5f;
                 const float bonus = (static_cast<float>(Enchanting::sharpnessBonus(edge)) +
@@ -9275,7 +9296,8 @@ void Application::updateMining(float deltaTime)
                 target->pierceArmour(Enchanting::levelOf(edge, Enchanting::Kind::Breach));
                 if (target->strike(blow, target->position() - m_player.position))
                 {
-                    const int knock = Enchanting::levelOf(edge, Enchanting::Kind::Knockback) + (sprintHit ? 1 : 0);
+                    const int knock = Enchanting::levelOf(edge, Enchanting::Kind::Knockback) + (sprintHit ? 1 : 0) +
+                                      static_cast<int>(m_player.attributes.value(Attributes::Kind::AttackKnockback));
                     glm::vec3 away = target->position() - m_player.position;
                     away.y = 0.0f;
                     if (knock > 0 && glm::length(away) > 0.01f)
@@ -9288,7 +9310,9 @@ void Application::updateMining(float deltaTime)
                     if (Tools::kindOf(weapon) == Tools::Kind::Sword && charged && !critical && !sprintHit && m_player.onGround)
                     {
                         const int sweeping = Enchanting::levelOf(edge, Enchanting::Kind::SweepingEdge);
-                        const int sweep = 1 + static_cast<int>(base * static_cast<float>(sweeping) / static_cast<float>(sweeping + 1));
+                        const float ratio = std::max(static_cast<float>(sweeping) / static_cast<float>(sweeping + 1),
+                                                     static_cast<float>(m_player.attributes.value(Attributes::Kind::SweepingDamageRatio)));
+                        const int sweep = 1 + static_cast<int>(base * ratio);
                         for (Mob& other : m_entities.mobs())
                         {
                             if (&other == target || !other.alive()) continue;
@@ -9394,11 +9418,17 @@ void Application::updateMining(float deltaTime)
     // and a block and knows nothing about what has been put on it.
     if (seconds > 0.0f)
         seconds /= Enchanting::digSpeedMultiplier(m_inventory.selected().enchantments) * Effects::digMultiplier(m_player.effects);
+    if (seconds > 0.0f)
+    {
+        const float efficiency = static_cast<float>(m_player.attributes.value(Attributes::Kind::MiningEfficiency));
+        seconds /= std::max(0.01f, static_cast<float>(m_player.attributes.value(Attributes::Kind::BlockBreakSpeed))) *
+                   (Tools::breakSeconds(m_inventory.selected().id, id) < Tools::breakSeconds(Blocks::Air, id) ? 1.0f + efficiency * 0.25f : 1.0f);
+    }
     if (seconds > 0.0f && !m_player.creative())
     {
         const ItemStack& helmet = m_inventory.slot(Inventory::ARMOR_FIRST);
         if (m_player.isHeadUnderwater(*m_world) && (helmet.empty() || !Enchanting::has(helmet.enchantments, Enchanting::Kind::AquaAffinity)))
-            seconds *= 5.0f;
+            seconds /= std::max(0.01f, static_cast<float>(m_player.attributes.value(Attributes::Kind::SubmergedMiningSpeed)));
         if (!m_player.onGround && !m_player.flying) seconds *= 5.0f;
     }
     if (seconds < 0.0f && !(m_player.creative() && isCreativeOnly(id))) return;
@@ -14782,7 +14812,9 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 
         const glm::vec3 away = chest - at;
         if (glm::length(away) > 0.001f)
-            m_player.velocity += glm::normalize(away) * 8.0f;
+            m_player.velocity += glm::normalize(away) * 8.0f *
+                                 (1.0f - std::clamp(static_cast<float>(m_player.attributes.value(Attributes::Kind::ExplosionKnockbackResistance)) +
+                                                        static_cast<float>(Enchanting::levelOf(m_inventory.slot(Inventory::ARMOR_FIRST + 1).enchantments, Enchanting::Kind::BlastProtection)) * 0.15f, 0.0f, 1.0f));
     }
 
     for (Mob& mob : m_entities.mobs())
@@ -19611,6 +19643,13 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
         case Chat::Kind::ScoreboardCommand:
             return m_scoreboard.command(command.sub, command.args, scoreHolder(), output);
 
+        case Chat::Kind::AttributeCommand:
+        {
+            const bool changed = Attributes::command(m_player.attributes, command.args, scoreHolder(), output);
+            m_player.health = std::min(m_player.health, m_player.maxHealth());
+            return changed;
+        }
+
         case Chat::Kind::Seed:
             output = m_world ? "Seed: " + std::to_string(m_world->seed()) : std::string("No world loaded.");
             return m_world != nullptr;
@@ -20492,7 +20531,7 @@ void Application::reelBobber()
             if (isOpaque(m_world->getBlock(cell.x, y, cell.z))) openSky = false;
         const bool jungle = m_world->generator().biomeAt(cell.x, cell.z) == Biome::Jungle;
         const uint32_t seed = m_bobber.rolls * 2654435761u + static_cast<uint32_t>(m_elapsedSeconds * 37.0f);
-        const Fishing::Catch caught = Fishing::roll(seed, openSky, jungle, Effects::luck(m_player.effects) + Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::LuckOfTheSea));
+        const Fishing::Catch caught = Fishing::roll(seed, openSky, jungle, Effects::luck(m_player.effects) + Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::LuckOfTheSea) + static_cast<int>(m_player.attributes.value(Attributes::Kind::Luck)));
         m_stats.add(Stats::Custom::FishCaught);
         for (const Advancements::Criterion& fish : Advancements::all()[static_cast<size_t>(Advancements::indexOf("husbandry/fishy_business"))].criteria)
             if (stackNamed(fish.name) == caught.stack.id) award("husbandry/fishy_business", fish.name);
@@ -22200,7 +22239,7 @@ void Application::updateMobs(float deltaTime)
         const glm::vec3 away = m_player.position - strike.from;
         const glm::vec3 flat(away.x, 0.0f, away.z);
         const float length = glm::length(flat);
-        if (length > 0.001f) m_player.velocity += (flat / length) * 6.0f;
+        if (length > 0.001f) m_player.velocity += (flat / length) * 6.0f * m_player.knockbackScale();
         if (m_player.onGround) m_player.velocity.y = std::max(m_player.velocity.y, 4.0f);
     }
 

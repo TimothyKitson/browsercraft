@@ -106,12 +106,27 @@ int Armour::maxDurability(StackId id)
     return static_cast<int>(static_cast<float>(DURABILITY[tier]) * PIECE_SHARE[piece]);
 }
 
-int Armour::reduce(int incoming, int points)
+int Armour::toughnessOf(StackId id)
+{
+    if (!inArmourRange(id)) return 0;
+    if (tierOf(id) == Tier::Diamond) return 2;
+    if (tierOf(id) == Tier::Netherite) return 3;
+    return 0;
+}
+
+float Armour::knockbackResistanceOf(StackId id)
+{
+    return inArmourRange(id) && tierOf(id) == Tier::Netherite ? 0.1f : 0.0f;
+}
+
+int Armour::reduce(int incoming, int points, int toughness)
 {
     if (incoming <= 0) return 0;
 
-    const int capped = std::clamp(points, 0, 20);
-    const float left = 1.0f - static_cast<float>(capped) * 0.04f;
+    const float armour = static_cast<float>(std::clamp(points, 0, 30));
+    const float bypass = armour - 4.0f * static_cast<float>(incoming) / (static_cast<float>(std::max(0, toughness)) + 8.0f);
+    const float effective = std::clamp(std::max(armour / 5.0f, bypass), 0.0f, 20.0f);
+    const float left = 1.0f - effective * 0.04f;
     const int after = static_cast<int>(std::lround(static_cast<float>(incoming) * left));
 
     // Armour softens a blow; it never stops one outright.

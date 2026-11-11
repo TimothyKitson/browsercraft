@@ -1,6 +1,8 @@
 #pragma once
 #include <array>
 #include <algorithm>
+#include "Game/Attributes.h"
+#include <algorithm>
 #include "Game/Effects.h"
 #include "Game/GameMode.h"
 #include "World/Block.h"
@@ -98,7 +100,11 @@ public:
     bool damage(int amount, bool throughArmour = false);
     bool invulnerable() const { return m_hurtCooldown > 0.0f; }
     void heal(int amount);
-    int maxHealth() const { return MAX_HEALTH + Effects::maxHealthBonus(effects); }
+    int maxHealth() const { return std::max(1, static_cast<int>(attributes.value(Attributes::Kind::MaxHealth))) + Effects::maxHealthBonus(effects); }
+    Attributes::Set attributes;
+    int armourToughness = 0;
+    float knockbackResistance = 0.0f;
+    float knockbackScale() const { return 1.0f - std::clamp(knockbackResistance + static_cast<float>(attributes.value(Attributes::Kind::KnockbackResistance)), 0.0f, 1.0f); }
     void takeEffect(Effects::Kind kind, int amplifier, float seconds, float strength = 1.0f);
     void respawn(glm::vec3 feetPosition);
 

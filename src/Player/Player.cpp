@@ -306,7 +306,9 @@ void Player::applyFallDamage(const World& world, float landingY)
     if (exempt() || flying || !fallHurts) return;
 
     const float fallDistance = m_fallStartY - landingY;
-    if (fallDistance <= SAFE_FALL_DISTANCE) return;
+    const float safe = static_cast<float>(attributes.value(Attributes::Kind::SafeFallDistance));
+    const float hurtScale = static_cast<float>(attributes.value(Attributes::Kind::FallDamageMultiplier));
+    if (fallDistance <= safe || hurtScale <= 0.0f) return;
 
     // What was landed on can cancel the whole of it.
     const int x = static_cast<int>(std::floor(position.x));
@@ -317,18 +319,18 @@ void Player::applyFallDamage(const World& world, float landingY)
     if (landed == Blocks::HayBale || axisBase(landed) == Blocks::HayBale)
     {
         cause = "fall";
-        damage(static_cast<int>(std::floor((fallDistance - SAFE_FALL_DISTANCE) * 0.2f)));
+        damage(static_cast<int>(std::floor((fallDistance - safe) * 0.2f * hurtScale)));
         return;
     }
     if (landed == Blocks::DripstoneUp)
     {
         cause = "stalagmite";
-        damage(static_cast<int>(std::floor((fallDistance + 2.0f - SAFE_FALL_DISTANCE) * 2.0f)));
+        damage(static_cast<int>(std::floor((fallDistance + 2.0f - safe) * 2.0f * hurtScale)));
         return;
     }
 
     cause = fallDistance > 5.0f ? "fallHigh" : "fall";
-    damage(static_cast<int>(std::floor(fallDistance - SAFE_FALL_DISTANCE)));
+    damage(static_cast<int>(std::floor((fallDistance - safe) * hurtScale)));
 }
 
 bool Player::onLadder(const World& world) const
@@ -438,7 +440,7 @@ bool Player::isInFire(const World& world) const
 void Player::ignite(float seconds)
 {
     if (exempt() || health <= 0 || Effects::fireImmune(effects)) return;
-    float scale = 1.0f;
+    float scale = static_cast<float>(attributes.value(Attributes::Kind::BurningTime));
     for (uint32_t set : armourEnchants) scale = std::min(scale, Enchanting::burnScale(set));
     m_fireSeconds = std::max(m_fireSeconds, seconds * scale);
 }
@@ -503,7 +505,9 @@ bool Player::damage(int amount, bool throughArmour)
 {
     if (exempt() || amount <= 0 || m_hurtCooldown > 0.0f) return false;
 
-    if (!throughArmour) amount = Armour::reduce(amount, armourPoints);
+    if (!throughArmour)
+        amount = Armour::reduce(amount, armourPoints + static_cast<int>(attributes.value(Attributes::Kind::Armor)),
+                                armourToughness + static_cast<int>(attributes.value(Attributes::Kind::ArmorToughness)));
 
     {
         const std::string why = cause ? cause : "";
@@ -657,7 +661,7 @@ bool Player::breathe(float deltaTime, bool headUnderwater)
     if (air > 0.0f)
     {
         const float held = static_cast<float>(Enchanting::levelOf(armourEnchants[0], Enchanting::Kind::Respiration));
-        air = std::max(0.0f, air - deltaTime / (1.0f + held));
+        air = std::max(0.0f, air - deltaTime / (1.0f + held + static_cast<float>(attributes.value(Attributes::Kind::OxygenBonus))));
         m_drownTimer = 0.0f;
         return false;
     }
@@ -767,6 +771,12 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     // Speed and slowness scale whatever the mode settled on, so they
     // read the same walking, sprinting or swimming.
     targetSpeed *= Effects::speedMultiplier(effects);
+    if (flying) targetSpeed *= static_cast<float>(attributes.ratio(Attributes::Kind::FlyingSpeed));
+    else
+    {
+        targetSpeed *= static_cast<float>(attributes.ratio(Attributes::Kind::MovementSpeed));
+        if (sneaking && pose == Pose::Sneaking) targetSpeed *= static_cast<float>(attributes.ratio(Attributes::Kind::SneakingSpeed));
+    }
 
     // A raised shield slows you to a walk. Without that cost it would
     // simply be worn at all times.
@@ -931,7 +941,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         }
         else
         {
-            velocity.y += GRAVITY * deltaTime;
+            velocity.y += GRAVITY * static_cast<float>(attributes.ratio(Attributes::Kind::Gravity)) * deltaTime;
             velocity.y = std::max(velocity.y, TERMINAL_VELOCITY);
         }
 
@@ -939,7 +949,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         // Minecraft does instead of jumping once and stopping.
         if (controls.jumpHeld && wasOnGround)
         {
-            velocity.y = JUMP_VELOCITY * Effects::jumpMultiplier(effects);
+            velocity.y = JUMP_VELOCITY * Effects::jumpMultiplier(effects) * static_cast<float>(attributes.ratio(Attributes::Kind::JumpStrength));
             if (world.getBlock(static_cast<int>(std::floor(position.x)), static_cast<int>(std::floor(position.y - 0.1f)),
                                static_cast<int>(std::floor(position.z))) == Blocks::HoneyBlock)
                 velocity.y *= 0.5f;

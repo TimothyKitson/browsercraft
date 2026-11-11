@@ -6,6 +6,7 @@
 #include "Core/Utf8.h"
 #include "GameRules.h"
 #include "Enchanting.h"
+#include "Attributes.h"
 #include "Renderer/FontMaps.h"
 #include <cmath>
 #include <cstdio>
@@ -456,7 +457,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         out.kind = Kind::Help;
         out.text = cheats
-            ? "/gamemode /time /tp /give /kill /seed /say /me /msg /list /tellraw /title /setblock /fill /clone /summon /effect /enchant /xp /clear /weather /difficulty /defaultgamemode /setworldspawn /spawnpoint /locate /damage /scoreboard /team /tag /trigger /worldborder /gamerule /help"
+            ? "/gamemode /time /tp /give /kill /seed /say /me /msg /list /tellraw /title /setblock /fill /clone /summon /effect /enchant /xp /clear /weather /difficulty /defaultgamemode /setworldspawn /spawnpoint /locate /damage /scoreboard /team /tag /trigger /attribute /worldborder /gamerule /help"
             : "/help  -  this world was made without cheats, so the rest are off";
         return out;
     }
@@ -949,6 +950,13 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
             if (out.text.rfind("minecraft:", 0) == 0) out.text = out.text.substr(10);
             return out;
         }
+        if (name == "attribute")
+        {
+            if (!cheats) return deny(name);
+            out.kind = Kind::AttributeCommand;
+            out.args.assign(words.begin() + 1, words.end());
+            return out;
+        }
         if (name == "scoreboard" || name == "team" || name == "tag" || name == "trigger")
         {
             if (!cheats && name != "trigger") return deny(name);
@@ -1048,7 +1056,7 @@ std::vector<std::string> Chat::suggest(const std::string& draft)
         "clear", "clone", "damage", "defaultgamemode", "difficulty", "effect", "enchant", "experience", "fill", "gamemode",
         "gamerule", "give", "help", "kill", "list", "locate", "me", "msg", "say", "seed", "setblock", "setworldspawn",
         "spawnpoint", "summon", "tell", "tellraw", "time", "title", "tp", "w", "weather", "worldborder", "xp",
-        "scoreboard", "team", "tag", "trigger" };
+        "scoreboard", "team", "tag", "trigger", "attribute" };
     static std::vector<std::string> items, blocks, mobs, effects, enchants, rules, biomes;
     if (items.empty())
     {
@@ -1128,6 +1136,15 @@ std::vector<std::string> Chat::suggest(const std::string& draft)
     else if (name == "team" && index == 1) use({ "add", "empty", "join", "leave", "list", "modify", "remove" });
     else if (name == "team" && index == 3 && sub == "modify") use({ "collisionRule", "color", "deathMessageVisibility", "displayName", "friendlyFire", "nametagVisibility", "prefix", "seeFriendlyInvisibles", "suffix" });
     else if (name == "tag" && index == 2) use({ "add", "list", "remove" });
+    else if (name == "attribute" && index == 2)
+    {
+        for (int a = 0; a < Attributes::COUNT; ++a) local.emplace_back(Attributes::info(static_cast<Attributes::Kind>(a)).id);
+        pool = &local;
+    }
+    else if (name == "attribute" && index == 3) use({ "base", "get", "modifier" });
+    else if (name == "attribute" && index == 4 && words.size() > 3 && lower(words[3]) == "base") use({ "get", "reset", "set" });
+    else if (name == "attribute" && index == 4 && words.size() > 3 && lower(words[3]) == "modifier") use({ "add", "remove", "value" });
+    else if (name == "attribute" && index == 7) use({ "add_multiplied_base", "add_multiplied_total", "add_value" });
     if (!pool) return out;
     std::string bare = word;
     if (bare.rfind("minecraft:", 0) == 0) bare = bare.substr(10);

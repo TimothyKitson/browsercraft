@@ -438,6 +438,31 @@ namespace
             }
         for (const auto& [kind, level] : Enchanting::listOf(stack.enchantments & Enchanting::KIND_BITS))
             line(std::string(Enchanting::name(kind)) + (Enchanting::maxLevel(kind) > 1 ? " " + romanLevel(level) : ""));
+        auto tidy = [](float value) {
+            char text[32];
+            std::snprintf(text, sizeof(text), "%.1f", static_cast<double>(value));
+            std::string out = text;
+            if (out.size() > 2 && out.compare(out.size() - 2, 2, ".0") == 0) out.resize(out.size() - 2);
+            return out;
+        };
+        if (Tools::isTool(stack.id) || stack.id == Items::Trident)
+        {
+            line("");
+            line("When in Main Hand:");
+            line(" " + std::to_string(Tools::attackDamage(stack.id)) + " Attack Damage");
+            line(" " + tidy(Tools::attackSpeed(stack.id)) + " Attack Speed");
+        }
+        else if (Armour::isArmour(stack.id))
+        {
+            static const char* SLOT[4] = { "Head", "Body", "Legs", "Feet" };
+            const int slot = std::clamp(Armour::slotFor(stack.id), 0, 3);
+            line("");
+            line(std::string("When on ") + SLOT[slot] + ":");
+            line("+" + std::to_string(Armour::defencePoints(stack.id)) + " Armor");
+            if (Armour::toughnessOf(stack.id) > 0) line("+" + std::to_string(Armour::toughnessOf(stack.id)) + " Armor Toughness");
+            if (Armour::knockbackResistanceOf(stack.id) > 0.0f)
+                line("+" + tidy(Armour::knockbackResistanceOf(stack.id) * 10.0f) + " Knockback Resistance");
+        }
         return lore;
     }
 }

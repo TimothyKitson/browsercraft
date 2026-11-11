@@ -69,6 +69,7 @@
 #include "Game/StructureLoot.h"
 #include "Game/Enchanting.h"
 #include "Game/Scoreboard.h"
+#include "Game/Attributes.h"
 #include "Game/Trading.h"
 #include "Game/EndPortal.h"
 #include "Game/Weather.h"
@@ -5296,6 +5297,41 @@ namespace
         check(!copy.load("1,2,3") && !copy.load("a,b,c,d,e,f,g,h,i"), "and a damaged line is refused");
         check(border.blocks(100.5, -20.5, 0.6) == false && border.blocks(103.0, -20.5, 0.6), "it only walls in what is up against it");
 
+        section("attributes: thirty-one of them, with modifiers and /attribute");
+        {
+            check(Attributes::COUNT == 31, "all thirty-one 1.21.1 attributes");
+            Attributes::Kind found;
+            check(Attributes::fromId("minecraft:generic.max_health", found) && found == Attributes::Kind::MaxHealth &&
+                  Attributes::fromId("movement_speed", found) && found == Attributes::Kind::MovementSpeed, "found by id, with or without the prefix");
+            Attributes::Set traits;
+            check(traits.value(Attributes::Kind::MovementSpeed) == 0.1 && traits.value(Attributes::Kind::MaxHealth) == 20.0, "defaults are 1.21.1's");
+            traits.addModifier(Attributes::Kind::MaxHealth, { "a", 10.0, Attributes::Operation::AddValue });
+            traits.addModifier(Attributes::Kind::MaxHealth, { "b", 0.5, Attributes::Operation::AddMultipliedBase });
+            traits.addModifier(Attributes::Kind::MaxHealth, { "c", 1.0, Attributes::Operation::AddMultipliedTotal });
+            check(traits.value(Attributes::Kind::MaxHealth) == 90.0, "add, then multiply the base, then multiply the total");
+            check(!traits.addModifier(Attributes::Kind::MaxHealth, { "a", 1.0, Attributes::Operation::AddValue }), "one id per modifier");
+            Attributes::Set copy;
+            copy.load(traits.save());
+            check(copy.value(Attributes::Kind::MaxHealth) == 90.0, "and the set is saved and read back");
+            traits.setBase(Attributes::Kind::MaxHealth, 5000.0);
+            check(traits.base(Attributes::Kind::MaxHealth) == 1024.0, "bases are clamped to the attribute's range");
+            Player tough(glm::vec3(0.0f));
+            std::string told;
+            std::vector<std::string> args = { "@s", "generic.max_health", "base", "set", "40" };
+            check(Attributes::command(tough.attributes, args, "Alex", told) && tough.maxHealth() == 40, "/attribute base set raises max health");
+            args = { "@s", "minecraft:generic.movement_speed", "modifier", "add", "fast", "0.5", "add_multiplied_base" };
+            check(Attributes::command(tough.attributes, args, "Alex", told) && std::abs(tough.attributes.value(Attributes::Kind::MovementSpeed) - 0.15) < 1e-9,
+                  "modifiers go on by command");
+            args = { "@s", "generic.movement_speed", "modifier", "remove", "fast" };
+            check(Attributes::command(tough.attributes, args, "Alex", told) && tough.attributes.value(Attributes::Kind::MovementSpeed) == 0.1, "and come off");
+            check(Chat::parse("/attribute @s generic.luck get", true).kind == Chat::Kind::AttributeCommand, "/attribute parses");
+            check(Armour::toughnessOf(Items::DiamondChestplate) == 2 && Armour::toughnessOf(Items::NetheriteBoots) == 3 &&
+                  Armour::knockbackResistanceOf(Items::NetheriteHelmet) == 0.1f && Armour::toughnessOf(Items::IronHelmet) == 0,
+                  "diamond and netherite carry toughness, netherite knockback resistance");
+            check(Armour::reduce(30, 20, 12) < Armour::reduce(30, 20, 0) && Armour::reduce(2, 20, 0) == 1,
+                  "toughness keeps armour working against big hits");
+        }
+
         section("scoreboard: objectives, scores, teams, tags and triggers");
         {
             Scoreboard board;
@@ -7982,9 +8018,9 @@ namespace
         check(reduce(10, 0) == 10, "no armour takes nothing off");
         check(reduce(10, 20) < reduce(10, 10), "a full suit beats half a one");
         check(reduce(10, 10) < 10, "and any armour beats none");
-        check(reduce(100, 20) == 20, "twenty points is eighty percent off");
+        check(reduce(10, 20) == 4 && reduce(100, 20) == 84, "twenty points take sixty percent off a ten and little off a hundred, as in 1.21.1");
         check(reduce(1, 20) == 1, "but the smallest blow still lands");
-        check(reduce(10, 40) == reduce(10, 20), "and points past twenty are wasted");
+        check(reduce(10, 40) == reduce(10, 30), "and points past thirty are wasted");
         check(reduce(0, 10) == 0, "nothing stays nothing");
 
         // The whole point of it: a player in diamond outlasts one in
