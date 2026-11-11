@@ -318,6 +318,7 @@ public:
     // Half size while young, which is also what shrinks its hitbox.
     // Shoved by something that is not a blow: a wind charge's burst.
     void shove(const glm::vec3& push) { m_velocity += push; m_onGround = false; }
+    void displace(const glm::vec3& by) { m_position += by; }
 
     // Stands where it is for this long, as a villager does while it is
     // being traded with.

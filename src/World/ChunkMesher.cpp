@@ -201,6 +201,17 @@ namespace
     // with the mesher's face order.
     int tileForFace(const BlockInfo& info, int faceIndex, BlockId id)
     {
+        if (isPiston(id))
+        {
+            static const int PISTON_DIR[6] = { 1, 3, 4, 5, 2, 0 };
+            const int f = pistonFacing(id);
+            const int dir = PISTON_DIR[faceIndex];
+            const int opposite = f < 4 ? (f + 2) % 4 : 9 - f;
+            if (dir == f) return isPistonBody(id) && pistonOut(id) ? Tiles::PistonArm : info.tileFront;
+            if (dir == opposite && isPistonBody(id)) return Tiles::PistonBack;
+            if (f < 4 && dir >= 4) return info.tileTop;
+            return info.tileSide;
+        }
         if (isDispenser(id) || isDropper(id) || isObserver(id))
         {
             static const int FACE_DIR[6] = { 1, 3, 4, 5, 2, 0 };

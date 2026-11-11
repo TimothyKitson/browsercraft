@@ -24,6 +24,7 @@
 #include "Entity/ExperienceOrbs.h"
 #include "Entity/Rain.h"
 #include "Game/Anvil.h"
+#include "Game/Piston.h"
 #include "Game/Raids.h"
 #include "Game/RecipeBook.h"
 #include "Game/Advancements.h"
@@ -585,7 +586,7 @@ private:
     bool hitArmorStand(float blockDistance);
     void breakArmorStand(size_t index, bool drop);
     void tickArmorStands(float deltaTime);
-    void pushArmorStands(const glm::ivec3& from, int facing, int length);
+    void pushArmorStands(const Piston::Moved& moved);
     std::vector<ArmorStands::Stand> standsHere(float reach) const;
     SignRenderer m_signRenderer;
     ArmourTextures m_armourTextures;

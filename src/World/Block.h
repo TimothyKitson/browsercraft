@@ -711,6 +711,7 @@ namespace Blocks
         HopperSideFirst, HopperSideLast = HopperSideFirst + 3,
         ThrowerTurnFirst, ThrowerTurnLast = ThrowerTurnFirst + 11,
         ObserverTurnFirst, ObserverTurnLast = ObserverTurnFirst + 11,
+        PistonVertFirst, PistonVertLast = PistonVertFirst + 11,
         ExtCount
     };
 }
@@ -1264,39 +1265,46 @@ inline bool isRail(BlockId id) { return blockInfo(id).render == RenderType::Rail
 
 // Pistons. Everything about one is read off its id: which way it
 // points, whether it is sticky, and whether its head is out.
+inline bool pistonVertical(BlockId id) { return id >= Blocks::PistonVertFirst && id <= Blocks::PistonVertLast; }
+
 inline bool isPistonBody(BlockId id)
 {
     return (id >= Blocks::PistonNorth && id <= Blocks::PistonOutWest) ||
-           (id >= Blocks::StickyPistonNorth && id <= Blocks::StickyPistonOutWest);
+           (id >= Blocks::StickyPistonNorth && id <= Blocks::StickyPistonOutWest) ||
+           (pistonVertical(id) && (id - Blocks::PistonVertFirst) % 6 < 4);
 }
 
 inline bool isPistonHead(BlockId id)
 {
     return (id >= Blocks::PistonHeadNorth && id <= Blocks::PistonHeadWest) ||
-           (id >= Blocks::StickyPistonHeadNorth && id <= Blocks::StickyPistonHeadWest);
+           (id >= Blocks::StickyPistonHeadNorth && id <= Blocks::StickyPistonHeadWest) ||
+           (pistonVertical(id) && (id - Blocks::PistonVertFirst) % 6 >= 4);
 }
 
 inline bool isPiston(BlockId id) { return isPistonBody(id) || isPistonHead(id); }
 
 inline bool pistonSticky(BlockId id)
 {
-    return id >= Blocks::StickyPistonNorth;
+    if (pistonVertical(id)) return id - Blocks::PistonVertFirst >= 6;
+    return id >= Blocks::StickyPistonNorth && id <= Blocks::StickyPistonHeadWest;
 }
 
 inline bool pistonOut(BlockId id)
 {
+    if (pistonVertical(id)) return (id - Blocks::PistonVertFirst) % 6 / 2 == 1;
     return (id >= Blocks::PistonOutNorth && id <= Blocks::PistonOutWest) ||
            (id >= Blocks::StickyPistonOutNorth && id <= Blocks::StickyPistonOutWest);
 }
 
 inline int pistonFacing(BlockId id)
 {
+    if (pistonVertical(id)) return 4 + ((id - Blocks::PistonVertFirst) & 1);
     return (id - Blocks::PistonNorth) & 3;
 }
 
-// The three parts of a piston, built back up from what it is.
 inline BlockId pistonBody(int facing, bool sticky, bool out)
 {
+    if (facing >= 4) return static_cast<BlockId>(Blocks::PistonVertFirst + (sticky ? 6 : 0) + (out ? 2 : 0) + (facing == 5 ? 1 : 0));
     const BlockId first = sticky ? (out ? Blocks::StickyPistonOutNorth
                                         : Blocks::StickyPistonNorth)
                                  : (out ? Blocks::PistonOutNorth : Blocks::PistonNorth);
@@ -1305,6 +1313,7 @@ inline BlockId pistonBody(int facing, bool sticky, bool out)
 
 inline BlockId pistonHead(int facing, bool sticky)
 {
+    if (facing >= 4) return static_cast<BlockId>(Blocks::PistonVertFirst + (sticky ? 6 : 0) + 4 + (facing == 5 ? 1 : 0));
     const BlockId first = sticky ? Blocks::StickyPistonHeadNorth : Blocks::PistonHeadNorth;
     return static_cast<BlockId>(first + (facing & 3));
 }

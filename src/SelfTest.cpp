@@ -10850,6 +10850,94 @@ namespace
                 check(blockInfo(head).tileFront >= 0, "the head has a face of its own");
             }
 
+        for (int facing = 4; facing < 6; ++facing)
+            for (bool sticky : { false, true })
+            {
+                const BlockId idle = pistonBody(facing, sticky, false);
+                const BlockId out = pistonBody(facing, sticky, true);
+                const BlockId head = pistonHead(facing, sticky);
+                check(isPistonBody(idle) && isPistonBody(out) && isPistonHead(head) && !isPistonHead(idle) && !isPistonBody(head),
+                      "an upright piston knows its parts");
+                check(pistonFacing(idle) == facing && pistonFacing(out) == facing && pistonFacing(head) == facing &&
+                          pistonSticky(idle) == sticky && pistonSticky(head) == sticky && pistonOut(out) && !pistonOut(idle),
+                      "and which way it points");
+                check(blockDrop(out) == static_cast<StackId>(sticky ? Blocks::StickyPistonNorth : Blocks::PistonNorth),
+                      "and breaks into the right piston");
+            }
+        check(!pistonSticky(Blocks::SlimeBlock) && !pistonSticky(Blocks::Stone), "only pistons are sticky pistons");
+
+        {
+            Bench bench;
+            bench.set(0, 0, 0, pistonBody(4, false, false));
+            bench.set(0, 1, 0, Blocks::Sand);
+            bench.set(0, 2, 0, Blocks::Cobblestone);
+            check(Piston::extend(bench, 0, 0, 0), "a piston facing up pushes");
+            check(bench.at(0, 1, 0) == pistonHead(4, false) && bench.at(0, 2, 0) == Blocks::Sand && bench.at(0, 3, 0) == Blocks::Cobblestone,
+                  "and lifts the column above it");
+            check(Piston::retract(bench, 0, 0, 0) && bench.at(0, 1, 0) == Blocks::Air && bench.at(0, 2, 0) == Blocks::Sand,
+                  "and leaves it up when it comes back");
+        }
+
+        {
+            Bench bench;
+            bench.set(0, 5, 0, pistonBody(5, true, false));
+            bench.set(0, 4, 0, Blocks::Stone);
+            check(Piston::extend(bench, 0, 5, 0) && bench.at(0, 3, 0) == Blocks::Stone, "a sticky piston facing down pushes down");
+            check(Piston::retract(bench, 0, 5, 0) && bench.at(0, 4, 0) == Blocks::Stone && bench.at(0, 3, 0) == Blocks::Air,
+                  "and pulls back up");
+        }
+
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::PistonEast);
+            bench.set(1, 0, 0, Blocks::SlimeBlock);
+            bench.set(1, 1, 0, Blocks::Stone);
+            bench.set(1, 0, 1, Blocks::Planks);
+            bench.set(1, -1, 0, Blocks::HoneyBlock);
+            Piston::Moved moved;
+            check(Piston::extend(bench, 0, 0, 0, &moved), "a piston pushes a slime block");
+            check(bench.at(2, 0, 0) == Blocks::SlimeBlock && bench.at(2, 1, 0) == Blocks::Stone && bench.at(2, 0, 1) == Blocks::Planks,
+                  "and everything stuck to the slime goes with it");
+            check(bench.at(1, -1, 0) == Blocks::HoneyBlock && bench.at(2, -1, 0) == Blocks::Air, "but honey does not stick to slime");
+            check(moved.cells.size() == 4 && moved.direction == glm::ivec3(1, 0, 0), "and the move is reported cell by cell");
+        }
+
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::StickyPistonEast);
+            bench.set(1, 0, 0, Blocks::HoneyBlock);
+            bench.set(1, 1, 0, Blocks::Cobblestone);
+            Piston::extend(bench, 0, 0, 0);
+            Piston::retract(bench, 0, 0, 0);
+            check(bench.at(1, 0, 0) == Blocks::HoneyBlock && bench.at(1, 1, 0) == Blocks::Cobblestone && bench.at(2, 1, 0) == Blocks::Air,
+                  "a sticky piston pulls a honey block back with what is on it");
+        }
+
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::PistonEast);
+            bench.set(1, 0, 0, Blocks::SlimeBlock);
+            bench.set(1, 1, 0, Blocks::Obsidian);
+            bench.set(2, 0, 0, Blocks::Obsidian);
+            check(!Piston::extend(bench, 0, 0, 0), "obsidian in front stops a slime push");
+            bench.set(2, 0, 0, Blocks::Air);
+            check(Piston::extend(bench, 0, 0, 0) && bench.at(1, 1, 0) == Blocks::Obsidian, "obsidian stuck on the side just stays");
+        }
+
+        {
+            Bench bench;
+            bench.set(0, 0, 0, Blocks::PistonEast);
+            bench.set(1, 0, 0, Blocks::Stone);
+            bench.set(2, 0, 0, Blocks::Torch);
+            Piston::Moved moved;
+            check(Piston::fragile(Blocks::Torch) && Piston::fragile(Blocks::Pumpkin) && !Piston::fragile(Blocks::Stone) && !Piston::fragile(Blocks::RailNorthSouth),
+                  "torches and pumpkins break, stone and rails do not");
+            check(Piston::extend(bench, 0, 0, 0, &moved) && bench.at(2, 0, 0) == Blocks::Stone, "a piston pushes stone over a torch");
+            check(moved.broken.size() == 1 && moved.broken[0].second == Blocks::Torch, "and the torch is broken off");
+            check(!Piston::movable(Blocks::Obsidian) && !Piston::movable(Blocks::EnchantingTable) && !Piston::movable(Blocks::Hopper),
+                  "obsidian, tables and hoppers do not move");
+        }
+
         // The crafter is a bench that answers to a pulse, so what it
         // makes is whatever the bench would make of the same grid.
         // Checked here rather than against a world: the block is a

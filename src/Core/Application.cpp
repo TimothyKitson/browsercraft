@@ -7743,6 +7743,7 @@ bool Application::frame()
                     m_world->setBlock(x, by, bz + 6, dropperFacingTo(f));
                     m_world->setBlock(x, by, bz + 8, observerFacingTo(f, false));
                     m_world->setBlock(x, by, bz + 10, observerFacingTo(f, true));
+                    m_world->setBlock(x, by, bz + 12, pistonBody(f, f % 2 == 1, false));
                 }
             }
 
@@ -9821,13 +9822,8 @@ void Application::updateMining(float deltaTime)
             // be one, so breaking either takes the other with it.
             if (isPiston(id))
             {
-                int dx = 0, dz = 0;
-                Piston::step(blockFacing(id), dx, dz);
-                const glm::ivec3 other = isPistonHead(id)
-                                             ? glm::ivec3(hit.block.x - dx, hit.block.y,
-                                                          hit.block.z - dz)
-                                             : glm::ivec3(hit.block.x + dx, hit.block.y,
-                                                          hit.block.z + dz);
+                const glm::ivec3 d = Piston::offset(pistonFacing(id));
+                const glm::ivec3 other = isPistonHead(id) ? hit.block - d : hit.block + d;
                 const BlockId paired = m_world->getBlock(other.x, other.y, other.z);
                 if (isPiston(paired))
                 {
@@ -13217,10 +13213,16 @@ void Application::settleRedstone(const glm::ivec3& at)
                 const bool powered = Redstone::poweredAt(cells, x, y, z);
                 if (powered == pistonOut(here)) continue;
 
-                const int length = powered ? Piston::lineLength(cells, x, y, z, pistonFacing(here)) : -1;
-                const bool shifted = powered ? Piston::extend(cells, x, y, z)
-                                             : Piston::retract(cells, x, y, z);
-                if (shifted && powered && length >= 0) pushArmorStands(glm::ivec3(x, y, z), pistonFacing(here), length + 1);
+                Piston::Moved shove;
+                const bool shifted = powered ? Piston::extend(cells, x, y, z, &shove)
+                                             : Piston::retract(cells, x, y, z, &shove);
+                if (shifted)
+                {
+                    for (const auto& gone : shove.broken)
+                        if (gone.second != Blocks::Air && m_rules.on(GameRules::Rule::DoTileDrops))
+                            m_drops.spawnFromBrokenBlock(gone.first, blockDrop(gone.second));
+                    pushArmorStands(shove);
+                }
                 moved = moved || shifted;
             }
 
@@ -14828,23 +14830,41 @@ void Application::tickArmorStands(float deltaTime)
     }
 }
 
-void Application::pushArmorStands(const glm::ivec3& from, int facing, int length)
+void Application::pushArmorStands(const Piston::Moved& moved)
 {
-    int dx = 0, dz = 0;
-    Piston::step(facing, dx, dz);
+    if (moved.cells.empty()) return;
+    const glm::vec3 d(moved.direction);
+    auto inside = [&](const glm::vec3& low, const glm::vec3& high) {
+        for (const glm::ivec3& c : moved.cells)
+        {
+            const glm::vec3 a(c);
+            const glm::vec3 b = a + glm::vec3(1.0f);
+            if (low.x < b.x && high.x > a.x && low.y < b.y + (d.y > 0.0f ? 0.01f : 0.0f) && high.y > a.y && low.z < b.z && high.z > a.z) return true;
+        }
+        return false;
+    };
+
     for (ArmorStandStore::Entry& entry : m_stands.all())
     {
         if (entry.dimension != m_stands.dimension()) continue;
         ArmorStands::Stand& stand = entry.stand;
-        const glm::ivec3 cell(static_cast<int>(std::floor(stand.feet.x)), static_cast<int>(std::floor(stand.feet.y + 0.01f)),
-                              static_cast<int>(std::floor(stand.feet.z)));
-        if (cell.y != from.y && cell.y != from.y - 1) continue;
-        for (int i = 1; i <= length; ++i)
-            if (cell.x == from.x + dx * i && cell.z == from.z + dz * i)
-            {
-                stand.feet += glm::vec3(static_cast<float>(dx), 0.0f, static_cast<float>(dz));
-                break;
-            }
+        if (inside(stand.feet - glm::vec3(0.25f, 0.0f, 0.25f), stand.feet + glm::vec3(0.25f, 1.975f, 0.25f))) stand.feet += d;
+    }
+
+    const float half = Player::WIDTH * 0.5f;
+    if (inside(m_player.position - glm::vec3(half, 0.0f, half), m_player.position + glm::vec3(half, m_player.height(), half)))
+    {
+        m_player.position += d;
+        if (d.y > 0.0f) m_player.velocity.y = std::max(m_player.velocity.y, 0.0f);
+        for (const glm::ivec3& c : moved.cells)
+            if (m_world->getBlock(c.x, c.y, c.z) == Blocks::SlimeBlock && d.y > 0.0f) { m_player.velocity.y = std::max(m_player.velocity.y, 9.0f); break; }
+    }
+
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive()) continue;
+        const glm::vec3 p = mob.position();
+        if (inside(p - glm::vec3(0.3f, 0.0f, 0.3f), p + glm::vec3(0.3f, 0.9f, 0.3f))) mob.displace(d);
     }
 }
 
@@ -18723,9 +18743,11 @@ void Application::handlePlacement()
     if (isPistonBody(placing))
     {
         const glm::vec3 look = m_camera.front;
-        const int facing = (std::fabs(look.x) > std::fabs(look.z))
-                               ? (look.x > 0.0f ? 1 : 3)
-                               : (look.z > 0.0f ? 2 : 0);
+        int facing = (std::fabs(look.x) > std::fabs(look.z))
+                         ? (look.x > 0.0f ? 1 : 3)
+                         : (look.z > 0.0f ? 2 : 0);
+        if (look.y < -0.7f) facing = 5;
+        else if (look.y > 0.7f) facing = 4;
         placing = pistonBody(facing, pistonSticky(placing), false);
     }
 

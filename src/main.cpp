@@ -870,6 +870,8 @@ namespace
             // The one block in the game a mob makes rather than the
             // world or the bench.
             else if (isFroglight(id))             why = "left by a frog that ate a magma cube";
+            else if (isPistonBody(id) && !pistonOut(id) && pistonFacing(id) >= 4)
+                                                  why = "a piston placed pointing up or down";
             else if (isPiston(id) || isPistonHead(id))
                                                   why = "a piston mid-stroke";
             else if (id == Blocks::FurnaceLit)    why = "a furnace that is burning";
