@@ -598,6 +598,34 @@ void EntityManager::tickHelpers(float deltaTime, const World& world, const glm::
 {
     for (auto& entry : m_castTimers) entry.second -= deltaTime;
     const size_t count = m_mobs.size();
+    {
+        std::vector<size_t> led;
+        std::vector<bool> taken(count, false);
+        for (size_t i = 0; i < count; ++i)
+            if (m_mobs[i].alive() && m_mobs[i].leashed() && (m_mobs[i].typeId() == MobId::Llama || m_mobs[i].typeId() == MobId::TraderLlama))
+                led.push_back(i);
+        for (size_t head : led)
+        {
+            taken[head] = true;
+            size_t front = head;
+            for (int link = 0; link < 9; ++link)
+            {
+                size_t next = count;
+                float best = 8.0f;
+                for (size_t j = 0; j < count; ++j)
+                {
+                    if (taken[j] || !m_mobs[j].alive() || m_mobs[j].leashed() || m_mobs[j].baby()) continue;
+                    if (m_mobs[j].typeId() != MobId::Llama && m_mobs[j].typeId() != MobId::TraderLlama) continue;
+                    const float apart = glm::length(m_mobs[j].position() - m_mobs[front].position());
+                    if (apart < best) { best = apart; next = j; }
+                }
+                if (next >= count) break;
+                taken[next] = true;
+                if (best > 2.2f) m_mobs[next].huntTowards(m_mobs[front].position());
+                front = next;
+            }
+        }
+    }
     for (size_t i = 0; i < count; ++i)
     {
         Mob& mob = m_mobs[i];
@@ -629,6 +657,12 @@ void EntityManager::tickHelpers(float deltaTime, const World& world, const glm::
             shot.damage = m_mobs[quarry].typeId() == MobId::Blaze ? 3 : 0;
             shot.kind = Arrows::Kind::Snowball;
             mob.shotQueue().push_back(shot);
+        }
+        else if (kind == MobId::WanderingTrader)
+        {
+            if (wait > 0.0f) continue;
+            wait = 5.0f;
+            if (m_daylight < 0.3f) mob.giveEffect(Effects::Kind::Invisibility, 0, 12.0f);
         }
         else if (kind == MobId::Witch)
         {
@@ -706,6 +740,7 @@ bool EntityManager::spawnPatrol(const World& world, const glm::vec3& playerPosit
 void EntityManager::update(float deltaTime, const World& world,
                            const glm::vec3& playerPosition, float daylight)
 {
+    m_daylight = daylight;
     const glm::vec3 target = m_playerHidden ? playerPosition + glm::vec3(0.0f, 100000.0f, 0.0f) : playerPosition;
     for (Mob& mob : m_mobs)
     {

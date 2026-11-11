@@ -7782,6 +7782,10 @@ bool Application::frame()
                 if (m_entities.spawnAt(MobId::Minecart, glm::vec3(bx + 1.5f, by + Mob::RAIL_LIFT, bz + 10.5f), *m_world))
                     m_entities.mobs().back().setVariant(6);
                 m_entities.spawnAt(MobId::SnowGolem, glm::vec3(bx + 6.5f, static_cast<float>(by), bz + 4.5f), *m_world);
+                if (m_entities.spawnAt(MobId::Donkey, glm::vec3(bx - 1.5f, static_cast<float>(by), bz + 3.5f), *m_world))
+                    m_entities.mobs().back().setGear(Mob::Chest, static_cast<uint16_t>(Blocks::Chest), true);
+                if (m_entities.spawnAt(MobId::Llama, glm::vec3(bx + 1.5f, static_cast<float>(by), bz + 3.5f), *m_world))
+                    m_entities.mobs().back().setGear(Mob::Chest, static_cast<uint16_t>(Blocks::Chest), true);
             }
 
             if (m_startupScreen == "turned")
@@ -17790,6 +17794,30 @@ void Application::handlePlacement()
                 }
             }
 
+    if (Mob* packer = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
+    {
+        const MobId k = packer->typeId();
+        const bool beast = k == MobId::Donkey || k == MobId::Mule || k == MobId::Llama || k == MobId::TraderLlama;
+        if (beast && packer->alive() && !packer->baby())
+        {
+            const bool packed = packer->gear(Mob::Chest) == static_cast<uint16_t>(Blocks::Chest);
+            if (!packed && stack.id == static_cast<StackId>(Blocks::Chest) && packer->tamed())
+            {
+                packer->setGear(Mob::Chest, static_cast<uint16_t>(Blocks::Chest), true);
+                if (!m_player.creative() && --stack.count <= 0) stack.clear();
+                m_audio.play(Sound::DigWood, 0.7f, 1.0f);
+                return;
+            }
+            if (packed && m_player.sneaking)
+            {
+                m_inventory.setCraftSize(2);
+                openVehicleChest(*packer);
+                m_chestVehicleName = packer->type().name;
+                return;
+            }
+        }
+    }
+
     if (stack.id == Items::Saddle)
         if (Mob* target = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
             if (target->alive() && target->type().saddleRide && !target->baby() && !target->saddled())
@@ -23157,7 +23185,14 @@ void Application::saveMobs()
                  << (mob.tamed() ? 1 : 0) << ' ' << (mob.sitting() ? 1 : 0) << ' ' << (mob.saddled() ? 1 : 0) << ' '
                  << mob.horseArmour() << ' ' << (mob.charged() ? 1 : 0) << ' ' << (name.empty() ? "-" : name);
             for (int slot = 0; slot < Mob::GearSlots; ++slot) mobs << ' ' << mob.gear(slot) << ' ' << (mob.gearSure(slot) ? 1 : 0);
-            mobs << ' ' << (mob.canPickUp() ? 1 : 0) << '\n';
+            mobs << ' ' << (mob.canPickUp() ? 1 : 0);
+            const auto packed = m_vehicleChests.find(mob.serial());
+            if (packed != m_vehicleChests.end())
+            {
+                mobs << " C";
+                for (const ItemStack& one : packed->second) mobs << ' ' << one.id << ' ' << one.count << ' ' << one.damage << ' ' << one.enchantments;
+            }
+            mobs << '\n';
             ++written;
         }
     if (mobs)
@@ -23214,6 +23249,22 @@ void Application::placePendingMobs()
             mob.setGear(slot, static_cast<uint16_t>(wornId), sure != 0);
         int picks = 0;
         if (in >> picks) mob.setCanPickUp(picks != 0);
+        std::string marker;
+        if (in >> marker && marker == "C")
+        {
+            Chests::Contents inside{};
+            for (ItemStack& one : inside)
+            {
+                long long id = 0, count = 0, damage = 0;
+                unsigned long long enchants = 0;
+                if (!(in >> id >> count >> damage >> enchants)) break;
+                one.id = static_cast<StackId>(id);
+                one.count = static_cast<int>(count);
+                one.damage = static_cast<int>(damage);
+                one.enchantments = static_cast<decltype(one.enchantments)>(enchants);
+            }
+            m_vehicleChests[mob.serial()] = inside;
+        }
     }
 }
 
@@ -24085,6 +24136,22 @@ void Application::pinFramedItems()
         }
     }
     if (!m_world) return;
+    for (const Mob& beast : m_entities.mobs())
+    {
+        if (!beast.alive() || beast.gear(Mob::Chest) != static_cast<uint16_t>(Blocks::Chest)) continue;
+        if (glm::length(beast.position() - m_camera.position) > 32.0f) continue;
+        const float turn = glm::radians(beast.yaw());
+        const glm::vec3 side(-std::sin(turn), 0.0f, std::cos(turn));
+        for (const float flank : { -1.0f, 1.0f })
+        {
+            DroppedItems::Cargo pack;
+            pack.block = Blocks::Chest;
+            pack.centre = beast.position() + side * (flank * beast.width() * 0.55f) + glm::vec3(0.0f, beast.height() * 0.55f, 0.0f);
+            pack.yaw = glm::radians(-beast.yaw());
+            pack.size = 0.35f;
+            m_drops.carry(pack);
+        }
+    }
     for (const Mob& cart : m_entities.mobs())
     {
         if (cart.typeId() != MobId::Minecart || cart.variant() <= 0 || cart.variant() > 6) continue;

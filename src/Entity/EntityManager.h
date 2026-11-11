@@ -216,6 +216,7 @@ private:
     bool m_traders = true;
     float random01();
     float m_golemTimer = 5.0f;
+    float m_daylight = 1.0f;
     std::vector<glm::vec3> m_snowTrail;
     std::unordered_map<uint32_t, float> m_castTimers;
     void tickHelpers(float deltaTime, const World& world, const glm::vec3& playerPosition);
