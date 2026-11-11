@@ -1695,8 +1695,8 @@ void Application::renderContainerScreen(float w, float h)
             const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
             const bool chosen = m_tradeSelected >= 0 && m_tradeSelected < static_cast<int>(deals.size());
 
-            const std::string header = std::string(Trading::name(m_tradeWith)) + " - " +
-                                       Trading::rankName(rank);
+            const std::string header = m_tradeWandering ? std::string("Wandering Trader")
+                                                        : std::string(Trading::name(m_tradeWith)) + " - " + Trading::rankName(rank);
             m_ui.text(header, panelX + 49.0f + 138.0f - std::floor(UIRenderer::textWidth(header, 1.0f) * 0.5f),
                       panelY + 6.0f, 1.0f, GUI_TEXT);
             const std::string tradesLabel = "Trades";
@@ -1847,8 +1847,8 @@ void Application::renderContainerScreen(float w, float h)
                 }
             };
 
-            const std::string header = std::string(Trading::rankName(rank)) + " " +
-                                       Trading::name(m_tradeWith);
+            const std::string header = m_tradeWandering ? std::string("Wandering Trader")
+                                                        : std::string(Trading::rankName(rank)) + " " + Trading::name(m_tradeWith);
             m_ui.text(header, panelX + PANEL_W * 0.5f - UIRenderer::textWidth(header, 1.0f) * 0.5f,
                       panelY + 6.0f, 1.0f, GUI_TEXT);
 

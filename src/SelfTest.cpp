@@ -13706,6 +13706,14 @@ namespace
         check(maxStackOf(Blocks::ShulkerBox) == 1 && maxStackOf(static_cast<StackId>(Blocks::ShulkerBoxFirst + 3)) == 1 && maxStackOf(Blocks::Bed) == 1,
               "shulker boxes and beds stack to one, as in 1.21.1");
 
+        {
+            const std::vector<Trading::Deal> stock = Trading::wandererDeals(12345u);
+            bool emeralds = true;
+            for (const Trading::Deal& deal : stock) emeralds = emeralds && deal.offer.want == Items::Emerald && deal.offer.valid();
+            check(stock.size() == 6 && emeralds && Trading::wandererDeals(12345u)[0].offer.give == stock[0].offer.give,
+                  "a wandering trader sells five common things and one rare one for emeralds, the same five for the same trader");
+        }
+
         section("campfires");
         check(isAnyCampfire(Blocks::CampfireUnlit) && !isCampfire(Blocks::CampfireUnlit) && lightEmission(Blocks::CampfireUnlit) == 0 &&
               lightEmission(Blocks::Campfire) == 15 && isSoulCampfire(Blocks::SoulCampfireUnlit),

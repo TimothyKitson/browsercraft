@@ -12212,7 +12212,7 @@ int Application::villagersNear(const glm::vec3& at, float radius) const
 
 std::vector<Trading::Deal> Application::tradeDeals() const
 {
-    std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith);
+    std::vector<Trading::Deal> deals = m_tradeWandering ? Trading::wandererDeals(m_tradeSeed) : Trading::dealsFor(m_tradeWith);
     if (m_player.effects.has(Effects::Kind::HeroOfTheVillage))
     {
         const int level = m_player.effects.amplifier(Effects::Kind::HeroOfTheVillage);
@@ -15805,8 +15805,16 @@ void Application::handlePlacement()
         if (const Mob* villager = m_entities.pick(m_camera.position, m_camera.front,
                                                   REACH_DISTANCE))
         {
+            if (villager->typeId() == MobId::WanderingTrader && villager->alive())
+            {
+                m_tradeWandering = true;
+                openTrading(*villager);
+                m_audio.play(Sound::MobTraderSay, 0.6f);
+                return;
+            }
             if (villager->typeId() == MobId::Villager && villager->alive())
             {
+                m_tradeWandering = false;
                 const Trading::Profession job = villager->professionSlot() >= 0
                     ? static_cast<Trading::Profession>(villager->professionSlot())
                     : Trading::professionFor(villager->birthSeed());

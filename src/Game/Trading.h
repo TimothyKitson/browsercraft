@@ -87,6 +87,7 @@ namespace Trading
     };
 
     std::vector<Deal> dealsFor(Profession trade);
+    std::vector<Deal> wandererDeals(uint32_t seed);
 
     // How long a villager takes to restock everything it has sold out
     // of, in seconds of play.

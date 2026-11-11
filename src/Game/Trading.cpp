@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "Trading.h"
 #include "Maps.h"
 #include "World/Block.h"
@@ -123,6 +124,40 @@ namespace Trading
         {
             return Enchanting::withLevel(0u, kind, level);
         }
+    }
+
+    std::vector<Deal> wandererDeals(uint32_t seed)
+    {
+        const std::vector<Deal> common = {
+            sell(1, Blocks::OakSapling, 1, 0, 8), sell(1, Blocks::SpruceSapling, 1, 0, 8), sell(1, Blocks::BirchSapling, 1, 0, 8),
+            sell(1, Blocks::JungleSapling, 1, 0, 8), sell(1, Blocks::AcaciaSapling, 1, 0, 8), sell(1, Blocks::DarkOakSapling, 1, 0, 8),
+            sell(1, Blocks::CherrySapling, 1, 0, 8), sell(1, Blocks::Fern, 1, 0, 12), sell(1, Blocks::SugarCane, 1, 0, 8),
+            sell(1, Blocks::Pumpkin, 1, 0, 4), sell(1, Blocks::Cactus, 3, 0, 8), sell(1, Blocks::Vine, 1, 0, 12),
+            sell(1, Blocks::BrownMushroom, 1, 0, 12), sell(1, Blocks::RedMushroom, 1, 0, 12), sell(1, Blocks::LilyPad, 2, 0, 5),
+            sell(1, Blocks::Seagrass, 1, 0, 12), sell(2, Blocks::SeaPickle, 1, 0, 5), sell(4, Items::Slimeball, 1, 0, 5),
+            sell(2, Blocks::Glowstone, 1, 0, 5), sell(4, Items::NautilusShell, 1, 0, 5), sell(1, Blocks::Bamboo, 1, 0, 8),
+            sell(1, Blocks::Moss, 2, 0, 5), sell(1, Blocks::RootedDirt, 2, 0, 5), sell(1, Blocks::RedSand, 4, 0, 6),
+            sell(1, Items::DyeWhite, 3, 0, 12), sell(1, Items::DyeBlack, 3, 0, 12),
+        };
+        const std::vector<Deal> rare = {
+            sell(5, Items::PufferfishBucket, 1, 0, 4), sell(5, Items::TropicalFishBucket, 1, 0, 4),
+            sell(3, Blocks::Podzol, 3, 0, 6), sell(6, Blocks::BlueIce, 1, 0, 6), sell(5, Blocks::Melon, 1, 0, 4),
+        };
+        std::vector<Deal> out;
+        uint32_t roll = seed * 2654435761u + 0x9E37u;
+        std::vector<int> picked;
+        while (out.size() < 5)
+        {
+            roll = roll * 1664525u + 1013904223u;
+            const int k = static_cast<int>((roll >> 8) % common.size());
+            if (std::find(picked.begin(), picked.end(), k) != picked.end()) continue;
+            picked.push_back(k);
+            out.push_back(common[static_cast<size_t>(k)]);
+        }
+        roll = roll * 1664525u + 1013904223u;
+        out.push_back(rare[(roll >> 8) % rare.size()]);
+        for (Deal& deal : out) { deal.villagerXp = 0; deal.playerXp = 1; }
+        return out;
     }
 
     std::vector<Deal> dealsFor(Profession trade)

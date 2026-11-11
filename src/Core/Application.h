@@ -690,6 +690,7 @@ private:
     int m_tradeScroll = 0;
     float m_traderSyncTimer = 0.0f;
     TraderRecord& openTrader();
+    bool m_tradeWandering = false;
     void selectTrade(int deal);
     void refreshTradeResult();
     void takeTradeResult(bool all);

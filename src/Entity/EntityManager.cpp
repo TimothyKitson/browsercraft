@@ -590,6 +590,8 @@ void EntityManager::update(float deltaTime, const World& world,
             m_grownTadpoles.push_back(mob.position());
             mob.vanish();
         }
+        if (mob.typeId() == MobId::WanderingTrader && mob.alive() && mob.age() > 2400.0f && mob.customName().empty() && !mob.leashed())
+            mob.vanish();
         if (mob.typeId() == MobId::Hoglin && mob.alive())
         {
             mob.addZombifyTime(m_dimension == Dimension::Nether ? -1.0f : deltaTime);
