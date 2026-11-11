@@ -3239,7 +3239,7 @@ bool Application::frame()
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
             m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
-            m_startupScreen == "boat" || m_startupScreen == "rails" ||
+            m_startupScreen == "boat" || m_startupScreen == "rails" || m_startupScreen == "railhill" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" || m_startupScreen == "zoo" || m_startupScreen == "llamas" ||
             m_startupScreen == "shulker" ||
@@ -3290,6 +3290,7 @@ bool Application::frame()
                                   m_startupScreen != "faces" &&
                                   m_startupScreen != "backs" &&
                                   m_startupScreen != "throwers" &&
+                                  m_startupScreen != "railhill" &&
                                   m_startupScreen != "flow" &&
                                   m_startupScreen != "buds" &&
                                   m_startupScreen != "beam" &&
@@ -5817,6 +5818,37 @@ bool Application::frame()
                 m_world->setBlock(px + 15, py, pz - 5, Blocks::Bookshelf);
                 m_world->setBlock(px + 15, py, pz,     Blocks::DiamondOre);
                 m_world->setBlock(px + 15, py, pz + 5, Blocks::EndPortalFrame);
+            }
+
+            if (m_startupScreen == "railhill")
+            {
+                m_camera.setOrientation(0.0f, -16.0f);
+                m_showDebug = false;
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+                for (int ax = -2; ax <= 14; ++ax)
+                    for (int az = -2; az <= 12; ++az)
+                    {
+                        for (int ay = 0; ay <= 8; ++ay) m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Grass);
+                    }
+                std::vector<glm::ivec3> laid;
+                for (int lane = 0; lane < 3; ++lane)
+                {
+                    const int z = pz - 2 + lane * 2;
+                    for (int i = 0; i < 9; ++i)
+                    {
+                        const int x = px + 3 + i;
+                        const int top = std::min(i, 4) - std::max(0, i - 6);
+                        for (int y = py; y < py + top; ++y) m_world->setBlock(x, y, z, Blocks::Cobblestone);
+                        const BlockId rail = lane == 0 ? Blocks::RailNorthSouth : specialRailOf(lane == 1 ? 1 : 3, false, lane == 1);
+                        m_world->setBlock(x, py + top, z, rail);
+                        laid.emplace_back(x, py + top, z);
+                    }
+                }
+                for (const glm::ivec3& cell : laid) reshapeRailsAround(cell);
+                m_entities.spawnAt(MobId::Minecart, glm::vec3(px + 5.5f, py + 2.5f + Mob::RAIL_LIFT, pz - 1.5f), *m_world);
             }
 
             if (m_startupScreen == "rails")
@@ -13493,7 +13525,7 @@ void Application::tickWiring(float deltaTime)
         if (specialRailFamily(rail) == 2)
         {
             const bool fresh = !specialRailPowered(rail);
-            setBlockFor(cell, specialRailOf(2, specialRailEastWest(rail), true), specialRailOf(2, specialRailEastWest(rail), false), 0.5f);
+            setBlockFor(cell, specialRailWithPower(rail, true), specialRailWithPower(rail, false), 0.5f);
             if (fresh) settleRedstone(cell);
         }
         if (specialRailFamily(rail) == 3 && specialRailPowered(rail) && riddenMob() == &mob) dismount();
@@ -13534,36 +13566,55 @@ void Application::tickWiring(float deltaTime)
 
 void Application::reshapeRailsAround(const glm::ivec3& at)
 {
-    const glm::ivec3 around[5] = {
-        at,
-        { at.x, at.y, at.z - 1 },
-        { at.x + 1, at.y, at.z },
-        { at.x, at.y, at.z + 1 },
-        { at.x - 1, at.y, at.z },
-    };
+    static const glm::ivec3 SIDE[4] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
+    std::vector<glm::ivec3> around;
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+        around.push_back(at + glm::ivec3(0, dy, 0));
+        for (const glm::ivec3& side : SIDE) around.push_back(at + side + glm::ivec3(0, dy, 0));
+    }
+
+    auto railAt = [&](const glm::ivec3& c) { return isRail(m_world->getBlock(c.x, c.y, c.z)); };
 
     for (const glm::ivec3& cell : around)
     {
         const BlockId here = m_world->getBlock(cell.x, cell.y, cell.z);
         if (!isRail(here)) continue;
-        if (isSpecialRail(here))
+
+        bool link[4] = { false, false, false, false };
+        bool rises[4] = { false, false, false, false };
+        for (int d = 0; d < 4; ++d)
         {
-            const bool ns = isRail(m_world->getBlock(cell.x, cell.y, cell.z - 1)) || isRail(m_world->getBlock(cell.x, cell.y, cell.z + 1));
-            const bool ew = isRail(m_world->getBlock(cell.x + 1, cell.y, cell.z)) || isRail(m_world->getBlock(cell.x - 1, cell.y, cell.z));
-            const BlockId shaped = specialRailOf(specialRailFamily(here), ew && !ns, specialRailPowered(here));
-            if (shaped != here)
-            {
-                m_world->setBlock(cell.x, cell.y, cell.z, shaped);
-                m_net.onLocalBlockChange(cell.x, cell.y, cell.z, shaped);
-            }
-            continue;
+            const glm::ivec3 next = cell + SIDE[d];
+            rises[d] = railAt(next + glm::ivec3(0, 1, 0)) && !isSolid(m_world->getBlock(cell.x, cell.y + 1, cell.z));
+            link[d] = railAt(next) || rises[d] || railAt(next - glm::ivec3(0, 1, 0));
         }
 
-        const BlockId want = railShapeFor(
-            isRail(m_world->getBlock(cell.x, cell.y, cell.z - 1)),
-            isRail(m_world->getBlock(cell.x + 1, cell.y, cell.z)),
-            isRail(m_world->getBlock(cell.x, cell.y, cell.z + 1)),
-            isRail(m_world->getBlock(cell.x - 1, cell.y, cell.z)));
+        BlockId want = here;
+        const int family = specialRailFamily(here);
+        if (family != 0)
+        {
+            const bool ns = link[0] || link[2];
+            const bool ew = link[1] || link[3];
+            const bool eastWest = ew && !ns;
+            int high = -1;
+            for (int d = eastWest ? 1 : 0; d < 4; d += 2)
+                if (rises[d]) high = d;
+            want = high >= 0 ? railSlopeOf(family, high, specialRailPowered(here)) : specialRailOf(family, eastWest, specialRailPowered(here));
+        }
+        else
+        {
+            want = railShapeFor(link[0], link[1], link[2], link[3]);
+            const bool straightNS = want == Blocks::RailNorthSouth;
+            const bool straightEW = want == Blocks::RailEastWest;
+            if (straightNS || straightEW)
+            {
+                int high = -1;
+                for (int d = straightEW ? 1 : 0; d < 4; d += 2)
+                    if (rises[d]) high = d;
+                if (high >= 0) want = railSlopeOf(0, high, false);
+            }
+        }
 
         if (want == here) continue;
 

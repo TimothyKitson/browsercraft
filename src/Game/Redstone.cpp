@@ -62,7 +62,7 @@ namespace Redstone
         if (id == Blocks::NoteBlock) return Blocks::NoteBlockLit;
         if (isObserver(id) && !observerLit(id)) return id == Blocks::Observer ? Blocks::ObserverLit : observerFacingTo(sixFacing(id), true);
         if (specialRailFamily(id) == 1 || specialRailFamily(id) == 3)
-            return specialRailOf(specialRailFamily(id), specialRailEastWest(id), true);
+            return specialRailWithPower(id, true);
         if (isDoor(id) && !doorIsOpen(id))
             return doorPart(doorBase(id), blockFacing(id), doorIsTop(id), true);
         if (isTrapdoor(id) && !trapdoorIsOpen(id))
@@ -78,7 +78,7 @@ namespace Redstone
         if (id == Blocks::RedstoneDustLit) return Blocks::RedstoneDust;
         if (id == Blocks::RedstoneLampLit) return Blocks::RedstoneLamp;
         if (specialRailFamily(id) == 1 || specialRailFamily(id) == 3)
-            return specialRailOf(specialRailFamily(id), specialRailEastWest(id), false);
+            return specialRailWithPower(id, false);
         if (isDoor(id) && doorIsOpen(id))
             return doorPart(doorBase(id), blockFacing(id), doorIsTop(id), false);
         if (isTrapdoor(id) && trapdoorIsOpen(id))

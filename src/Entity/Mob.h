@@ -409,6 +409,7 @@ public:
     // a cart's wheels sit. The mesher draws the panel at the same
     // height, so the two agree by sharing the number.
     static constexpr float RAIL_LIFT = 0.0625f;
+    static constexpr float RAIL_SLOPE = 4.0f;
 
     // Where the track puts a cart and which way it sends it. The cart
     // leaves by whichever of the rail's two ends it is already pointed

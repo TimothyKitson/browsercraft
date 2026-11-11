@@ -618,6 +618,7 @@ StackId blockDrop(BlockId id)
     if (isTripwireHook(id)) return Items::TripwireHook;
     if (isTripwire(id)) return Items::StringItem;
     if (isSpecialRail(id)) return specialRailOf(specialRailFamily(id), false, false);
+    if (isRail(id)) return Blocks::RailNorthSouth;
     if (isIronDoor(id)) return Blocks::IronDoorFirst;
     if (isIronTrapdoor(id)) return Blocks::IronTrapdoorFirst;
     if (isChain(id)) return Blocks::ChainFirst;

@@ -243,6 +243,14 @@ bool Mob::railGuide(BlockId rail, const glm::ivec3& cell, const glm::vec3& posit
     if (std::fabs(along.x) > 0.5f) snapped.z = static_cast<float>(cell.z) + 0.5f;
     else                           snapped.x = static_cast<float>(cell.x) + 0.5f;
     snapped.y = static_cast<float>(cell.y) + RAIL_LIFT;
+    const int high = railSlopeDir(rail);
+    if (high >= 0)
+    {
+        const float fx = std::clamp(snapped.x - static_cast<float>(cell.x), 0.0f, 1.0f);
+        const float fz = std::clamp(snapped.z - static_cast<float>(cell.z), 0.0f, 1.0f);
+        const float rise = high == 0 ? 1.0f - fz : high == 1 ? fx : high == 2 ? fz : 1.0f - fx;
+        snapped.y += rise;
+    }
 
     return true;
 }
@@ -870,6 +878,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     // On rails the track does the steering: the rider only chooses
     // whether the cart rolls, never where it goes.
     bool onRail = false;
+    bool railSloped = false;
     if (t.ridesRails)
     {
         const int cx = static_cast<int>(std::floor(m_position.x));
@@ -903,6 +912,23 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             {
                 if (specialRailPowered(rail)) m_railSpeed = std::min(currentSpeed() * 1.6f, m_railSpeed + 9.0f * deltaTime);
                 else m_railSpeed = std::max(0.0f, m_railSpeed - 12.0f * deltaTime);
+            }
+            const int high = railSlopeDir(rail);
+            railSloped = high >= 0;
+            if (high >= 0)
+            {
+                m_onGround = true;
+                const bool uphill = std::fabs(PlayerAnimation::wrapDegrees(exitYaw - railYaw(high))) < 45.0f;
+                if (uphill)
+                {
+                    m_railSpeed -= RAIL_SLOPE * deltaTime;
+                    if (m_railSpeed <= 0.0f)
+                    {
+                        m_yaw = m_goalYaw = railYaw((high + 2) & 3);
+                        m_railSpeed = 0.2f;
+                    }
+                }
+                else m_railSpeed = std::min(8.0f, m_railSpeed + RAIL_SLOPE * deltaTime);
             }
             m_moving = m_railSpeed > 0.01f;
         }
@@ -979,9 +1005,36 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     m_onGround = false;
 
     const glm::vec3 before = m_position;
-    moveAxis(world, m_velocity.x * deltaTime, 0);
-    moveAxis(world, m_velocity.y * deltaTime, 1);
-    moveAxis(world, m_velocity.z * deltaTime, 2);
+    if (onRail)
+    {
+        const glm::vec3 flat(m_velocity.x, 0.0f, m_velocity.z);
+        const float speed = glm::length(flat);
+        if (speed > 0.0001f)
+        {
+            const glm::vec3 next = m_position + flat * deltaTime;
+            const glm::vec3 lead = railSloped ? next : next + flat / speed * (width() * 0.5f);
+            const BlockId into = world.getBlock(static_cast<int>(std::floor(lead.x)), static_cast<int>(std::floor(next.y + 0.3f)),
+                                                static_cast<int>(std::floor(lead.z)));
+            if (isSolid(into))
+            {
+                m_velocity.x = 0.0f;
+                m_velocity.z = 0.0f;
+                m_railSpeed = 0.0f;
+            }
+            else
+            {
+                m_position.x = next.x;
+                m_position.z = next.z;
+            }
+        }
+        moveAxis(world, m_velocity.y * deltaTime, 1);
+    }
+    else
+    {
+        moveAxis(world, m_velocity.x * deltaTime, 0);
+        moveAxis(world, m_velocity.y * deltaTime, 1);
+        moveAxis(world, m_velocity.z * deltaTime, 2);
+    }
 
     // Neither water nor a rail is a floor, so moveAxis never reports
     // standing on either. Something riding on one is as settled as it

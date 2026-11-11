@@ -1738,12 +1738,19 @@ namespace
         const float y0 = static_cast<float>(y) + LIFT;
         const float z0 = static_cast<float>(lz);
 
-        const glm::vec3 corner[4] = {
+        glm::vec3 corner[4] = {
             { x0,        y0, z0        },
             { x0 + 1.0f, y0, z0        },
             { x0 + 1.0f, y0, z0 + 1.0f },
             { x0,        y0, z0 + 1.0f },
         };
+        static const int RAISED[4][2] = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 } };
+        const int high = railSlopeDir(id);
+        if (high >= 0)
+        {
+            corner[RAISED[high][0]].y += 1.0f;
+            corner[RAISED[high][1]].y += 1.0f;
+        }
 
         // The tile is painted running north to south, and the corner
         // one bent from its north edge round to its east. Every other
@@ -1755,7 +1762,10 @@ namespace
             case Blocks::RailSouthEast: turn = 1; break;
             case Blocks::RailSouthWest: turn = 2; break;
             case Blocks::RailNorthWest: turn = 3; break;
-            default: if (isSpecialRail(id) && specialRailEastWest(id)) turn = 1; break;
+            default:
+                if (isRailSlope(id)) turn = (railSlopeDir(id) & 1) ? 1 : 0;
+                else if (isSpecialRail(id) && specialRailEastWest(id)) turn = 1;
+                break;
         }
 
         const float u[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };

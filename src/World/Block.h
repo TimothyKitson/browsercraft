@@ -712,6 +712,7 @@ namespace Blocks
         ThrowerTurnFirst, ThrowerTurnLast = ThrowerTurnFirst + 11,
         ObserverTurnFirst, ObserverTurnLast = ObserverTurnFirst + 11,
         PistonVertFirst, PistonVertLast = PistonVertFirst + 11,
+        RailSlopeFirst, RailSlopeLast = RailSlopeFirst + 27,
         ExtCount
     };
 }
@@ -950,21 +951,31 @@ inline BlockId hookOf(int facing, bool attached, bool powered)
     return static_cast<BlockId>(Blocks::TripwireHookFirst + (facing & 3) * 4 + (attached ? 2 : 0) + (powered ? 1 : 0));
 }
 inline bool isTripwire(BlockId id) { return id == Blocks::Tripwire || id == Blocks::TripwireActive; }
+inline bool isRailSlope(BlockId id) { return id >= Blocks::RailSlopeFirst && id <= Blocks::RailSlopeLast; }
+inline int railSlopeDir(BlockId id)
+{
+    if (!isRailSlope(id)) return -1;
+    const int i = id - Blocks::RailSlopeFirst;
+    return i < 4 ? i : ((i - 4) % 8) / 2;
+}
 inline int specialRailFamily(BlockId id)
 {
     if (id >= Blocks::PoweredRailFirst && id <= Blocks::PoweredRailLast) return 1;
     if (id >= Blocks::DetectorRailFirst && id <= Blocks::DetectorRailLast) return 2;
     if (id >= Blocks::ActivatorRailFirst && id <= Blocks::ActivatorRailLast) return 3;
+    if (isRailSlope(id) && id - Blocks::RailSlopeFirst >= 4) return 1 + (id - Blocks::RailSlopeFirst - 4) / 8;
     return 0;
 }
 inline bool isSpecialRail(BlockId id) { return specialRailFamily(id) != 0; }
 inline bool specialRailEastWest(BlockId id)
 {
+    if (isRailSlope(id)) return isSpecialRail(id) && (railSlopeDir(id) & 1) != 0;
     static const BlockId FIRST[4] = { 0, Blocks::PoweredRailFirst, Blocks::DetectorRailFirst, Blocks::ActivatorRailFirst };
     return isSpecialRail(id) && ((id - FIRST[specialRailFamily(id)]) & 2) != 0;
 }
 inline bool specialRailPowered(BlockId id)
 {
+    if (isRailSlope(id)) return isSpecialRail(id) && ((id - Blocks::RailSlopeFirst - 4) & 1) != 0;
     static const BlockId FIRST[4] = { 0, Blocks::PoweredRailFirst, Blocks::DetectorRailFirst, Blocks::ActivatorRailFirst };
     return isSpecialRail(id) && ((id - FIRST[specialRailFamily(id)]) & 1) != 0;
 }
@@ -972,6 +983,16 @@ inline BlockId specialRailOf(int family, bool eastWest, bool powered)
 {
     static const BlockId FIRST[4] = { Blocks::PoweredRailFirst, Blocks::PoweredRailFirst, Blocks::DetectorRailFirst, Blocks::ActivatorRailFirst };
     return static_cast<BlockId>(FIRST[family & 3] + (eastWest ? 2 : 0) + (powered ? 1 : 0));
+}
+inline BlockId railSlopeOf(int family, int high, bool powered)
+{
+    if (family <= 0) return static_cast<BlockId>(Blocks::RailSlopeFirst + (high & 3));
+    return static_cast<BlockId>(Blocks::RailSlopeFirst + 4 + (family - 1) * 8 + (high & 3) * 2 + (powered ? 1 : 0));
+}
+inline BlockId specialRailWithPower(BlockId id, bool powered)
+{
+    if (isRailSlope(id)) return railSlopeOf(specialRailFamily(id), railSlopeDir(id), powered);
+    return specialRailOf(specialRailFamily(id), specialRailEastWest(id), powered);
 }
 inline bool isChain(BlockId id) { return id >= Blocks::ChainFirst && id <= Blocks::ChainLast; }
 inline int chainAxis(BlockId id) { return isChain(id) ? id - Blocks::ChainFirst : 0; }
@@ -1872,6 +1893,7 @@ inline bool railLinks(BlockId rail, int facing)
         case Blocks::RailSouthWest:  return facing == 2 || facing == 3;
         case Blocks::RailNorthWest:  return facing == 0 || facing == 3;
         default:
+            if (isRailSlope(rail)) return (railSlopeDir(rail) & 1) == (facing & 1);
             if (isSpecialRail(rail)) return specialRailEastWest(rail) ? (facing == 1 || facing == 3) : (facing == 0 || facing == 2);
             return false;
     }

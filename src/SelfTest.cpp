@@ -2531,6 +2531,32 @@ namespace
                            -90.0f, snapped, yaw);
             check(yaw == Mob::railYaw(0), "and turned round it goes back north");
 
+            Mob::railGuide(railSlopeOf(0, 1, false), cell, glm::vec3(4.75f, 70.5f, -8.5f), 0.0f, snapped, yaw);
+            check(std::fabs(snapped.y - (70.75f + Mob::RAIL_LIFT)) < 0.0001f && yaw == Mob::railYaw(1),
+                  "a cart three quarters up a slope rising east sits three quarters up");
+            Mob::railGuide(railSlopeOf(2, 0, true), cell, glm::vec3(4.5f, 70.5f, -8.75f), -90.0f, snapped, yaw);
+            check(std::fabs(snapped.y - (70.75f + Mob::RAIL_LIFT)) < 0.0001f, "and the same on a powered slope rising north");
+
+            for (int high = 0; high < 4; ++high)
+            {
+                const BlockId plain = railSlopeOf(0, high, false);
+                check(isRail(plain) && isRailSlope(plain) && railSlopeDir(plain) == high && !isSpecialRail(plain) &&
+                          railLinks(plain, high) && railLinks(plain, (high + 2) & 3) && !railLinks(plain, (high + 1) & 3),
+                      "a sloped rail runs up and down its own slope");
+                check(blockDrop(plain) == blockDrop(Blocks::RailNorthSouth), "and breaks into a rail");
+                for (int family = 1; family <= 3; ++family)
+                    for (bool powered : { false, true })
+                    {
+                        const BlockId sloped = railSlopeOf(family, high, powered);
+                        check(specialRailFamily(sloped) == family && specialRailPowered(sloped) == powered &&
+                                  railSlopeDir(sloped) == high && specialRailEastWest(sloped) == ((high & 1) != 0),
+                              "a sloped special rail keeps its kind, power and slope");
+                        check(specialRailWithPower(sloped, !powered) == railSlopeOf(family, high, !powered),
+                              "and keeps its slope when power changes");
+                    }
+            }
+            check(Redstone::lit(railSlopeOf(1, 2, false)) == railSlopeOf(1, 2, true), "a powered rail on a slope lights up");
+
             // A bend sends it out the other way than it came in.
             Mob::railGuide(Blocks::RailSouthEast, cell, glm::vec3(4.5f, 70.1f, -8.5f),
                            -90.0f, snapped, yaw);
