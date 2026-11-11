@@ -166,13 +166,14 @@ AABB Player::aabbAt(const glm::vec3& feetPosition) const
     const glm::vec3 half(WIDTH * 0.5f, 0.0f, WIDTH * 0.5f);
     return AABB{
         feetPosition - half,
-        feetPosition + glm::vec3(half.x, HEIGHT, half.z)
+        feetPosition + glm::vec3(half.x, height(), half.z)
     };
 }
 
 glm::vec3 Player::eyePosition() const
 {
-    return position + glm::vec3(0.0f, sneaking ? SNEAK_EYE_HEIGHT : EYE_HEIGHT, 0.0f);
+    const float eye = pose == Pose::Swimming ? SWIM_EYE_HEIGHT : (pose == Pose::Sneaking || sneaking) ? SNEAK_EYE_HEIGHT : EYE_HEIGHT;
+    return position + glm::vec3(0.0f, eye, 0.0f);
 }
 
 bool Player::collides(const World& world, const AABB& box) const
@@ -713,6 +714,23 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     sprinting = controls.sprint && !sneaking && glm::length(controls.wishDirection) > 0.1f &&
                 (exempt() || hunger > SPRINT_HUNGER);
 
+    if (spectator() || flying || gliding) pose = Pose::Standing;
+    else
+    {
+        const bool submerged = isHeadUnderwater(world);
+        Pose wanted = Pose::Standing;
+        if (sprinting && inWater && (pose == Pose::Swimming || submerged)) wanted = Pose::Swimming;
+        else if (sneaking) wanted = Pose::Sneaking;
+        auto fits = [&](float tall) {
+            const glm::vec3 half(WIDTH * 0.5f, 0.0f, WIDTH * 0.5f);
+            return !collides(world, AABB{ position - half + glm::vec3(0.0f, 0.01f, 0.0f), position + glm::vec3(half.x, tall, half.z) });
+        };
+        if (wanted == Pose::Standing && !fits(HEIGHT)) wanted = fits(SNEAK_HEIGHT) ? Pose::Sneaking : Pose::Swimming;
+        if (wanted == Pose::Sneaking && !fits(SNEAK_HEIGHT)) wanted = Pose::Swimming;
+        pose = wanted;
+        if (pose == Pose::Swimming && !inWater) sprinting = false;
+    }
+
     // Wings. The rules and the flying are both Glide's, so a descent
     // can be flown in a test without a world to fly it over.
     {
@@ -731,6 +749,10 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     // --- choose a target horizontal velocity ---
     float targetSpeed;
     if (flying) targetSpeed = (controls.sprint ? FLY_SPRINT_SPEED : FLY_SPEED) * (spectator() ? flySpeedScale : 1.0f);
+    else if (inWater && pose == Pose::Swimming)
+        targetSpeed = 5.6f * Effects::swimMultiplier(effects);
+    else if (pose == Pose::Swimming)
+        targetSpeed = SNEAK_SPEED;
     else if (inWater)
     {
         const float strider = static_cast<float>(std::min(3, Enchanting::levelOf(armourEnchants[3], Enchanting::Kind::DepthStrider))) / 3.0f;
@@ -780,7 +802,8 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         else if (under == Blocks::HoneyBlock || under == Blocks::SoulSand) targetSpeed *= 0.4f;
     }
 
-    const glm::vec3 targetVelocity = controls.wishDirection * targetSpeed;
+    const float lean = (pose == Pose::Swimming && inWater) ? std::sqrt(std::max(0.0f, 1.0f - controls.look.y * controls.look.y)) : 1.0f;
+    const glm::vec3 targetVelocity = controls.wishDirection * targetSpeed * lean;
 
     float acceleration;
     if (flying) acceleration = 16.0f;
@@ -848,6 +871,12 @@ void Player::update(float deltaTime, const World& world, const Controls& control
              }())
     {
         velocity.y = -1.0f;
+        m_falling = false;
+    }
+    else if (inWater && pose == Pose::Swimming)
+    {
+        const float pace = 5.6f * Effects::swimMultiplier(effects);
+        velocity.y += (controls.look.y * pace - velocity.y) * std::clamp(6.0f * deltaTime, 0.0f, 1.0f);
         m_falling = false;
     }
     else if (inWater)

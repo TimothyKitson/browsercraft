@@ -64,6 +64,9 @@ namespace BoxMesh
         float modelYaw = 0.0f;
         float jointAngle = 0.0f;    // radians, applied to jointed boxes
         glm::vec3 jointPivot{ 0.0f };
+        float bodyPitch = 0.0f;
+        glm::vec3 bodyPivot{ 0.0f };
+        glm::vec3 bodyShift{ 0.0f };
     };
 
     // Appends one box, in world space, to a vertex buffer.

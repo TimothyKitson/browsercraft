@@ -22,7 +22,14 @@ public:
     static constexpr float WIDTH = 0.6f;
     static constexpr float HEIGHT = 1.8f;
     static constexpr float EYE_HEIGHT = 1.62f;
-    static constexpr float SNEAK_EYE_HEIGHT = 1.45f;
+    static constexpr float SNEAK_EYE_HEIGHT = 1.27f;
+    static constexpr float SNEAK_HEIGHT = 1.5f;
+    static constexpr float SWIM_HEIGHT = 0.6f;
+    static constexpr float SWIM_EYE_HEIGHT = 0.4f;
+    enum class Pose { Standing, Sneaking, Swimming };
+    Pose pose = Pose::Standing;
+    float height() const { return pose == Pose::Swimming ? SWIM_HEIGHT : pose == Pose::Sneaking ? SNEAK_HEIGHT : HEIGHT; }
+    bool swimming() const { return pose == Pose::Swimming; }
     static constexpr int MAX_HEALTH = 20;
 
     struct Controls

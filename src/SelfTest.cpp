@@ -12804,6 +12804,14 @@ namespace
             other.damage(10);
             check(other.health == Player::MAX_HEALTH - 10, "and does nothing for a punch");
 
+            Player posed(glm::vec3(0.0f, 10.0f, 0.0f));
+            check(std::abs(posed.aabb().max.y - posed.aabb().min.y - Player::HEIGHT) < 0.001f && std::abs(posed.eyePosition().y - 10.0f - Player::EYE_HEIGHT) < 0.001f, "standing is 1.8 tall");
+            posed.pose = Player::Pose::Sneaking;
+            check(std::abs(posed.aabb().max.y - posed.aabb().min.y - 1.5f) < 0.001f && std::abs(posed.eyePosition().y - 11.27f) < 0.001f,
+                  "sneaking shrinks the box to 1.5 with the eyes at 1.27");
+            posed.pose = Player::Pose::Swimming;
+            check(std::abs(posed.aabb().max.y - posed.aabb().min.y - 0.6f) < 0.001f && std::abs(posed.eyePosition().y - 10.4f) < 0.001f,
+                  "swimming and crawling lie down to 0.6");
             Anvil::Input cursed{ Items::DiamondSword, 1, 40, Enchanting::withLevel(Enchanting::withLevel(0u, Kind::Sharpness, 3), Kind::VanishingCurse, 1) };
             const Grindstone::Result ground = Grindstone::combine(cursed, Anvil::Input{ Blocks::Air, 0, 0, 0u });
             check(ground.valid && !Enchanting::has(ground.enchantments, Kind::Sharpness) && Enchanting::has(ground.enchantments, Kind::VanishingCurse),

@@ -2901,7 +2901,7 @@ bool Application::frame()
                     {
                         if (!mob.alive() || mob.type().inanimate) continue;
                         living.push_back(&mob);
-                        if (overlaps(m_player.position, 0.6f, Player::HEIGHT, mob.position(), mob.width(), mob.height())) ++crowd;
+                        if (overlaps(m_player.position, 0.6f, m_player.height(), mob.position(), mob.width(), mob.height())) ++crowd;
                     }
                     if (crowd >= crowdLimit && !m_player.exempt())
                     {
@@ -3179,7 +3179,7 @@ bool Application::frame()
             m_startupScreen == "faces" || m_startupScreen == "backs" ||
             m_startupScreen == "flow" || m_startupScreen == "buds" ||
             m_startupScreen == "icons" || m_startupScreen == "beam" ||
-            m_startupScreen == "elytra" || m_startupScreen == "elytradoll")
+            m_startupScreen == "elytra" || m_startupScreen == "elytradoll" || m_startupScreen == "crawl")
         {
             // Dev aid: open the inventory with something in it, so the
             // screenshot shows a real grid rather than 36 empty boxes.
@@ -3207,6 +3207,7 @@ bool Application::frame()
                                   m_startupScreen != "buds" &&
                                   m_startupScreen != "beam" &&
                                   m_startupScreen != "elytra" &&
+                                  m_startupScreen != "crawl" &&
                                   m_startupScreen != "enchantblock" &&
                                   m_startupScreen != "villager" &&
                                   m_startupScreen != "endportal" &&
@@ -7457,6 +7458,24 @@ bool Application::frame()
                     m_showDebug = false;
                     m_camera.setOrientation(m_camera.yaw, 10.0f);
                 }
+            }
+
+            if (m_startupScreen == "crawl")
+            {
+                m_perspective = Perspective::ThirdFront;
+                m_showDebug = false;
+                m_player.position.y = 112.0f;
+                m_camera.setOrientation(m_camera.yaw, -8.0f);
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = 112;
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+                for (int dx = -4; dx <= 4; ++dx)
+                    for (int dz = -4; dz <= 4; ++dz)
+                    {
+                        m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Stone);
+                        for (int dy = 0; dy <= 3; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                    }
+                m_world->setBlock(px, py + 1, pz, Blocks::OakTrapdoor);
             }
 
             if (m_startupScreen == "beam")
@@ -14684,7 +14703,7 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
             }
 
     // Then everything living, the player included.
-    const glm::vec3 chest = m_player.position + glm::vec3(0.0f, Player::HEIGHT * 0.5f, 0.0f);
+    const glm::vec3 chest = m_player.position + glm::vec3(0.0f, m_player.height() * 0.5f, 0.0f);
     const float toPlayer = glm::length(chest - at);
     const int onPlayer = m_blastSource >= 0 ? Player::scaledByDifficulty(Explosion::damageAt(toPlayer, radius, damage), m_player.difficulty)
                                             : Explosion::damageAt(toPlayer, radius, damage);
@@ -15099,7 +15118,7 @@ namespace
             const glm::vec3 apart = point - feet;
 
             if (std::abs(apart.x) > 0.4f || std::abs(apart.z) > 0.4f) return false;
-            if (apart.y < 0.0f || apart.y > Player::HEIGHT) return false;
+            if (apart.y < 0.0f || apart.y > player->height()) return false;
 
             // A raised shield stops an arrow the same way it stops a
             // blow, and from the same arc. Letting arrows through was
@@ -20768,8 +20787,10 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
         pose.bodyYaw = animation.started ? animation.bodyYaw : m_camera.yaw;
         pose.limbPhase = animation.phase;
         pose.limbAmount = animation.amount;
-        pose.sneaking = m_player.sneaking;
+        pose.sneaking = m_player.sneaking && !m_player.swimming();
         pose.gliding = m_player.gliding;
+        pose.swimming = m_player.swimming();
+        pose.inWater = m_world && m_player.isInWater(*m_world);
         const float speed = glm::length(m_player.velocity);
         pose.fall = (speed > 0.001f && m_player.velocity.y < 0.0f) ? -m_player.velocity.y / speed : 0.0f;
 

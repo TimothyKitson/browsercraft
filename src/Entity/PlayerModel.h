@@ -21,6 +21,8 @@ struct PlayerPose
     float limbAmount = 0.0f;   // 0 standing still, 1 at walking pace
     bool sneaking = false;
     bool gliding = false;
+    bool swimming = false;
+    bool inWater = false;
     float fall = 0.0f;
 };
 

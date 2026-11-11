@@ -145,6 +145,12 @@ void PlayerModel::build(const PlayerSkin& skin, const PlayerPose& pose,
     frame.textureHeight = static_cast<float>(skin.height());
     frame.jointAngle = pose.sneaking ? SNEAK_TILT : 0.0f;
     frame.jointPivot = glm::vec3(0.0f, HIP_Y, 0.0f);
+    if (pose.swimming)
+    {
+        frame.bodyPitch = glm::radians(pose.inWater ? std::clamp(90.0f - pose.headPitch, 10.0f, 170.0f) : 90.0f);
+        frame.bodyPivot = glm::vec3(0.0f, 16.0f, 0.0f);
+        frame.bodyShift = glm::vec3(0.0f, -11.0f, 0.0f);
+    }
 
     BoxMesh::appendAll(m_vertices, boxes, frame);
 }
@@ -179,6 +185,12 @@ void PlayerModel::buildArmour(const PlayerPose& pose, int piece, float sky, floa
     frame.textureHeight = 32.0f;
     frame.jointAngle = pose.sneaking ? SNEAK_TILT : 0.0f;
     frame.jointPivot = glm::vec3(0.0f, HIP_Y, 0.0f);
+    if (pose.swimming)
+    {
+        frame.bodyPitch = glm::radians(pose.inWater ? std::clamp(90.0f - pose.headPitch, 10.0f, 170.0f) : 90.0f);
+        frame.bodyPivot = glm::vec3(0.0f, 16.0f, 0.0f);
+        frame.bodyShift = glm::vec3(0.0f, -11.0f, 0.0f);
+    }
     BoxMesh::appendAll(m_vertices, boxes, frame);
 }
 
@@ -232,6 +244,12 @@ void PlayerModel::buildElytra(const PlayerPose& pose, float sky, float blockLigh
     frame.textureHeight = 32.0f;
     frame.jointAngle = pose.sneaking ? SNEAK_TILT : 0.0f;
     frame.jointPivot = glm::vec3(0.0f, HIP_Y, 0.0f);
+    if (pose.swimming)
+    {
+        frame.bodyPitch = glm::radians(pose.inWater ? std::clamp(90.0f - pose.headPitch, 10.0f, 170.0f) : 90.0f);
+        frame.bodyPivot = glm::vec3(0.0f, 16.0f, 0.0f);
+        frame.bodyShift = glm::vec3(0.0f, -11.0f, 0.0f);
+    }
     BoxMesh::appendAll(m_vertices, wings, frame);
 }
 
