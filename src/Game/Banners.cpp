@@ -446,3 +446,9 @@ void Banners::compose(int baseColour, const Design& design, const Sheets& sheets
             }
     }
 }
+
+Banners::Design Banners::ominous()
+{
+    return { { Rhombus, 9 }, { StripeBottom, 8 }, { StripeCenter, 7 }, { Border, 8 },
+             { StripeMiddle, 15 }, { HalfHorizontal, 8 }, { Circle, 8 }, { Border, 15 } };
+}

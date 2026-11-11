@@ -249,6 +249,10 @@ namespace
 
     // A supply room, which is exactly what it sounds like: what you
     // want in your hands before the next spawner starts.
+    const Entry TRAP[] = {
+        { Items::Arrow, 2, 7 },
+    };
+
     const Entry SUPPLY[] = {
         { Items::Arrow,       4, 12 },
         { Items::Bread,       1, 4 },
@@ -302,6 +306,8 @@ namespace
                 return { CITY, static_cast<int>(std::size(CITY)) };
             case WorldGen::Hoard::TrialChamber:
                 return { SUPPLY, static_cast<int>(std::size(SUPPLY)) };
+            case WorldGen::Hoard::TrapDispenser:
+                return { TRAP, static_cast<int>(std::size(TRAP)) };
             case WorldGen::Hoard::None:
                 break;
         }
@@ -328,14 +334,11 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::Dungeon:         out.id = static_cast<StackId>(Items::MusicDiscFirst + static_cast<int>(hashCoords(x, y, z, seed) % 3u)); out.count = 1; break;
         case WorldGen::Hoard::Stronghold:      out.id = Items::Book;      out.count = 2; break;
         case WorldGen::Hoard::SwampHut:        out.id = Items::GlassBottle; out.count = 3; break;
-        // Minecraft hangs the wings in a frame aboard the ship moored
-        // beside an End city. There is no ship here, so they are the
-        // thing the city's chest is guarding -- and the one reason
-        // anybody crosses the End to find one.
-        case WorldGen::Hoard::EndCity:         out.id = Items::Elytra;    out.count = 1; break;
+        case WorldGen::Hoard::EndCity:         out.id = Items::Diamond;   out.count = 2; break;
         case WorldGen::Hoard::Bastion:         out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::AncientCity:     out.id = Items::Diamond;   out.count = 3; break;
         case WorldGen::Hoard::TrialChamber:    out.id = Items::Arrow;     out.count = 8; break;
+        case WorldGen::Hoard::TrapDispenser:   out.id = Items::Arrow;     out.count = 5; break;
         case WorldGen::Hoard::None:            return out;
     }
 

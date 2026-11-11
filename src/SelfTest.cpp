@@ -68,6 +68,7 @@
 #include "World/Village.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
+#include <memory>
 #include "Game/Enchanting.h"
 #include "Game/Scoreboard.h"
 #include "Game/Attributes.h"
@@ -395,6 +396,163 @@ namespace
                     }
             }
         check(tallest >= 14, "and cuts a tall, open slot down through the rock");
+    }
+
+    void testStructureUpgrades()
+    {
+        section("pyramids, temples, outposts, huts and the End ship");
+        struct Probe
+        {
+            const WorldGen& gen;
+            std::map<std::pair<int, int>, std::unique_ptr<Chunk>> chunks;
+            BlockId at(int x, int y, int z)
+            {
+                const int cx = static_cast<int>(std::floor(static_cast<float>(x) / Chunk::SX));
+                const int cz = static_cast<int>(std::floor(static_cast<float>(z) / Chunk::SZ));
+                auto& slot = chunks[{ cx, cz }];
+                if (!slot)
+                {
+                    slot = std::make_unique<Chunk>(ChunkPos{ cx, cz });
+                    gen.generate(*slot);
+                }
+                return slot->getBlock(x - cx * Chunk::SX, y, z - cz * Chunk::SZ);
+            }
+        };
+        const WorldGen overworld(2024u);
+        auto find = [&](WorldGen::Landmark kind, int& midX, int& midZ) {
+            for (int ring = 0; ring < 4; ++ring)
+            {
+                const Structures::Spot spot = overworld.nearestLandmark(kind, ring * 3000, -ring * 2000, 10);
+                if (!spot.exists) continue;
+                midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+                if (overworld.landmarkStands(kind, midX, midZ) && overworld.surfaceHeight(midX, midZ) > WorldGen::SEA_LEVEL) return true;
+            }
+            return false;
+        };
+
+        int midX = 0, midZ = 0;
+        if (find(WorldGen::Landmark::DesertPyramid, midX, midZ))
+        {
+            Probe probe{ overworld, {} };
+            const int ground = overworld.surfaceHeight(midX, midZ);
+            check(probe.at(midX, ground, midZ) == colourIn(Blocks::TerracottaFirst, 11), "a pyramid's hall has blue terracotta in the middle of its floor");
+            check(probe.at(midX, ground - 3, midZ) == Blocks::Air, "with a shaft under it");
+            check(probe.at(midX, ground - 10, midZ) == plateOf(0, false), "down to a stone pressure plate");
+            int tnt = 0;
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dz = -1; dz <= 1; ++dz)
+                    if (probe.at(midX + dx, ground - 12, midZ + dz) == Blocks::Tnt) ++tnt;
+            check(tnt == 9, "over nine TNT");
+            WorldGen::ChestSpot spots[4];
+            const int many = WorldGen::landmarkChests(WorldGen::Landmark::DesertPyramid, spots);
+            int chests = 0;
+            for (int i = 0; i < many; ++i)
+                if (probe.at(midX + spots[i].dx, ground + spots[i].dy, midZ + spots[i].dz) == Blocks::Chest &&
+                    overworld.hoardAt(midX + spots[i].dx, ground + spots[i].dy, midZ + spots[i].dz) == WorldGen::Hoard::DesertPyramid)
+                    ++chests;
+            check(many == 4 && chests == 4, "and four chests on the pyramid table round it");
+        }
+        else check(false, "a desert pyramid is found to look at");
+
+        if (find(WorldGen::Landmark::JungleTemple, midX, midZ))
+        {
+            Probe probe{ overworld, {} };
+            const int ground = overworld.surfaceHeight(midX, midZ);
+            WorldGen::ChestSpot traps[4];
+            const int armed = WorldGen::landmarkTraps(WorldGen::Landmark::JungleTemple, traps);
+            int dispensers = 0;
+            for (int i = 0; i < armed; ++i)
+            {
+                const int x = midX + traps[i].dx, y = ground + traps[i].dy, z = midZ + traps[i].dz;
+                const BlockId here = probe.at(x, y, z);
+                if (isDispenser(here) && sixFacing(here) == (traps[i].dx < -4 ? 1 : 3) &&
+                    overworld.hoardAt(x, y, z) == WorldGen::Hoard::TrapDispenser)
+                    ++dispensers;
+            }
+            check(armed == 2 && dispensers == 2, "a jungle temple's trap corridor has two dispensers facing across it");
+            const BlockId west = probe.at(midX - 5, ground - 3, midZ - 2);
+            const BlockId east = probe.at(midX - 3, ground - 3, midZ - 2);
+            check(isTripwireHook(west) && hookFacing(west) == 1 && isTripwireHook(east) && hookFacing(east) == 3 &&
+                      probe.at(midX - 4, ground - 3, midZ - 2) == Blocks::Tripwire,
+                  "with tripwire strung between two hooks");
+            bool arrows = false;
+            for (const StructureLoot::Stack& stack : StructureLoot::rollFor(WorldGen::Hoard::TrapDispenser, midX - 6, ground - 2, midZ - 2, 2024u))
+                if (stack.id == Items::Arrow && stack.count >= 2) arrows = true;
+            check(arrows, "and the dispensers are loaded with arrows");
+            int mossy = 0;
+            for (int dz = -7; dz <= 7; ++dz)
+                if (probe.at(midX - 6, ground + 2, midZ + dz) == Blocks::MossyCobblestone) ++mossy;
+            check(mossy > 0 && mossy < 15, "its walls mix mossy cobblestone into the cobblestone");
+        }
+        else check(false, "a jungle temple is found to look at");
+
+        if (find(WorldGen::Landmark::PillagerOutpost, midX, midZ))
+        {
+            Probe probe{ overworld, {} };
+            const int ground = overworld.surfaceHeight(midX, midZ);
+            const int top = ground + WorldGen::OUTPOST_TALL;
+            const BlockId foot = probe.at(midX + 5, ground + 1, midZ + 4);
+            check((foot == Blocks::Cobblestone || foot == Blocks::MossyCobblestone) && probe.at(midX + 6, ground + 2, midZ + 3) == Blocks::DarkOakLog,
+                  "an outpost tower stands on a cobblestone base with dark oak posts round it");
+            check(probe.at(midX + 4, ground + 9, midZ + 2) == Blocks::DarkOakPlanks && probe.at(midX + 4, ground + 9, midZ + 3) == Blocks::DarkOakLog,
+                  "with a dark oak body above");
+            check(probe.at(midX, top, midZ) == Blocks::BirchPlanks && probe.at(midX + 7, top + 1, midZ) == fenceOfWood(5) &&
+                      probe.at(midX, top + 7, midZ) == Blocks::DarkOakPlanks && probe.at(midX, top + 2, midZ) == Blocks::Air,
+                  "a railed birch lookout and a dark oak roof over it");
+            int banners[8][4];
+            const int hung = WorldGen::outpostBanners(banners);
+            int flying = 0;
+            for (int i = 0; i < hung; ++i)
+                if (probe.at(midX + banners[i][0], ground + banners[i][1], midZ + banners[i][2]) == bannerOf(0, true, banners[i][3])) ++flying;
+            check(hung == 8 && flying == 8, "and eight banners hung on its walls");
+            check(Banners::ominous().size() == 8, "which carry the eight layers of the ominous design");
+            int rungs = 0;
+            for (int y = ground + 1; y <= top; ++y)
+                if (probe.at(midX + 3, y, midZ + 3) == Blocks::LadderNorth) ++rungs;
+            check(rungs == WorldGen::OUTPOST_TALL, "a ladder runs from the ground to the lookout");
+            int cageX = 0, cageZ = 0;
+            bool golem = false;
+            overworld.outpostCage(midX, midZ, cageX, cageZ, golem);
+            const int g = overworld.surfaceHeight(cageX, cageZ);
+            check(probe.at(cageX + 2, g + 1, cageZ) == fenceOfWood(5) && probe.at(cageX, g + 1, cageZ) == Blocks::Air &&
+                      probe.at(cageX + 2, g + 4, cageZ) == Blocks::DarkOakPlanks && probe.at(cageX + 2, g + 2, cageZ + 2) == Blocks::DarkOakLog,
+                  "and it keeps a fenced dark oak cage beside it");
+        }
+        else check(false, "a pillager outpost is found to look at");
+
+        if (find(WorldGen::Landmark::SwampHut, midX, midZ))
+        {
+            Probe probe{ overworld, {} };
+            bool cauldron = false, pot = false;
+            for (int y = 40; y < 120; ++y)
+            {
+                if (probe.at(midX + 1, y, midZ - 2) == Blocks::Cauldron0) cauldron = true;
+                if (probe.at(midX + 2, y, midZ - 2) == pottedOf(Blocks::RedMushroom)) pot = true;
+            }
+            check(cauldron && pot, "a swamp hut has its cauldron and potted red mushroom");
+        }
+
+        const WorldGen end(4242u, Dimension::End);
+        const Structures::Spot spot = end.nearestEndCity(0, 0, 40);
+        if (spot.exists)
+        {
+            Probe probe{ end, {} };
+            const int cx = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+            const int cz = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            const int ground = end.endGroundAt(cx, cz);
+            int sx = 0, sz = 0, deck = 0;
+            WorldGen::endShip(cx, cz, ground, sx, sz, deck);
+            check(probe.at(sx, deck, sz) == Blocks::PurpurBlock && probe.at(sx, deck + 3, sz) == Blocks::PurpurPillar,
+                  "an End city has a purpur ship moored beside it with a mast");
+            check(isFrame(probe.at(sx, deck + 2, sz + 8)) && probe.at(sx, deck - 1, sz + 8) == lightBlockOf(0),
+                  "with a frame waiting for its elytra");
+            const BlockId bow = probe.at(sx, deck + 1, sz - 10);
+            check(isHead(bow) && headKind(bow) == 5, "and a dragon head on the bow");
+            check(probe.at(sx - 1, deck - 2, sz + 5) == Blocks::Chest && end.hoardAt(sx - 1, deck - 2, sz + 5) == WorldGen::Hoard::EndCity,
+                  "and chests below deck on the End city table");
+        }
+        else check(false, "an End city is found to look at");
     }
 
     void testNetherPortalRuins()
@@ -7349,14 +7507,6 @@ namespace
                   Armour::slotFor(Items::DiamondChestplate),
               "and they share the chestplate's slot");
 
-        // They come out of an End city, which is the only reason to
-        // cross the End to find one.
-        bool found = false;
-        for (int n = 0; n < 40 && !found; ++n)
-            for (const StructureLoot::Stack& stack : StructureLoot::rollFor(
-                     WorldGen::Hoard::EndCity, n * 7, 50, n * 11, 4242u))
-                if (stack.id == Items::Elytra) found = true;
-        check(found, "and an End city is where they are");
 
         section("the shulker and the drowned");
 
@@ -8975,7 +9125,7 @@ namespace
             const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
             const int ground = generator.surfaceHeight(midX, midZ);
 
-            WorldGen::ChestSpot spots[2];
+            WorldGen::ChestSpot spots[4];
             const int many = WorldGen::landmarkChests(pair.kind, spots);
             check(many > 0, "every landmark keeps a chest somewhere");
 
@@ -17759,6 +17909,7 @@ int runSelfTest()
     testDripKinds();
     testBigTrees();
     testNetherPortalRuins();
+    testStructureUpgrades();
     testRavines();
     testMineshaftNetwork();
     testCaveAndSpikeFeatures();

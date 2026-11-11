@@ -50,6 +50,7 @@ namespace Banners
     bool addLayer(const Design& current, int pattern, int colour, Design& out);
 
     float coverage(int pattern, int x, int y);
+    Design ominous();
 
     std::string key(int baseColour, const Design& design);
 

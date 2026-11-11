@@ -10908,6 +10908,7 @@ void Application::fireThrower(const glm::ivec3& at, bool dispenser)
     const glm::vec3 from = glm::vec3(at) + glm::vec3(0.5f) + dir * 0.7f;
     const glm::vec3 frontCentre = glm::vec3(front) + glm::vec3(0.5f);
 
+    if (!m_chests.has(at)) fillVillageChest(at);
     Chests::Contents& held = m_chests.at(at);
     int slot = -1;
     for (int i = 0; i < Hopper::THROWER_SLOTS; ++i)
@@ -12032,12 +12033,25 @@ void Application::tickStructureLairs(float deltaTime)
         const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
         const int dx = px - midX;
         const int dz = pz - midZ;
+        const int ground = gen.endGroundAt(midX, midZ);
+        if (ground < 0) return;
+
+        {
+            int sx = 0, sz = 0, deck = 0;
+            WorldGen::endShip(midX, midZ, ground, sx, sz, deck);
+            const glm::ivec3 marker(sx, deck - 1, sz + 8);
+            const glm::ivec3 frame(sx, deck + 2, sz + 8);
+            if (m_world->getBlock(marker.x, marker.y, marker.z) == lightBlockOf(0) &&
+                isFrame(m_world->getBlock(frame.x, frame.y, frame.z)))
+            {
+                m_frames.at(frame) = ItemStack{ Items::Elytra, 1 };
+                m_world->setBlock(marker.x, marker.y, marker.z, Blocks::Air);
+            }
+        }
+
         // The tower plus a little, so standing at the door counts.
         const int half = WorldGen::END_CITY_HALF + 4;
         if (dx * dx + dz * dz > half * half) return;
-
-        const int ground = gen.endGroundAt(midX, midZ);
-        if (ground < 0) return;
 
         int already = 0;
         for (const Mob& mob : m_entities.mobs())
@@ -12179,9 +12193,9 @@ void Application::tickStructureLairs(float deltaTime)
                     // always the ones on the ground.
                     struct Post { int dx, dy, dz; bool onTower; };
                     const Post POSTS[] = {
-                        {  2, WorldGen::OUTPOST_TALL - 3, -2, true },
-                        { -2, WorldGen::OUTPOST_TALL - 3,  2, true },
-                        {  2, WorldGen::OUTPOST_TALL - 3,  2, true },
+                        {  2, WorldGen::OUTPOST_TALL + 1, -2, true },
+                        { -5, WorldGen::OUTPOST_TALL + 1,  0, true },
+                        {  5, WorldGen::OUTPOST_TALL + 1,  0, true },
                         {  7, 0,  1, false },
                         { -7, 0,  4, false },
                         {  3, 0, -7, false },
@@ -12203,8 +12217,6 @@ void Application::tickStructureLairs(float deltaTime)
         }
     }
 
-    // And the allay the outpost keeps in a cage, which is where
-    // Minecraft puts them and the only place you find one.
     {
         const Structures::Spot spot =
             gen.nearestLandmark(WorldGen::Landmark::PillagerOutpost, px, pz, 1);
@@ -12212,30 +12224,36 @@ void Application::tickStructureLairs(float deltaTime)
         {
             const int midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
             const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
-            const int dx = px - midX;
-            const int dz = pz - midZ;
+            int cageX = 0, cageZ = 0;
+            bool golem = false;
+            gen.outpostCage(midX, midZ, cageX, cageZ, golem);
+            const int dx = px - cageX;
+            const int dz = pz - cageZ;
 
-            if (dx * dx + dz * dz < 28 * 28)
+            const int ox = px - midX, oz = pz - midZ;
+            if (ox * ox + oz * oz < 64 * 64 && gen.landmarkStands(WorldGen::Landmark::PillagerOutpost, midX, midZ))
             {
+                const int ground = gen.surfaceHeight(midX, midZ);
+                int banners[8][4];
+                const int hung = WorldGen::outpostBanners(banners);
+                for (int i = 0; i < hung; ++i)
+                {
+                    const glm::ivec3 at(midX + banners[i][0], ground + banners[i][1], midZ + banners[i][2]);
+                    const std::array<int, 4> key{ static_cast<int>(m_dimension), at.x, at.y, at.z };
+                    if (isBanner(m_world->getBlock(at.x, at.y, at.z)) && !m_bannerAt.count(key))
+                        m_bannerAt[key] = m_bannerLibrary.idOf(Banners::ominous());
+                }
+            }
+
+            if (dx * dx + dz * dz < 28 * 28 && gen.landmarkStands(WorldGen::Landmark::PillagerOutpost, midX, midZ))
+            {
+                const glm::vec3 centre(cageX + 0.5f, static_cast<float>(gen.surfaceHeight(cageX, cageZ) + 1), cageZ + 0.5f);
+                const MobId want = golem ? MobId::IronGolem : MobId::Allay;
                 int already = 0;
                 for (const Mob& mob : m_entities.mobs())
-                    if (mob.alive() && mob.typeId() == MobId::Allay) ++already;
-
-                if (already == 0)
-                {
-                    const int ground = gen.surfaceHeight(midX, midZ);
-                    for (int tries = 0; tries < 8; ++tries)
-                    {
-                        const float angle = tries * 0.785398f;
-                        const int x = midX + static_cast<int>(std::cos(angle) * 5.0f);
-                        const int z = midZ + static_cast<int>(std::sin(angle) * 5.0f);
-                        const glm::vec3 feet(x + 0.5f,
-                                             static_cast<float>(gen.surfaceHeight(x, z) + 2),
-                                             z + 0.5f);
-                        if (feet.y < ground - 6.0f) continue;
-                        if (m_entities.spawnAt(MobId::Allay, feet, *m_world)) return;
-                    }
-                }
+                    if (mob.alive() && mob.typeId() == want && glm::length(mob.position() - centre) < 4.0f) ++already;
+                if (already < (golem ? 1 : 2) && isFence(m_world->getBlock(cageX + 2, static_cast<int>(centre.y), cageZ)))
+                    if (m_entities.spawnAt(want, centre + glm::vec3(golem ? 0.0f : (already ? 0.6f : -0.6f), 0.0f, 0.0f), *m_world)) return;
             }
         }
     }

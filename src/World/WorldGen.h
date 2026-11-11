@@ -115,7 +115,11 @@ public:
     // copies of the same arithmetic: the stamp reads it to put the
     // chests down and the loot reads it to recognise one later.
     struct ChestSpot { int dx, dy, dz; };
-    static int landmarkChests(Landmark kind, ChestSpot out[2]);
+    static int landmarkChests(Landmark kind, ChestSpot out[4]);
+    static int landmarkTraps(Landmark kind, ChestSpot out[4]);
+    void outpostCage(int midX, int midZ, int& cageX, int& cageZ, bool& golem) const;
+    static int outpostBanners(int out[8][4]);
+    static void endShip(int midX, int midZ, int ground, int& sx, int& sz, int& deck);
 
     // What kind of thing a chest found standing in the world belongs
     // to. Worked out from where it is rather than stored, like
@@ -141,6 +145,7 @@ public:
         Bastion,
         TrialChamber,
         Dungeon,
+        TrapDispenser,
     };
 
     Hoard hoardAt(int x, int y, int z) const;
@@ -210,7 +215,7 @@ public:
 
     // The outpost's height, which the chest table needs as well as the
     // stamp: the chest is three down from the top of the tower.
-    static constexpr int OUTPOST_TALL = 11;
+    static constexpr int OUTPOST_TALL = 16;
 
     // The mansion's half-width. It is the widest thing that stands on
     // land here, so it is what sets the reach the landmark pass needs.

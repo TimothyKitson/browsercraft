@@ -4646,19 +4646,20 @@ void Application::fillVillageChest(const glm::ivec3& block)
     if (loot.empty()) return;
 
     Chests::Contents filled{};
+    const int slots = isDispenser(m_world->getBlock(block.x, block.y, block.z)) ? Hopper::THROWER_SLOTS : Chests::SLOTS;
 
     // Spread through the chest rather than packed into the first few
     // slots, which is how a found chest looks in Minecraft.
-    for (size_t i = 0; i < loot.size() && i < static_cast<size_t>(Chests::SLOTS); ++i)
+    for (size_t i = 0; i < loot.size() && i < static_cast<size_t>(slots); ++i)
     {
         const uint32_t where = hashCoords(block.x + static_cast<int>(i), block.y, block.z,
                                           m_world->seed() + 61100);
-        int slot = static_cast<int>(where % static_cast<uint32_t>(Chests::SLOTS));
+        int slot = static_cast<int>(where % static_cast<uint32_t>(slots));
 
         // Walk on to the next free one, so two draws landing on the
         // same slot do not lose one of the stacks.
-        for (int step = 0; step < Chests::SLOTS && !filled[slot].empty(); ++step)
-            slot = (slot + 1) % Chests::SLOTS;
+        for (int step = 0; step < slots && !filled[slot].empty(); ++step)
+            slot = (slot + 1) % slots;
 
         filled[slot].id = loot[i].id;
         filled[slot].count = loot[i].count;

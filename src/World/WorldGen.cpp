@@ -1763,7 +1763,7 @@ namespace
     void putChests(Chunk& chunk, WorldGen::Landmark kind,
                    int midX, int ground, int midZ)
     {
-        WorldGen::ChestSpot spots[2];
+        WorldGen::ChestSpot spots[4];
         const int many = WorldGen::landmarkChests(kind, spots);
         for (int i = 0; i < many; ++i)
             put(chunk, midX + spots[i].dx, ground + spots[i].dy, midZ + spots[i].dz,
@@ -2727,17 +2727,52 @@ void WorldGen::buildLandmarks(Chunk& chunk) const
     }
 }
 
-int WorldGen::landmarkChests(Landmark kind, ChestSpot out[2])
+int WorldGen::outpostBanners(int out[8][4])
+{
+    int n = 0;
+    for (int side = 0; side < 4; ++side)
+        for (int along = -2; along <= 2; along += 4)
+        {
+            const int dx = side == 1 ? 5 : side == 3 ? -5 : along;
+            const int dz = side == 0 ? -5 : side == 2 ? 5 : along;
+            out[n][0] = dx;
+            out[n][1] = OUTPOST_TALL - 3;
+            out[n][2] = dz;
+            out[n][3] = side;
+            ++n;
+        }
+    return n;
+}
+
+void WorldGen::outpostCage(int midX, int midZ, int& cageX, int& cageZ, bool& golem) const
+{
+    const uint32_t roll = hashCoords(midX, 0, midZ, m_seed + 9401);
+    cageX = midX + ((roll & 1u) ? 10 : -11);
+    cageZ = midZ + 3;
+    golem = (roll & 2u) != 0;
+}
+
+int WorldGen::landmarkTraps(Landmark kind, ChestSpot out[4])
+{
+    if (kind != Landmark::JungleTemple) return 0;
+    out[0] = { -6, -2, -2 };
+    out[1] = { -2, -2, -4 };
+    return 2;
+}
+
+int WorldGen::landmarkChests(Landmark kind, ChestSpot out[4])
 {
     switch (kind)
     {
         case Landmark::DesertPyramid:
-            out[0] = { -2, -2, -2 };
-            out[1] = {  2, -2,  2 };
-            return 2;
+            out[0] = {  0, -10, -3 };
+            out[1] = {  0, -10,  3 };
+            out[2] = { -3, -10,  0 };
+            out[3] = {  3, -10,  0 };
+            return 4;
         case Landmark::JungleTemple:
-            out[0] = {  0,  1,  3 };
-            out[1] = { -3,  1,  3 };
+            out[0] = { -4, -3, -6 };
+            out[1] = {  3, -3, -5 };
             return 2;
         case Landmark::Igloo:
             out[0] = {  1, -11,  0 };
@@ -2746,7 +2781,7 @@ int WorldGen::landmarkChests(Landmark kind, ChestSpot out[2])
             out[0] = {  3,  0,  1 };
             return 1;
         case Landmark::PillagerOutpost:
-            out[0] = {  0,  OUTPOST_TALL - 3,  0 };
+            out[0] = { -2,  OUTPOST_TALL + 1,  2 };
             return 1;
         case Landmark::WoodlandMansion:
             out[0] = { -4,  1,  4 };
@@ -2771,62 +2806,178 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
     {
         case Landmark::DesertPyramid:
         {
-            // Stepped sandstone, and a room cut into the ground under
-            // it with the chests in it -- which is where everybody
-            // digs, and why everybody knows the floor is a trap.
-            constexpr int HALF = 9;
+            constexpr int HALF = 10;
+            const BlockId orange = colourIn(Blocks::TerracottaFirst, 1);
+            const BlockId blue = colourIn(Blocks::TerracottaFirst, 11);
             for (int step = 0; step <= HALF; ++step)
             {
                 const int radius = HALF - step;
                 const int y = ground + step;
                 for (int dx = -radius; dx <= radius; ++dx)
                     for (int dz = -radius; dz <= radius; ++dz)
-                        put(chunk, midX + dx, y, midZ + dz, Blocks::Sandstone);
+                    {
+                        const bool band = step == 4 && (std::abs(dx) == radius || std::abs(dz) == radius) && ((dx + dz) & 1) == 0;
+                        put(chunk, midX + dx, y, midZ + dz, band ? orange : Blocks::Sandstone);
+                    }
             }
+            for (int dx = -HALF; dx <= HALF; ++dx)
+                for (int dz = -HALF; dz <= HALF; ++dz)
+                    for (int y = ground - 1; y >= ground - 6; --y)
+                        put(chunk, midX + dx, y, midZ + dz, Blocks::Sandstone);
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                const int tx = midX + side * (HALF - 2);
+                const int tz = midZ - (HALF - 2);
+                for (int dx = -2; dx <= 2; ++dx)
+                    for (int dz = -2; dz <= 2; ++dz)
+                        for (int dy = 0; dy <= 10; ++dy)
+                        {
+                            const bool edge = std::abs(dx) == 2 || std::abs(dz) == 2;
+                            BlockId block = Blocks::Sandstone;
+                            if (dy == 10) block = Blocks::CutSandstone;
+                            else if (edge && (dy == 7 || dy == 8) && (std::abs(dx) + std::abs(dz)) % 2 == 0) block = orange;
+                            else if (edge && dy == 9) block = Blocks::ChiseledSandstone;
+                            else if (!edge && dy >= 1 && dy <= 9) block = Blocks::Air;
+                            put(chunk, tx + dx, ground + dy, tz + dz, block);
+                        }
+                for (int dy = 1; dy <= 9; ++dy)
+                    put(chunk, tx, ground + dy, tz + 1, Blocks::LadderNorth);
+                for (int dy = 1; dy <= 2; ++dy)
+                    put(chunk, tx, ground + dy, tz - 2, Blocks::Air);
+            }
+
+            for (int dx = -4; dx <= 4; ++dx)
+                for (int dz = -4; dz <= 4; ++dz)
+                    for (int dy = 1; dy <= 5; ++dy)
+                        put(chunk, midX + dx, ground + dy, midZ + dz, Blocks::Air);
+            for (int dz = -HALF; dz <= -5; ++dz)
+                for (int dx = -1; dx <= 1; ++dx)
+                    for (int dy = 1; dy <= 3; ++dy)
+                        put(chunk, midX + dx, ground + dy, midZ + dz, Blocks::Air);
+            for (int dx = -4; dx <= 4; dx += 8)
+                for (int dz = -4; dz <= 4; dz += 8)
+                    for (int dy = 1; dy <= 5; ++dy)
+                        put(chunk, midX + dx, ground + dy, midZ + dz, dy == 3 ? Blocks::ChiseledSandstone : Blocks::CutSandstone);
+
+            for (int dx = -2; dx <= 2; ++dx)
+                for (int dz = -2; dz <= 2; ++dz)
+                {
+                    const int ring = std::abs(dx) + std::abs(dz);
+                    BlockId floor = Blocks::Sandstone;
+                    if (dx == 0 && dz == 0) floor = blue;
+                    else if (ring == 2 || (std::abs(dx) == 2 && std::abs(dz) == 2)) floor = orange;
+                    put(chunk, midX + dx, ground, midZ + dz, floor);
+                }
+
+            const int top = ground - 7;
+            const int floorY = ground - 11;
+            for (int dx = -3; dx <= 3; ++dx)
+                for (int dz = -3; dz <= 3; ++dz)
+                    for (int y = floorY - 2; y <= top; ++y)
+                    {
+                        const bool shell = std::abs(dx) == 3 || std::abs(dz) == 3 || y <= floorY || y == top;
+                        BlockId block = shell ? Blocks::Sandstone : Blocks::Air;
+                        if (shell && y == floorY + 2 && (std::abs(dx) == 3) != (std::abs(dz) == 3)) block = Blocks::CutSandstone;
+                        put(chunk, midX + dx, y, midZ + dz, block);
+                    }
+            for (int y = ground - 1; y >= top; --y) put(chunk, midX, y, midZ, Blocks::Air);
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dz = -1; dz <= 1; ++dz)
+                    put(chunk, midX + dx, floorY - 1, midZ + dz, Blocks::Tnt);
+            put(chunk, midX, floorY + 1, midZ, plateOf(0, false));
+            for (int k = 0; k < 4; ++k)
+            {
+                const int ax = k == 2 ? -3 : k == 3 ? 3 : 0;
+                const int az = k == 0 ? -3 : k == 1 ? 3 : 0;
+                put(chunk, midX + ax, floorY + 2, midZ + az, Blocks::Air);
+                put(chunk, midX + ax, floorY + 3, midZ + az, Blocks::Air);
+            }
+            putChests(chunk, Landmark::DesertPyramid, midX, ground, midZ);
 
             for (int dx = -3; dx <= 3; ++dx)
                 for (int dz = -3; dz <= 3; ++dz)
-                    for (int dy = 1; dy <= 4; ++dy)
+                    for (int y = ground - 4; y <= ground - 2; ++y)
                     {
-                        const bool shell = std::abs(dx) == 3 || std::abs(dz) == 3 || dy == 1;
-                        put(chunk, midX + dx, ground - dy, midZ + dz,
-                            shell ? Blocks::Sandstone : Blocks::Air);
+                        if (dx == 0 && dz == 0) continue;
+                        const bool shell = std::abs(dx) == 3 || std::abs(dz) == 3 || y == ground - 4 || (std::abs(dx) <= 1 && std::abs(dz) <= 1);
+                        put(chunk, midX + dx, y, midZ + dz, shell ? Blocks::Sandstone : Blocks::Sand);
                     }
-
-            putChests(chunk, Landmark::DesertPyramid, midX, ground, midZ);
-            // The thing under the floor. Everybody finds it once.
-            put(chunk, midX, ground - 4, midZ, Blocks::Tnt);
             for (int k = 0; k < 4; ++k)
             {
-                const int side = static_cast<int>(hashCoords(midX, k, midZ, m_seed + 9201) % 4u);
-                const int along = static_cast<int>(hashCoords(midX, k, midZ, m_seed + 9202) % 5u) - 2;
-                const int dx = side == 0 ? 4 : side == 1 ? -4 : along;
-                const int dz = side == 2 ? 4 : side == 3 ? -4 : along;
-                put(chunk, midX + dx, ground - 2 - static_cast<int>(k % 2), midZ + dz, suspiciousOf(0, 0));
+                const int pick = static_cast<int>(hashCoords(midX, k, midZ, m_seed + 9201) % 16u);
+                const int ring[16][2] = { { -2, -2 }, { -1, -2 }, { 0, -2 }, { 1, -2 }, { 2, -2 }, { 2, -1 }, { 2, 0 }, { 2, 1 },
+                                          { 2, 2 }, { 1, 2 }, { 0, 2 }, { -1, 2 }, { -2, 2 }, { -2, 1 }, { -2, 0 }, { -2, -1 } };
+                put(chunk, midX + ring[pick][0], ground - 3 + static_cast<int>(k % 2), midZ + ring[pick][1], suspiciousOf(0, 0));
             }
             break;
         }
 
         case Landmark::JungleTemple:
         {
-            constexpr int HALF = 5;
-            for (int dx = -HALF; dx <= HALF; ++dx)
-                for (int dz = -HALF; dz <= HALF; ++dz)
-                    for (int dy = 0; dy <= 6; ++dy)
+            auto stone = [&](int x, int y, int z) {
+                return hashToFloat(hashCoords(x, y, z, m_seed + 9301)) < 0.4f ? Blocks::MossyCobblestone : Blocks::Cobblestone;
+            };
+            const int low = ground - 4;
+            for (int dx = -6; dx <= 5; ++dx)
+                for (int dz = -7; dz <= 7; ++dz)
+                    for (int y = low; y <= ground + 5; ++y)
                     {
-                        const bool shell = std::abs(dx) == HALF || std::abs(dz) == HALF ||
-                                           dy == 0 || dy == 6;
-                        const bool door = std::abs(dx) <= 1 && dz == -HALF &&
-                                          dy >= 1 && dy <= 2;
-                        put(chunk, midX + dx, ground + dy, midZ + dz,
-                            (shell && !door) ? Blocks::Cobblestone : Blocks::Air);
+                        const bool shell = dx == -6 || dx == 5 || dz == -7 || dz == 7 || y == low || y == ground || y == ground + 5;
+                        const int wx = midX + dx, wz = midZ + dz;
+                        put(chunk, wx, y, wz, shell ? stone(wx, y, wz) : Blocks::Air);
                     }
+            for (int dx = -4; dx <= 3; ++dx)
+                for (int dz = -5; dz <= 5; ++dz)
+                    for (int y = ground + 6; y <= ground + 9; ++y)
+                    {
+                        const int wx = midX + dx, wz = midZ + dz;
+                        const bool band = y == ground + 7 && (dx == -4 || dx == 3) && dz % 3 == 0;
+                        put(chunk, wx, y, wz, band ? Blocks::ChiseledStoneBricks : stone(wx, y, wz));
+                    }
+            for (int dx = -2; dx <= 1; ++dx)
+                for (int dz = -2; dz <= 2; ++dz)
+                    put(chunk, midX + dx, ground + 10, midZ + dz, stone(midX + dx, ground + 10, midZ + dz));
+            for (int dx = -1; dx <= 0; ++dx)
+                for (int dy = 1; dy <= 3; ++dy)
+                    put(chunk, midX + dx, ground + dy, midZ - 7, Blocks::Air);
+            for (int dx = -3; dx <= 2; ++dx)
+                put(chunk, midX + dx, ground + 4, midZ - 7, Blocks::ChiseledStoneBricks);
+            for (int dx = -5; dx <= 4; dx += 3)
+                for (int dz = -4; dz <= 4; dz += 4)
+                    for (int dy = 1; dy <= 4; ++dy)
+                        put(chunk, midX + dx, ground + dy, midZ + dz, stone(midX + dx, ground + dy, midZ + dz));
+            for (int y = low + 1; y <= ground; ++y)
+                put(chunk, midX + 4, y, midZ + 6, Blocks::LadderNorth);
 
+            for (int dx = -5; dx <= 4; ++dx)
+                for (int y = low + 1; y <= low + 3; ++y)
+                {
+                    const bool door = (dx == -4 || dx == 2) && y <= low + 2;
+                    if (!door) put(chunk, midX + dx, y, midZ + 2, stone(midX + dx, y, midZ + 2));
+                }
+            for (int dz = -6; dz <= 1; ++dz)
+                for (int y = low + 1; y <= low + 3; ++y)
+                    put(chunk, midX - 2, y, midZ + dz, stone(midX - 2, y, midZ + dz));
+
+            for (int t = 0; t < 2; ++t)
+            {
+                const int z = midZ + (t == 0 ? -2 : -4);
+                put(chunk, midX - 5, low + 1, z, hookOf(1, true, false));
+                put(chunk, midX - 4, low + 1, z, Blocks::Tripwire);
+                put(chunk, midX - 3, low + 1, z, hookOf(3, true, false));
+            }
+            ChestSpot traps[4];
+            const int armed = landmarkTraps(Landmark::JungleTemple, traps);
+            for (int i = 0; i < armed; ++i)
+                put(chunk, midX + traps[i].dx, ground + traps[i].dy, midZ + traps[i].dz,
+                    dispenserFacingTo(traps[i].dx < -4 ? 1 : 3));
+
+            for (int k = 0; k < 3; ++k)
+                put(chunk, midX + k, low + 2, midZ + 1, leverOf(1, 0, false));
             putChests(chunk, Landmark::JungleTemple, midX, ground, midZ);
-            // Levers on the wall, because a jungle temple is a puzzle
-            // even when the puzzle is only a story.
-            put(chunk, midX + 2, ground + 2, midZ + HALF - 1, Blocks::LeverOff);
-            put(chunk, midX + 3, ground + 2, midZ + HALF - 1, Blocks::LeverOff);
+            put(chunk, midX + 1, ground + 2, midZ + 6, wallTorchOf(0, 0));
+            put(chunk, midX - 3, low + 2, midZ + 6, wallTorchOf(0, 0));
             break;
         }
 
@@ -2911,41 +3062,163 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
 
         case Landmark::PillagerOutpost:
         {
-            // A tower of dark oak with a roof and a way up inside it.
-            constexpr int HALF = 3;
-            constexpr int TALL = OUTPOST_TALL;
+            constexpr int TOP = OUTPOST_TALL;
+            const BlockId darkFence = fenceOfWood(5);
+            auto cobble = [&](int x, int y, int z) {
+                return hashToFloat(hashCoords(x, y, z, m_seed + 9411)) < 0.2f ? Blocks::MossyCobblestone : Blocks::Cobblestone;
+            };
 
-            for (int dy = 0; dy <= TALL; ++dy)
-            {
-                // The top storey hangs a block out past the tower,
-                // which is the shape anybody recognises one by. A
-                // plain box of planks read as a slab.
-                const int half = (dy >= TALL - 4) ? HALF + 1 : HALF;
+            for (int dx = -7; dx <= 7; ++dx)
+                for (int dz = -7; dz <= 7; ++dz)
+                    for (int y = ground + 1; y <= ground + TOP + 7; ++y)
+                        put(chunk, midX + dx, y, midZ + dz, Blocks::Air);
 
-                for (int dx = -half; dx <= half; ++dx)
-                    for (int dz = -half; dz <= half; ++dz)
+            for (int dx = -5; dx <= 5; ++dx)
+                for (int dz = -5; dz <= 5; ++dz)
+                {
+                    const int ring = std::max(std::abs(dx), std::abs(dz));
+                    const int wx = midX + dx, wz = midZ + dz;
+                    for (int y = ground - 4; y < ground; ++y) put(chunk, wx, y, wz, cobble(wx, y, wz));
+                    put(chunk, wx, ground, wz, ring == 5 ? cobble(wx, ground, wz) : Blocks::BirchPlanks);
+                    for (int dy = 1; dy <= 4; ++dy)
                     {
-                        const bool wall = std::abs(dx) == half || std::abs(dz) == half;
-                        const bool floor = dy == 0 || dy == TALL || dy == TALL - 4;
-                        const bool door = wall && dz == -half && std::abs(dx) <= 1 &&
-                                          dy >= 1 && dy <= 2;
-
-                        // Slots to watch from, and to be shot through.
-                        const bool window = wall && dy >= TALL - 3 && dy <= TALL - 2 &&
-                                            ((std::abs(dx) % 2) == 0) &&
-                                            ((std::abs(dz) % 2) == 0);
-
-                        put(chunk, midX + dx, ground + dy, midZ + dz,
-                            ((wall || floor) && !door && !window) ? Blocks::DarkOakPlanks
-                                                                  : Blocks::Air);
+                        if (ring != 5) continue;
+                        const int along = std::abs(dx) == 5 ? dz : dx;
+                        const bool door = dz == -5 && dx == 0 && dy <= 2;
+                        const bool window = dy == 2 && std::abs(along) == 2;
+                        put(chunk, wx, ground + dy, wz, (door || window) ? Blocks::Air : cobble(wx, ground + dy, wz));
                     }
+                    put(chunk, wx, ground + 5, wz, ring == 5 ? Blocks::DarkOakPlanks : Blocks::BirchPlanks);
+                    if (ring == 5 && (std::abs(dx) != 5 || std::abs(dz) != 5) && (std::abs(dx) + std::abs(dz)) % 2 == 1)
+                        put(chunk, wx, ground + 6, wz, cobble(wx, ground + 6, wz));
+                }
+            for (int k = 0; k < 8; ++k)
+            {
+                const int px = k < 4 ? (k & 1 ? 6 : -6) : (k & 1 ? 3 : -3);
+                const int pz = k < 4 ? (k & 2 ? 3 : -3) : (k & 2 ? 6 : -6);
+                for (int dy = 0; dy <= 3; ++dy)
+                    put(chunk, midX + px, ground + dy, midZ + pz, Blocks::DarkOakLog);
             }
+            put(chunk, midX - 1, ground + 1, midZ - 6, darkFence);
+            put(chunk, midX + 1, ground + 1, midZ - 6, darkFence);
 
-            // The ladder up, and the chest at the top of it.
-            for (int dy = 1; dy < TALL; ++dy)
-                put(chunk, midX + HALF - 1, ground + dy, midZ + HALF - 1, Blocks::LadderNorth);
+            for (int y = ground + 6; y < ground + TOP; ++y)
+                for (int dx = -4; dx <= 4; ++dx)
+                    for (int dz = -4; dz <= 4; ++dz)
+                    {
+                        const int wx = midX + dx, wz = midZ + dz;
+                        const bool edge = std::abs(dx) == 4 || std::abs(dz) == 4;
+                        if (y == ground + 11 && !edge) { put(chunk, wx, y, wz, Blocks::DarkOakPlanks); continue; }
+                        if (!edge) continue;
+                        const bool corner = std::abs(dx) == 4 && std::abs(dz) == 4;
+                        const int along = std::abs(dx) == 4 ? dz : dx;
+                        const bool bigWindow = (y == ground + 7 || y == ground + 8) && std::abs(along) <= 1;
+                        const bool slit = y == ground + 13 && along == 0;
+                        BlockId block = Blocks::DarkOakPlanks;
+                        if (corner) block = cobble(wx, y, wz);
+                        else if (bigWindow || slit) block = Blocks::Air;
+                        else if (std::abs(along) == 3) block = Blocks::DarkOakLog;
+                        put(chunk, wx, y, wz, block);
+                    }
+            for (int dx = -7; dx <= 7; ++dx)
+                for (int dz = -7; dz <= 7; ++dz)
+                {
+                    const int ring = std::max(std::abs(dx), std::abs(dz));
+                    const int wx = midX + dx, wz = midZ + dz;
+                    if (ring >= 5) put(chunk, wx, ground + TOP - 1, wz, Blocks::DarkOakPlanks);
+                    put(chunk, wx, ground + TOP, wz, ring == 7 ? Blocks::DarkOakPlanks : Blocks::BirchPlanks);
+                    const bool corner = std::abs(dx) == 7 && std::abs(dz) == 7;
+                    if (corner)
+                        for (int dy = 1; dy <= 3; ++dy) put(chunk, wx, ground + TOP + dy, wz, cobble(wx, ground + TOP + dy, wz));
+                    else if (ring == 7)
+                        put(chunk, wx, ground + TOP + 1, wz, darkFence);
+                    const int high = ring <= 4 ? 7 : ring <= 5 ? 6 : ring <= 6 ? 5 : 4;
+                    for (int dy = 4; dy <= high; ++dy) put(chunk, wx, ground + TOP + dy, wz, Blocks::DarkOakPlanks);
+                    if (ring == 7 && !corner && std::abs(std::abs(dx) - std::abs(dz)) <= 2)
+                        put(chunk, wx, ground + TOP + 3, wz, Blocks::DarkOakPlanks);
+                }
+            for (int sx = -1; sx <= 1; sx += 2)
+                for (int sz = -1; sz <= 1; sz += 2)
+                {
+                    for (int dy = 1; dy <= 3; ++dy)
+                        put(chunk, midX + sx * 4, ground + TOP + dy, midZ + sz * 4, Blocks::DarkOakLog);
+                    put(chunk, midX + sx * 7, ground + TOP + 5, midZ + sz * 7, Blocks::Torch);
+                }
+
+            for (int y = ground + 1; y <= ground + TOP; ++y)
+                put(chunk, midX + 3, y, midZ + 3, Blocks::LadderNorth);
+            for (int y = ground + 1; y <= ground + 4; ++y)
+                put(chunk, midX + 3, y, midZ + 4, cobble(midX + 3, y, midZ + 4));
+            put(chunk, midX - 3, ground + 1, midZ + 3, Blocks::Torch);
+            put(chunk, midX - 3, ground + 6, midZ + 3, Blocks::Torch);
+            put(chunk, midX - 3, ground + 12, midZ + 3, Blocks::Torch);
+
+            int banners[8][4];
+            const int hung = outpostBanners(banners);
+            for (int i = 0; i < hung; ++i)
+                put(chunk, midX + banners[i][0], ground + banners[i][1], midZ + banners[i][2], bannerOf(0, true, banners[i][3]));
 
             putChests(chunk, Landmark::PillagerOutpost, midX, ground, midZ);
+
+            int cageX = 0, cageZ = 0;
+            bool golem = false;
+            outpostCage(midX, midZ, cageX, cageZ, golem);
+            {
+                const int g = surfaceHeight(cageX, cageZ);
+                for (int dx = -2; dx <= 2; ++dx)
+                    for (int dz = -2; dz <= 2; ++dz)
+                        for (int dy = 1; dy <= 4; ++dy)
+                        {
+                            const bool edge = std::abs(dx) == 2 || std::abs(dz) == 2;
+                            const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2;
+                            BlockId block = Blocks::Air;
+                            if (corner) block = Blocks::DarkOakLog;
+                            else if (dy == 4) block = (edge || !golem) ? Blocks::DarkOakPlanks : Blocks::Air;
+                            else if (edge) block = darkFence;
+                            put(chunk, cageX + dx, g + dy, cageZ + dz, block);
+                        }
+            }
+
+            {
+                const int tx = midX - 10, tz = midZ - 6;
+                const int g = surfaceHeight(tx, tz);
+                for (int dz = -1; dz <= 1; ++dz)
+                    for (int dx = -2; dx <= 2; ++dx)
+                    {
+                        const int y = g + 2 + (dx + 2) / 2;
+                        if (std::abs(dz) == 1 && std::abs(dx) == 2)
+                            for (int yy = g + 1; yy < y; ++yy) put(chunk, tx + dx, yy, tz + dz * 2, darkFence);
+                        put(chunk, tx + dx, y, tz + dz, Blocks::Wool);
+                    }
+                for (int dz = -2; dz <= 2; dz += 4)
+                    for (int dx = -2; dx <= 2; dx += 4)
+                        put(chunk, tx + dx, g + 4 + (dx > 0 ? 1 : 0), tz + dz, Blocks::Air);
+                put(chunk, tx + 1, g + 1, tz, Blocks::CraftingTable);
+            }
+
+            {
+                const int lx = midX + 6, lz = midZ - 10;
+                const int g = surfaceHeight(lx, lz);
+                const BlockId lying = withAxis(Blocks::DarkOakLog, 1);
+                for (int dx = -2; dx <= 2; ++dx)
+                {
+                    for (int dz = 0; dz <= 2; ++dz) put(chunk, lx + dx, g + 1, lz + dz, lying);
+                    for (int dz = 0; dz <= 1; ++dz) put(chunk, lx + dx, g + 2, lz + dz, lying);
+                    if (dx > -2) put(chunk, lx + dx, g + 3, lz, lying);
+                }
+            }
+
+            for (int t = 0; t < 2; ++t)
+            {
+                const int fx = midX + (t == 0 ? -8 : -5);
+                const int fz = midZ + (t == 0 ? 8 : 10);
+                const int g = surfaceHeight(fx, fz);
+                put(chunk, fx, g + 1, fz, darkFence);
+                put(chunk, fx, g + 2, fz, Blocks::HayBale);
+                put(chunk, fx - 1, g + 2, fz, darkFence);
+                put(chunk, fx + 1, g + 2, fz, darkFence);
+                put(chunk, fx, g + 3, fz, static_cast<BlockId>(Blocks::CarvedPumpkinFirst + 2));
+            }
             break;
         }
 
@@ -3101,6 +3374,24 @@ void WorldGen::stampSwampHut(Chunk& chunk, int midX, int midZ, int ground) const
     // What is inside: the stand she brews at, a table, and the chest.
     put(chunk, midX - 1, floorY + 1, midZ - 1, Blocks::BrewingStand);
     put(chunk, midX - 1, floorY + 1, midZ + 1, Blocks::CraftingTable);
+    put(chunk, midX + 1, floorY + 1, midZ - 2, Blocks::Cauldron0);
+    put(chunk, midX + 2, floorY + 1, midZ - 2, pottedOf(Blocks::RedMushroom));
+    const BlockId spruceFence = fenceOfWood(1);
+    put(chunk, midX, floorY + 2, midZ - HALF, spruceFence);
+    put(chunk, midX - HALF, floorY + 2, midZ, spruceFence);
+    put(chunk, midX + HALF, floorY + 2, midZ, spruceFence);
+    put(chunk, midX - 1, floorY + 1, midZ + HALF, spruceFence);
+    put(chunk, midX + 1, floorY + 1, midZ + HALF, spruceFence);
+    for (int dx = -HALF - 1; dx <= HALF + 1; ++dx)
+    {
+        put(chunk, midX + dx, floorY + WALL, midZ - HALF - 1, stairsOf(8, false, 2));
+        put(chunk, midX + dx, floorY + WALL, midZ + HALF + 1, stairsOf(8, false, 0));
+    }
+    for (int dz = -HALF; dz <= HALF; ++dz)
+    {
+        put(chunk, midX - HALF - 1, floorY + WALL, midZ + dz, stairsOf(8, false, 1));
+        put(chunk, midX + HALF + 1, floorY + WALL, midZ + dz, stairsOf(8, false, 3));
+    }
     putChests(chunk, Landmark::SwampHut, midX, floorY - STILTS, midZ);
 }
 
@@ -5277,7 +5568,13 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
 
         const int ground = surfaceHeight(midX, midZ);
 
-        ChestSpot spots[2];
+        ChestSpot traps[4];
+        const int armed = landmarkTraps(kind, traps);
+        for (int i = 0; i < armed; ++i)
+            if (midX + traps[i].dx == x && ground + traps[i].dy == y && midZ + traps[i].dz == z)
+                return Hoard::TrapDispenser;
+
+        ChestSpot spots[4];
         const int many = landmarkChests(kind, spots);
         for (int i = 0; i < many; ++i)
             if (midX + spots[i].dx == x && ground + spots[i].dy == y &&
@@ -5388,6 +5685,10 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
             const int midZ = spot.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
             const int ground = endGroundAt(midX, midZ);
             if (ground >= 0 && x == midX - 2 && z == midZ + 2 && y == ground + 2 + 21)
+                return Hoard::EndCity;
+            int sx = 0, sz = 0, deck = 0;
+            endShip(midX, midZ, ground, sx, sz, deck);
+            if (ground >= 0 && y == deck - 2 && z == sz + 5 && std::abs(x - sx) == 1)
                 return Hoard::EndCity;
         }
     }
@@ -5788,7 +6089,7 @@ void WorldGen::buildEndCities(Chunk& chunk) const
     const int chunkX = chunk.position().x;
     const int chunkZ = chunk.position().z;
 
-    constexpr int REACH_CHUNKS = 1;
+    constexpr int REACH_CHUNKS = 2;
     const Structures::Grid& grid = Structures::END_CITY;
 
     const int firstX = Structures::squareOf(chunkX - REACH_CHUNKS, grid.spacing);
@@ -5810,6 +6111,13 @@ void WorldGen::buildEndCities(Chunk& chunk) const
 
             stampEndCity(chunk, midX, midZ, endGroundAt(midX, midZ));
         }
+}
+
+void WorldGen::endShip(int midX, int midZ, int ground, int& sx, int& sz, int& deck)
+{
+    sx = midX + END_CITY_HALF + 14;
+    sz = midZ;
+    deck = ground + 14;
 }
 
 void WorldGen::stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const
@@ -5864,6 +6172,43 @@ void WorldGen::stampEndCity(Chunk& chunk, int midX, int midZ, int ground) const
         put(chunk, midX + HALF - 1, ground + 1 + dy, midZ + HALF - 1, Blocks::LadderNorth);
 
     put(chunk, midX - 2, ground + 2 + STOREY * 3, midZ + 2, Blocks::Chest);
+
+    int sx = 0, sz = 0, deck = 0;
+    endShip(midX, midZ, ground, sx, sz, deck);
+    auto beam = [](int dz) { const int a = std::abs(dz); return a >= 9 ? 1 : a >= 6 ? 2 : 3; };
+    for (int dz = -10; dz <= 10; ++dz)
+    {
+        const int w = beam(dz);
+        for (int dx = -w; dx <= w; ++dx)
+            for (int y = deck - 3; y <= deck + 1; ++y)
+            {
+                const int level = deck - y;
+                const int reach = level >= 3 ? w - 2 : level == 2 ? w - 1 : w;
+                if (std::abs(dx) > reach) continue;
+                const bool side = std::abs(dx) == reach || std::abs(dz) == 10;
+                BlockId block = Blocks::Air;
+                if (y == deck + 1) block = (std::abs(dx) == w || std::abs(dz) == 10) ? Blocks::PurpurBlock : Blocks::Air;
+                else if (y == deck || level >= 3 || side) block = Blocks::PurpurBlock;
+                put(chunk, sx + dx, y, sz + dz, block);
+            }
+    }
+    for (int dx = -1; dx <= 1; ++dx)
+        for (int y = deck + 1; y <= deck + 3; ++y)
+            put(chunk, sx + dx, y, sz + 9, Blocks::PurpurBlock);
+    put(chunk, sx, deck + 2, sz + 8, Blocks::FrameNorth);
+    put(chunk, sx, deck - 1, sz + 8, lightBlockOf(0));
+    for (int y = deck + 1; y <= deck + 10; ++y) put(chunk, sx, y, sz, Blocks::PurpurPillar);
+    for (int dx = -3; dx <= 3; ++dx) put(chunk, sx + dx, deck + 8, sz, dx == 0 ? Blocks::PurpurPillar : static_cast<BlockId>(Blocks::WoolOrange + 1));
+    put(chunk, sx, deck + 11, sz, Blocks::EndRodFirst);
+    put(chunk, sx, deck + 1, sz - 10, headOf(5, false, 8));
+    put(chunk, sx, deck, sz + 3, Blocks::Air);
+    put(chunk, sx, deck - 1, sz + 3, Blocks::LadderSouth);
+    put(chunk, sx, deck - 2, sz + 3, Blocks::LadderSouth);
+    put(chunk, sx - 1, deck - 2, sz + 5, Blocks::Chest);
+    put(chunk, sx + 1, deck - 2, sz + 5, Blocks::Chest);
+    put(chunk, sx, deck - 2, sz - 2, Blocks::BrewingStand);
+    put(chunk, sx - 2, deck + 1, sz - 4, Blocks::EndRodFirst);
+    put(chunk, sx + 2, deck + 1, sz - 4, Blocks::EndRodFirst);
 
     // And a chorus plant on the island beside it, because an End city
     // without one standing near it looks dropped there.
