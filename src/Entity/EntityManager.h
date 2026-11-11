@@ -152,6 +152,7 @@ public:
     Mob* rideable(const glm::vec3& origin, const glm::vec3& direction, float maxDistance);
 
     bool spawnAt(MobId type, glm::vec3 feetPosition, const World& world, bool baby = false);
+    bool summonAt(MobId type, glm::vec3 feetPosition, bool baby = false);
     void clear()
     {
         m_mobs.clear(); m_deaths.clear(); m_births.clear(); m_laidEggs.clear(); m_turtleNests.clear(); m_snifferNests.clear(); m_grownTurtles.clear();

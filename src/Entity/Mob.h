@@ -322,6 +322,8 @@ public:
     void ride(uint32_t mount) { m_mount = mount; }
     uint32_t mount() const { return m_mount; }
     void seatAt(const glm::vec3& at) { m_position = at; m_velocity = glm::vec3(0.0f); m_onGround = true; }
+    void teleportTo(const glm::vec3& at) { m_position = at; m_velocity = glm::vec3(0.0f); }
+    Effects::Set& effectSet() { return m_effects; }
     void setCaptain(bool on) { m_captain = on; }
     std::vector<MobShot>& shotQueue() { return m_shots; }
     static constexpr float BURROW_SECONDS = 6.7f;

@@ -82,6 +82,7 @@ namespace Chat
         glm::vec3 position2{ 0.0f };
         glm::vec3 position3{ 0.0f };
         std::vector<std::string> args;
+        std::string target;
     };
 
     // `cheats` decides whether anything beyond chat and /help is allowed.

@@ -319,6 +319,13 @@ bool EntityManager::fits(const World& world, const MobType& type, const glm::vec
     return true;
 }
 
+bool EntityManager::summonAt(MobId type, glm::vec3 feetPosition, bool baby)
+{
+    if (static_cast<int>(m_mobs.size()) >= MAX_MOBS) return false;
+    m_mobs.emplace_back(type, feetPosition, m_rng ^ static_cast<uint32_t>(m_mobs.size() * 2654435761u), baby);
+    return true;
+}
+
 bool EntityManager::spawnAt(MobId type, glm::vec3 feetPosition, const World& world, bool baby)
 {
     if (static_cast<int>(m_mobs.size()) >= MAX_MOBS) return false;

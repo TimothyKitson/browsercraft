@@ -513,15 +513,37 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     if (name == "tp" || name == "teleport")
     {
         if (!cheats) return deny(name);
-        if (words.size() < 4) return fail("/tp <x> <y> <z>");
-
-        float x = 0.0f, y = 0.0f, z = 0.0f;
-        if (!coordinate(words[1], origin.x, x) || !coordinate(words[2], origin.y, y) || !coordinate(words[3], origin.z, z))
-            return fail("/tp wants three numbers.");
-
+        const std::string usage = "/tp <x> <y> <z>, /tp <targets> <x> <y> <z> or /tp [targets] <destination>";
+        if (words.size() < 2) return fail(usage);
+        float probe = 0.0f;
+        const bool firstIsPlace = coordinate(words[1], origin.x, probe);
         out.kind = Kind::Teleport;
-        out.position = glm::vec3(x, y, z);
         out.text = "Teleported.";
+        if (firstIsPlace)
+        {
+            if (words.size() < 4) return fail(usage);
+            float x = 0.0f, y = 0.0f, z = 0.0f;
+            if (!coordinate(words[1], origin.x, x) || !coordinate(words[2], origin.y, y) || !coordinate(words[3], origin.z, z))
+                return fail("/tp wants three numbers.");
+            out.position = glm::vec3(x, y, z);
+            return out;
+        }
+        if (words.size() == 2)
+        {
+            out.sub = words[1];
+            return out;
+        }
+        out.target = words[1];
+        if (words.size() == 3)
+        {
+            out.sub = words[2];
+            return out;
+        }
+        if (words.size() < 5) return fail(usage);
+        float x = 0.0f, y = 0.0f, z = 0.0f;
+        if (!coordinate(words[2], origin.x, x) || !coordinate(words[3], origin.y, y) || !coordinate(words[4], origin.z, z))
+            return fail("/tp wants three numbers.");
+        out.position = glm::vec3(x, y, z);
         return out;
     }
 
@@ -532,6 +554,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
 
         size_t named = 1;
         if (words.size() >= 3 && (words[1][0] == '@' || (lookUp(words[1]) == Blocks::Air && lookUp(words[2]) != Blocks::Air))) named = 2;
+        if (named == 2) out.target = words[1];
         std::string wanted = lower(words[named]);
         if (wanted.rfind("minecraft:", 0) == 0) wanted = wanted.substr(10);
         const std::string eggSuffix = "_spawn_egg";
@@ -561,6 +584,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
     {
         if (!cheats) return deny(name);
         out.kind = Kind::Kill;
+        if (words.size() >= 2) out.target = words[1];
         out.text = "Ouch.";
         return out;
     }
@@ -700,7 +724,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         const std::string action = lower(words[1]);
         size_t next = 2;
         if (next < words.size() && !words[next].empty() && words[next][0] == '@')
-            ++next;
+            out.target = words[next++];
         else if (next + 1 < words.size())
         {
             Effects::Kind probe;
@@ -743,7 +767,7 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
 
     {
         size_t at = 1;
-        auto target = [&]() { if (at < words.size() && !words[at].empty() && words[at][0] == '@') ++at; };
+        auto target = [&]() { if (at < words.size() && !words[at].empty() && words[at][0] == '@') out.target = words[at++]; };
         auto rest = [&](size_t from) {
             std::string text;
             for (size_t k = from; k < words.size(); ++k) text += (k > from ? " " : "") + words[k];

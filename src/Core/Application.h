@@ -362,6 +362,17 @@ private:
     void renderDebugLines(const glm::mat4& view, const glm::mat4& projection);
     std::set<uint32_t> m_inked;
     float nightVisionLevel() const;
+    void runCheatAudit();
+    bool positionLoaded(int x, int z) const;
+    bool m_cheatAuditPending = false;
+    struct Targets
+    {
+        bool player = false;
+        std::vector<size_t> mobs;
+        bool empty() const { return !player && mobs.empty(); }
+        int count() const { return (player ? 1 : 0) + static_cast<int>(mobs.size()); }
+    };
+    bool selectTargets(const std::string& token, const glm::vec3& origin, bool fromBlock, Targets& out, std::string& error);
     void renderEntityShadows(const glm::mat4& view, const glm::mat4& projection);
     WorldBorder m_border;
     void renderBorder(const glm::mat4& view, const glm::mat4& projection);

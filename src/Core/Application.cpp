@@ -3342,7 +3342,7 @@ bool Application::frame()
             m_startupScreen == "dragon" ||
             m_startupScreen == "wither" ||
             m_startupScreen == "geode" ||
-            m_startupScreen == "city" || m_startupScreen == "bastion" || m_startupScreen == "fortress" ||
+            m_startupScreen == "city" || m_startupScreen == "bastion" || m_startupScreen == "fortress" || m_startupScreen == "cheats" ||
             m_startupScreen == "endcity" ||
             m_startupScreen == "shipwreck" || m_startupScreen == "monument" ||
             m_startupScreen == "seabed" || m_startupScreen == "reef" ||
@@ -3526,6 +3526,7 @@ bool Application::frame()
                                   m_startupScreen != "city" &&
                                   m_startupScreen != "bastion" &&
                                   m_startupScreen != "fortress" &&
+                                  m_startupScreen != "cheats" &&
                                   m_startupScreen != "endcity" &&
                                   m_startupScreen != "well" &&
                                   m_startupScreen != "shipwreck" &&
@@ -6364,6 +6365,8 @@ bool Application::frame()
                 m_player.health = Player::MAX_HEALTH;
             }
 
+            if (m_startupScreen == "cheats") m_cheatAuditPending = true;
+
             if (m_startupScreen == "fortress" && m_dimension == Dimension::Nether)
             {
                 const WorldGen& gen = m_world->generator();
@@ -8613,6 +8616,17 @@ bool Application::frame()
     {
         m_readySeconds += deltaTime;
         if (m_readySeconds >= m_autoScreenshotDelay) m_pendingScreenshot = true;
+    }
+
+    if (m_cheatAuditPending && m_world && m_worldReady)
+    {
+        m_readySeconds += deltaTime;
+        if (m_readySeconds > 2.0f)
+        {
+            m_cheatAuditPending = false;
+            runCheatAudit();
+            m_running = false;
+        }
     }
 
     if (m_pendingScreenshot)
@@ -20751,6 +20765,19 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
     const Chat::Command command = Chat::parse(line, fromBlock || m_allowCheats || m_player.creative(), origin);
     output.clear();
 
+    if (!command.target.empty() &&
+        (command.kind == Chat::Kind::Give || command.kind == Chat::Kind::Clear || command.kind == Chat::Kind::Experience ||
+         command.kind == Chat::Kind::Enchant || command.kind == Chat::Kind::SpawnPoint || command.kind == Chat::Kind::Title))
+    {
+        Targets targets;
+        if (!selectTargets(command.target, origin, fromBlock, targets, output)) return false;
+        if (!targets.player)
+        {
+            output = "No player was found";
+            return false;
+        }
+    }
+
     switch (command.kind)
     {
         case Chat::Kind::Nothing:
@@ -20791,6 +20818,11 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
                     output = "That position is out of the world.";
                     return false;
                 }
+                if (!positionLoaded(at.x, at.z))
+                {
+                    output = "That position is not loaded";
+                    return false;
+                }
                 const BlockId block = asBlock(command.item);
                 m_world->setBlock(at.x, at.y, at.z, block);
                 m_net.onLocalBlockChange(at.x, at.y, at.z, block);
@@ -20800,22 +20832,47 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
 
         case Chat::Kind::EffectGive:
         {
+            Targets targets;
+            if (!selectTargets(command.target, origin, fromBlock, targets, output)) return false;
             const Effects::Kind kind = static_cast<Effects::Kind>(command.effect);
-            if (Effects::isInstant(kind)) m_player.takeEffect(kind, command.amplifier, command.seconds);
-            else Effects::give(m_player.effects, kind, command.amplifier, command.seconds);
+            if (targets.player)
+            {
+                if (Effects::isInstant(kind)) m_player.takeEffect(kind, command.amplifier, command.seconds);
+                else Effects::give(m_player.effects, kind, command.amplifier, command.seconds);
+            }
+            for (size_t index : targets.mobs) m_entities.mobs()[index].giveEffect(kind, command.amplifier, command.seconds);
+            if (targets.count() > 1) output = std::string("Applied ") + Effects::name(kind) + " to " + std::to_string(targets.count()) + " targets";
             break;
         }
 
         case Chat::Kind::EffectClear:
-            if (command.effect < 0) Effects::clear(m_player.effects);
-            else Effects::remove(m_player.effects, static_cast<Effects::Kind>(command.effect));
-            m_raidOmenPending = false;
+        {
+            Targets targets;
+            if (!selectTargets(command.target, origin, fromBlock, targets, output)) return false;
+            if (targets.player)
+            {
+                if (command.effect < 0) Effects::clear(m_player.effects);
+                else Effects::remove(m_player.effects, static_cast<Effects::Kind>(command.effect));
+                m_raidOmenPending = false;
+            }
+            for (size_t index : targets.mobs)
+            {
+                Effects::Set& set = m_entities.mobs()[index].effectSet();
+                if (command.effect < 0) Effects::clear(set);
+                else Effects::remove(set, static_cast<Effects::Kind>(command.effect));
+            }
             break;
+        }
 
         case Chat::Kind::Summon:
-            if (!m_world || !m_entities.spawnAt(static_cast<MobId>(command.mob), command.position, *m_world))
+            if (!m_world || !positionLoaded(static_cast<int>(std::floor(command.position.x)), static_cast<int>(std::floor(command.position.z))))
             {
-                output = "There is no room to summon that there.";
+                output = "That position is not loaded";
+                return false;
+            }
+            if (!m_entities.summonAt(static_cast<MobId>(command.mob), command.position))
+            {
+                output = "Too many entities are loaded to summon another.";
                 return false;
             }
             if (!command.sub.empty())
@@ -20849,9 +20906,30 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             break;
 
         case Chat::Kind::Teleport:
-            m_player.position = command.position;
-            m_player.velocity = glm::vec3(0.0f);
+        {
+            Targets movers;
+            if (!selectTargets(command.target, origin, fromBlock, movers, output)) return false;
+            glm::vec3 to = command.position;
+            if (!command.sub.empty())
+            {
+                Targets destination;
+                if (!selectTargets(command.sub, origin, fromBlock, destination, output)) return false;
+                if (destination.count() != 1)
+                {
+                    output = "Only one entity is allowed, but the selector given allows more than one";
+                    return false;
+                }
+                to = destination.player ? m_player.position : m_entities.mobs()[destination.mobs.front()].position();
+            }
+            if (movers.player)
+            {
+                m_player.position = to;
+                m_player.velocity = glm::vec3(0.0f);
+            }
+            for (size_t index : movers.mobs) m_entities.mobs()[index].teleportTo(to);
+            output = movers.count() == 1 ? "Teleported." : "Teleported " + std::to_string(movers.count()) + " entities.";
             break;
+        }
 
         case Chat::Kind::Give:
             if (command.amplifier != 0)
@@ -20868,9 +20946,25 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             break;
 
         case Chat::Kind::Kill:
-            m_player.cause = "kill";
-            m_player.health = 0;
+        {
+            Targets targets;
+            if (!selectTargets(command.target, origin, fromBlock, targets, output)) return false;
+            std::string named;
+            for (size_t index : targets.mobs)
+            {
+                Mob& mob = m_entities.mobs()[index];
+                named = mob.customName().empty() ? mobType(mob.typeId()).name : mob.customName();
+                mob.damage(1000000, glm::vec3(0.0f));
+            }
+            if (targets.player)
+            {
+                m_player.cause = "kill";
+                m_player.health = 0;
+                named = m_playerName.empty() ? "Player" : m_playerName;
+            }
+            output = targets.count() == 1 ? "Killed " + named : "Killed " + std::to_string(targets.count()) + " entities";
             break;
+        }
 
         case Chat::Kind::GameRuleQuery:
         {
@@ -21072,15 +21166,30 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             return locateFor(command.sub, command.text, output);
 
         case Chat::Kind::Damage:
-            if (command.count <= 0 || m_player.creative() || m_player.spectator())
+        {
+            Targets targets;
+            if (!selectTargets(command.target, origin, fromBlock, targets, output)) return false;
+            bool hurt = false;
+            for (size_t index : targets.mobs)
+            {
+                Mob& mob = m_entities.mobs()[index];
+                const int before = mob.health();
+                mob.damage(command.count, glm::vec3(0.0f));
+                hurt = hurt || mob.health() < before;
+            }
+            if (targets.player && command.count > 0 && !m_player.creative() && !m_player.spectator())
+            {
+                m_player.clearHurtCooldown();
+                m_player.cause = "generic";
+                hurt = m_player.damage(command.count) || hurt;
+            }
+            if (!hurt)
             {
                 output = "Nothing happened.";
                 return false;
             }
-            m_player.clearHurtCooldown();
-            m_player.cause = "generic";
-            m_player.damage(command.count);
             break;
+        }
 
         case Chat::Kind::Fill:
         case Chat::Kind::Clone:
@@ -21101,6 +21210,13 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
                 output = "That position is out of the world.";
                 return false;
             }
+            for (int x = Structures::squareOf(lo.x, Chunk::SX); x <= Structures::squareOf(hi.x, Chunk::SX); ++x)
+                for (int z = Structures::squareOf(lo.z, Chunk::SZ); z <= Structures::squareOf(hi.z, Chunk::SZ); ++z)
+                    if (!positionLoaded(x * Chunk::SX, z * Chunk::SZ))
+                    {
+                        output = "That position is not loaded";
+                        return false;
+                    }
             int changed = 0;
             if (command.kind == Chat::Kind::Fill)
             {
@@ -21184,7 +21300,7 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             break;
     }
 
-    output = command.text;
+    if (output.empty()) output = command.text;
     return Chat::succeeded(command);
 }
 
@@ -27951,3 +28067,408 @@ std::string Application::deathMessageFor() const
     return who + " died";
 }
 
+void Application::runCheatAudit()
+{
+    int passed = 0, failed = 0;
+    for (const auto& [pos, chunk] : m_world->chunks())
+    {
+        if (chunk->state.load() != ChunkState::Lit) continue;
+        bool ringed = true;
+        for (int dx = -1; dx <= 1 && ringed; ++dx)
+            for (int dz = -1; dz <= 1 && ringed; ++dz)
+            {
+                const Chunk* near = m_world->chunkAt(pos.x + dx, pos.z + dz);
+                ringed = near && near->state.load() == ChunkState::Lit;
+            }
+        if (!ringed) continue;
+        const int x = pos.x * Chunk::SX + 8, z = pos.z * Chunk::SZ + 8;
+        m_player.position = glm::vec3(x + 0.5f, static_cast<float>(m_world->generator().surfaceHeight(x, z) + 1), z + 0.5f);
+        m_player.velocity = glm::vec3(0.0f);
+        break;
+    }
+    auto report = [&](bool ok, const std::string& what, const std::string& said) {
+        std::printf("%s  %s%s%s\n", ok ? "PASS" : "FAIL", what.c_str(), said.empty() ? "" : "  -> ", said.c_str());
+        ok ? ++passed : ++failed;
+    };
+    auto run = [&](const std::string& line) {
+        std::string said;
+        const bool worked = runCommand(line, m_player.position, false, said);
+        return std::make_pair(worked, said);
+    };
+    auto countMobs = [&](MobId kind) {
+        int n = 0;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == kind) ++n;
+        return n;
+    };
+
+    m_gameMode = GameMode::Survival;
+    m_player.mode = GameMode::Survival;
+    m_allowCheats = false;
+    {
+        const auto [worked, said] = run("/gamemode creative");
+        report(!worked && m_player.mode == GameMode::Survival, "without cheats a survival player cannot use /gamemode", said);
+    }
+    {
+        const auto [worked, said] = run("/help");
+        report(worked, "/help still answers without cheats", said);
+    }
+    m_allowCheats = true;
+
+    {
+        const auto [worked, said] = run("/gamemode creative");
+        report(worked && m_player.mode == GameMode::Creative, "/gamemode creative", said);
+        const auto back = run("/gamemode survival");
+        report(back.first && m_player.mode == GameMode::Survival, "/gamemode survival", back.second);
+        const auto spec = run("/gamemode spectator");
+        report(spec.first && m_player.spectator(), "/gamemode spectator", spec.second);
+        run("/gamemode survival");
+    }
+    {
+        const auto [worked, said] = run("/time set night");
+        const float night = m_timeOfDay;
+        const auto day = run("/time set day");
+        report(worked && day.first && night != m_timeOfDay, "/time set night and day", said + " / " + day.second);
+    }
+    {
+        const auto [worked, said] = run("/weather rain");
+        const bool raining = m_weather.kind == Weather::Kind::Rain;
+        const auto clear = run("/weather clear");
+        report(worked && raining && clear.first && m_weather.kind == Weather::Kind::Clear, "/weather rain and clear", said);
+    }
+    {
+        const int before = m_inventory.countOf(Items::Diamond);
+        const auto [worked, said] = run("/give @s diamond 5");
+        report(worked && m_inventory.countOf(Items::Diamond) == before + 5, "/give @s diamond 5", said);
+        const auto cleared = run("/clear @s diamond");
+        report(cleared.first && m_inventory.countOf(Items::Diamond) == 0, "/clear @s diamond", cleared.second);
+    }
+    {
+        const float y = m_player.position.y;
+        const auto [worked, said] = run("/tp ~ ~10 ~");
+        report(worked && std::fabs(m_player.position.y - (y + 10.0f)) < 0.6f, "/tp ~ ~10 ~", said);
+        run("/tp ~ ~-10 ~");
+    }
+    {
+        const auto [worked, said] = run("/effect give @s speed 30 1");
+        report(worked && m_player.effects.has(Effects::Kind::Speed), "/effect give @s speed", said);
+        const auto gone = run("/effect clear @s");
+        report(gone.first && !m_player.effects.has(Effects::Kind::Speed), "/effect clear @s", gone.second);
+    }
+    {
+        const int before = m_player.experience;
+        const auto [worked, said] = run("/xp add @s 100 points");
+        report(worked && m_player.experience == before + 100, "/xp add @s 100 points", said);
+    }
+    {
+        const glm::ivec3 at(static_cast<int>(std::floor(m_player.position.x)) + 2, static_cast<int>(std::floor(m_player.position.y)) + 1,
+                            static_cast<int>(std::floor(m_player.position.z)));
+        const auto [worked, said] = run("/setblock ~2 ~1 ~ gold_block");
+        report(worked && m_world->getBlock(at.x, at.y, at.z) == Blocks::GoldBlock, "/setblock ~2 ~1 ~ gold_block", said);
+        const auto filled = run("/fill ~3 ~1 ~ ~4 ~2 ~1 stone");
+        report(filled.first && m_world->getBlock(at.x + 1, at.y, at.z) == Blocks::Stone && m_world->getBlock(at.x + 2, at.y + 1, at.z + 1) == Blocks::Stone,
+               "/fill a 2x2x2 of stone", filled.second);
+        run("/fill ~2 ~1 ~ ~4 ~2 ~1 air");
+    }
+    {
+        const int before = countMobs(MobId::Pig);
+        const auto [worked, said] = run("/summon pig ~3 ~ ~3");
+        run("/summon pig ~-3 ~ ~3");
+        run("/summon cow ~3 ~ ~-3");
+        report(worked && countMobs(MobId::Pig) == before + 2, "/summon pig", said);
+        const auto tagged = run("/effect give @e[type=pig] glowing 30");
+        bool glowing = true;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.typeId() == MobId::Pig && mob.alive() && !mob.effects().has(Effects::Kind::Glowing)) glowing = false;
+        report(tagged.first && glowing && !m_player.effects.has(Effects::Kind::Glowing), "/effect give @e[type=pig] reaches the pigs and not you", tagged.second);
+        const glm::vec3 there = m_player.position + glm::vec3(6.0f, 0.0f, 0.0f);
+        const auto moved = run("/tp @e[type=cow] ~6 ~ ~");
+        bool cowMoved = false;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.typeId() == MobId::Cow && mob.alive() && glm::length(mob.position() - there) < 1.0f) cowMoved = true;
+        report(moved.first && cowMoved, "/tp @e[type=cow] ~6 ~ ~ moves the cow", moved.second);
+        const int health = m_player.health;
+        const auto killed = run("/kill @e[type=pig]");
+        int alive = 0;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.typeId() == MobId::Pig && mob.alive() && mob.health() > 0) ++alive;
+        report(killed.first && alive == 0 && m_player.health == health && countMobs(MobId::Cow) >= 1, "/kill @e[type=pig] kills the pigs, spares you and the cow", killed.second);
+        const auto nearest = run("/kill @e[type=cow,limit=1,sort=nearest]");
+        report(nearest.first && countMobs(MobId::Cow) == 0, "/kill @e[type=cow,limit=1,sort=nearest]", nearest.second);
+        const auto none = run("/kill @e[type=zombie]");
+        report(!none.first && m_player.health == health, "/kill on nothing fails without touching you", none.second);
+        const auto notPlayer = run("/give @e[type=pig] diamond");
+        report(!notPlayer.first, "/give to a selector with no player in it fails", notPlayer.second);
+    }
+    {
+        m_inventory.selected() = ItemStack{ Items::DiamondSword, 1 };
+        const auto [worked, said] = run("/enchant @s sharpness 3");
+        report(worked && m_inventory.selected().enchantments != 0, "/enchant @s sharpness 3", said);
+        m_inventory.selected().clear();
+    }
+    {
+        const auto [worked, said] = run("/difficulty hard");
+        report(worked && m_worldMeta.difficulty == Worlds::Difficulty::Hard, "/difficulty hard", said);
+        run("/difficulty normal");
+    }
+    {
+        const auto [worked, said] = run("/gamerule doDaylightCycle false");
+        report(worked && !m_rules.on(GameRules::Rule::DoDaylightCycle), "/gamerule doDaylightCycle false", said);
+        run("/gamerule doDaylightCycle true");
+    }
+    {
+        const auto [worked, said] = run("/locate structure village");
+        report(worked && !said.empty(), "/locate structure village", said);
+    }
+    {
+        const auto [worked, said] = run("/seed");
+        report(worked && said.find(std::to_string(m_world->seed())) != std::string::npos, "/seed", said);
+    }
+    {
+        const auto [worked, said] = run("/spawnpoint");
+        report(worked, "/spawnpoint", said);
+        const auto world = run("/setworldspawn");
+        report(world.first, "/setworldspawn", world.second);
+    }
+    {
+        const auto [worked, said] = run("/tag @s add audited");
+        report(worked, "/tag @s add", said);
+        const auto board = run("/scoreboard objectives add audit dummy");
+        report(board.first, "/scoreboard objectives add", board.second);
+    }
+    {
+        const int health = m_player.health;
+        const auto [worked, said] = run("/damage @s 2");
+        report(worked && m_player.health < health, "/damage @s 2", said);
+        m_player.health = Player::MAX_HEALTH;
+    }
+    {
+        const auto [worked, said] = run("/title @s title Audit");
+        report(worked, "/title", said);
+        const auto plays = run("/playsound minecraft:block.note_block.pling master @s");
+        report(plays.first, "/playsound", plays.second);
+        const auto part = run("/particle minecraft:heart ~ ~2 ~");
+        report(part.first, "/particle", part.second);
+    }
+    {
+        const auto [worked, said] = run("/worldborder set 2000");
+        report(worked, "/worldborder set", said);
+        run("/worldborder set 59999968");
+    }
+
+    std::printf("Cheat audit: %d passed, %d failed\n", passed, failed);
+    std::fflush(stdout);
+}
+
+bool Application::selectTargets(const std::string& token, const glm::vec3& origin, bool fromBlock, Targets& out, std::string& error)
+{
+    out = Targets{};
+    const std::string self = m_playerName.empty() ? std::string("Player") : m_playerName;
+    if (token.empty())
+    {
+        out.player = !fromBlock;
+        if (!out.player) error = "No entity was found";
+        return out.player;
+    }
+    auto lowerOf = [](std::string text) {
+        for (char& c : text) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return text;
+    };
+    if (token[0] != '@')
+    {
+        if (lowerOf(token) == lowerOf(self) || lowerOf(token) == "player") out.player = true;
+        const std::vector<Mob>& mobs = m_entities.mobs();
+        for (size_t i = 0; i < mobs.size(); ++i)
+            if (mobs[i].alive() && !mobs[i].customName().empty() && mobs[i].customName() == token) out.mobs.push_back(i);
+        if (out.empty()) error = "No entity was found";
+        return !out.empty();
+    }
+    if (token.size() < 2 || std::string("aeprs").find(token[1]) == std::string::npos)
+    {
+        error = "Unknown selector " + token;
+        return false;
+    }
+    const char base = token[1];
+    std::map<std::string, std::vector<std::string>> args;
+    if (token.size() > 2)
+    {
+        if (token[2] != '[' || token.back() != ']')
+        {
+            error = "Selector arguments go in [brackets]";
+            return false;
+        }
+        std::string body = token.substr(3, token.size() - 4);
+        size_t start = 0;
+        while (start <= body.size())
+        {
+            const size_t comma = body.find(',', start);
+            const std::string part = body.substr(start, comma == std::string::npos ? std::string::npos : comma - start);
+            const size_t equals = part.find('=');
+            if (!part.empty())
+            {
+                if (equals == std::string::npos)
+                {
+                    error = "Selector argument " + part + " needs a value";
+                    return false;
+                }
+                args[lowerOf(part.substr(0, equals))].push_back(part.substr(equals + 1));
+            }
+            if (comma == std::string::npos) break;
+            start = comma + 1;
+        }
+    }
+
+    glm::vec3 centre = origin;
+    auto numberArg = [&](const char* key, float& value) {
+        const auto found = args.find(key);
+        if (found == args.end() || found->second.empty()) return false;
+        try { value = std::stof(found->second.front()); } catch (...) { return false; }
+        return true;
+    };
+    numberArg("x", centre.x);
+    numberArg("y", centre.y);
+    numberArg("z", centre.z);
+    float lowDistance = -1.0f, highDistance = -1.0f;
+    if (args.count("distance"))
+    {
+        const std::string range = args["distance"].front();
+        const size_t dots = range.find("..");
+        try
+        {
+            if (dots == std::string::npos) lowDistance = highDistance = std::stof(range);
+            else
+            {
+                if (dots > 0) lowDistance = std::stof(range.substr(0, dots));
+                if (dots + 2 < range.size()) highDistance = std::stof(range.substr(dots + 2));
+            }
+        }
+        catch (...)
+        {
+            error = "Bad distance " + range;
+            return false;
+        }
+    }
+    glm::vec3 box(0.0f);
+    const bool boxed = numberArg("dx", box.x) | numberArg("dy", box.y) | numberArg("dz", box.z);
+    auto inRange = [&](const glm::vec3& at) {
+        const float d = glm::length(at - centre);
+        if (lowDistance >= 0.0f && d < lowDistance - 0.0001f) return false;
+        if (highDistance >= 0.0f && d > highDistance + 0.0001f) return false;
+        if (boxed)
+        {
+            const glm::vec3 lo = glm::min(centre, centre + box), hi = glm::max(centre, centre + box) + glm::vec3(1.0f);
+            if (at.x < lo.x || at.y < lo.y || at.z < lo.z || at.x > hi.x || at.y > hi.y || at.z > hi.z) return false;
+        }
+        return true;
+    };
+    auto typeMatches = [&](bool isPlayer, MobId kind) {
+        const auto found = args.find("type");
+        if (found == args.end()) return true;
+        for (std::string wanted : found->second)
+        {
+            const bool negate = !wanted.empty() && wanted[0] == '!';
+            if (negate) wanted = wanted.substr(1);
+            wanted = lowerOf(wanted);
+            if (wanted.rfind("minecraft:", 0) == 0) wanted = wanted.substr(10);
+            bool hit = false;
+            if (wanted == "player") hit = isPlayer;
+            else if (!isPlayer)
+            {
+                std::string name = lowerOf(mobType(kind).name);
+                std::replace(name.begin(), name.end(), ' ', '_');
+                hit = name == wanted;
+            }
+            if (hit == negate) return false;
+        }
+        return true;
+    };
+    auto nameMatches = [&](const std::string& name) {
+        const auto found = args.find("name");
+        if (found == args.end()) return true;
+        for (const std::string& wanted : found->second)
+        {
+            const bool negate = !wanted.empty() && wanted[0] == '!';
+            const std::string bare = negate ? wanted.substr(1) : wanted;
+            if ((name == bare) == negate) return false;
+        }
+        return true;
+    };
+    auto tagMatches = [&](bool isPlayer) {
+        const auto found = args.find("tag");
+        if (found == args.end()) return true;
+        for (const std::string& wanted : found->second)
+        {
+            const bool negate = !wanted.empty() && wanted[0] == '!';
+            const std::string bare = negate ? wanted.substr(1) : wanted;
+            const bool has = isPlayer && (bare.empty() ? !m_scoreboard.tags().empty() : m_scoreboard.tagged(bare));
+            if (bare.empty() && !negate) { if (!has) return false; continue; }
+            if (has == negate) return false;
+        }
+        return true;
+    };
+    auto modeMatches = [&](bool isPlayer) {
+        const auto found = args.find("gamemode");
+        if (found == args.end()) return true;
+        if (!isPlayer) return false;
+        for (const std::string& wanted : found->second)
+        {
+            const bool negate = !wanted.empty() && wanted[0] == '!';
+            const std::string bare = lowerOf(negate ? wanted.substr(1) : wanted);
+            const bool is = bare == lowerOf(gameModeName(m_player.mode));
+            if (is == negate) return false;
+        }
+        return true;
+    };
+
+    struct Pick { bool player; size_t mob; float distance; };
+    std::vector<Pick> picks;
+    const bool playerAllowed = !(base == 's' && fromBlock) && m_player.health > 0;
+    if (playerAllowed && typeMatches(true, MobId::Count) && nameMatches(self) && tagMatches(true) && modeMatches(true) &&
+        inRange(m_player.position))
+        picks.push_back({ true, 0, glm::length(m_player.position - centre) });
+    if (base == 'e')
+    {
+        const std::vector<Mob>& mobs = m_entities.mobs();
+        for (size_t i = 0; i < mobs.size(); ++i)
+        {
+            const Mob& mob = mobs[i];
+            if (!mob.alive()) continue;
+            if (!typeMatches(false, mob.typeId()) || !nameMatches(mob.customName().empty() ? mobType(mob.typeId()).name : mob.customName()) ||
+                !tagMatches(false) || !modeMatches(false) || !inRange(mob.position()))
+                continue;
+            picks.push_back({ false, i, glm::length(mob.position() - centre) });
+        }
+    }
+
+    std::string sort = base == 'p' ? "nearest" : base == 'r' ? "random" : "arbitrary";
+    if (args.count("sort")) sort = lowerOf(args["sort"].front());
+    if (sort == "nearest") std::stable_sort(picks.begin(), picks.end(), [](const Pick& a, const Pick& b) { return a.distance < b.distance; });
+    else if (sort == "furthest") std::stable_sort(picks.begin(), picks.end(), [](const Pick& a, const Pick& b) { return a.distance > b.distance; });
+    else if (sort == "random")
+        for (size_t i = picks.size(); i > 1; --i) std::swap(picks[i - 1], picks[static_cast<size_t>(std::rand()) % i]);
+    int limit = (base == 'p' || base == 'r' || base == 's') ? 1 : -1;
+    if (args.count("limit"))
+    {
+        try { limit = std::stoi(args["limit"].front()); } catch (...) { limit = -1; }
+    }
+    if (limit >= 0 && static_cast<int>(picks.size()) > limit) picks.resize(static_cast<size_t>(limit));
+
+    for (const Pick& pick : picks)
+    {
+        if (pick.player) out.player = true;
+        else out.mobs.push_back(pick.mob);
+    }
+    if (out.empty())
+    {
+        error = base == 'e' ? "No entity was found" : "No player was found";
+        return false;
+    }
+    return true;
+}
+
+bool Application::positionLoaded(int x, int z) const
+{
+    if (!m_world) return false;
+    const Chunk* chunk = m_world->chunkAt(Structures::squareOf(x, Chunk::SX), Structures::squareOf(z, Chunk::SZ));
+    return chunk && chunk->state.load() >= ChunkState::Generated;
+}
