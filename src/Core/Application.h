@@ -894,6 +894,7 @@ private:
     float m_bushSting = 0.0f;
     float m_hiveClock = 0.0f;
     HeldItem m_heldItem;
+    HeldItem m_offhandItem;
 
     // Set before a world is made and saved with it, the way Minecraft
     // does: chat always works, the commands only here.

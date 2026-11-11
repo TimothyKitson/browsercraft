@@ -9553,6 +9553,8 @@ void Application::updateGameplay(float deltaTime)
         const ItemStack& inHand = m_inventory.selected();
         m_heldItem.update(deltaTime,
                           inHand.empty() ? static_cast<StackId>(Blocks::Air) : inHand.id);
+        const ItemStack& offHand = m_inventory.slot(Inventory::OFFHAND);
+        m_offhandItem.update(deltaTime, offHand.empty() ? static_cast<StackId>(Blocks::Air) : offHand.id);
     }
 }
 
@@ -22170,9 +22172,25 @@ void Application::renderHand()
                       // held.id is a StackId, and mixing them is what
                       // -Wextra objects to.
                       held.empty() ? static_cast<StackId>(Blocks::Air) : held.id,
-                      sky, blockLight, m_player.sneaking, m_player.blocking);
+                      sky, blockLight, m_player.sneaking,
+                      m_player.blocking && (held.id == Items::Shield || m_inventory.slot(Inventory::OFFHAND).id != Items::Shield));
     if (!m_activeShader && !held.empty() && (Enchanting::glints(held.id, held.enchantments) || (held.id == Items::Compass && held.damage > 0)))
         m_heldItem.renderGlint(m_chunkShader, glintTexture(false), glintShift());
+
+    const ItemStack& off = m_inventory.slot(Inventory::OFFHAND);
+    if (off.empty()) return;
+    m_offhandItem.setTileOverride(crossbowIcon(off, true) >= 0 ? crossbowIcon(off, true) : animatedIcon(off));
+    m_offhandItem.setLeftHanded(!m_leftHanded);
+    m_offhandItem.clearShieldLook();
+    if (off.id == Items::Shield && (off.enchantments >> 24) != 0u)
+    {
+        const Banners::Design look = m_bannerLibrary.design(static_cast<int>(off.enchantments >> 24));
+        if (!look.empty()) m_offhandItem.setShieldLook(look[0].colour, Banners::Design(look.begin() + 1, look.end()));
+    }
+    m_offhandItem.render(m_activeShader ? *m_activeShader : m_chunkShader, m_camera, skinFor(localAppearance()), m_atlas, off.id,
+                         sky, blockLight, m_player.sneaking, m_player.blocking && off.id == Items::Shield && held.id != Items::Shield);
+    if (!m_activeShader && (Enchanting::glints(off.id, off.enchantments) || (off.id == Items::Compass && off.damage > 0)))
+        m_offhandItem.renderGlint(m_chunkShader, glintTexture(false), glintShift());
 }
 
 // -------------------------------------------------------------- players ---
