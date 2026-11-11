@@ -116,6 +116,7 @@ public:
         glm::vec3 at{ 0.0f };
         float yaw = 0.0f;
         bool baby = false;
+        MobId into = MobId::Zoglin;
     };
     std::vector<Zombified> drainZombified();
     static constexpr float ZOMBIFY_SECONDS = 15.0f;

@@ -599,6 +599,44 @@ void EntityManager::update(float deltaTime, const World& world,
                 mob.vanish();
             }
         }
+        if (mob.alive())
+        {
+            const MobId kind = mob.typeId();
+            const glm::vec3 at = mob.position();
+            const int fx = static_cast<int>(std::floor(at.x)), fz = static_cast<int>(std::floor(at.z));
+            MobId into = MobId::Count;
+            bool condition = false;
+            float needed = 0.0f;
+            if (kind == MobId::Piglin || kind == MobId::PiglinBrute)
+            {
+                into = MobId::ZombiePigman;
+                condition = m_dimension != Dimension::Nether;
+                needed = ZOMBIFY_SECONDS;
+            }
+            else if (kind == MobId::Zombie || kind == MobId::Husk)
+            {
+                into = kind == MobId::Zombie ? MobId::Drowned : MobId::Zombie;
+                condition = isWater(world.getBlock(fx, static_cast<int>(std::floor(at.y + mob.height() * 0.85f)), fz));
+                needed = 45.0f;
+            }
+            else if (kind == MobId::Skeleton)
+            {
+                into = MobId::Stray;
+                condition = world.getBlock(fx, static_cast<int>(std::floor(at.y + 0.1f)), fz) == Blocks::PowderSnow;
+                needed = 7.0f;
+            }
+            if (into != MobId::Count)
+            {
+                mob.addZombifyTime(condition ? deltaTime : -1.0f);
+                if (mob.zombifyTime() > needed)
+                {
+                    Zombified turned{ at, mob.yaw(), mob.baby() };
+                    turned.into = into;
+                    m_zombified.push_back(turned);
+                    mob.vanish();
+                }
+            }
+        }
     }
 
     // A frog eats a magma cube it can reach. This is the whole reason

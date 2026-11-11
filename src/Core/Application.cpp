@@ -21554,10 +21554,11 @@ void Application::updateMobs(float deltaTime)
     }
     for (const EntityManager::Zombified& turned : m_entities.drainZombified())
     {
-        if (m_entities.spawnAt(MobId::Zoglin, turned.at, *m_world, turned.baby))
+        if (m_entities.spawnAt(turned.into, turned.at, *m_world, turned.baby))
             m_entities.mobs().back().setYaw(turned.yaw);
         const float distance = glm::length(turned.at - m_camera.position);
-        if (distance < 32.0f) m_audio.play(Sound::ZoglinConvert, 1.0f - distance / 32.0f, 1.0f);
+        if (distance < 32.0f)
+            m_audio.play(turned.into == MobId::Zoglin ? Sound::ZoglinConvert : mobType(turned.into).voice, 1.0f - distance / 32.0f, 1.0f);
         sprites(SpriteParticles::Kind::Poof, turned.at + glm::vec3(0.0f, 0.8f, 0.0f), 10, 0.6f, 0.6f, 0.4f, 0.8f);
     }
     for (const glm::vec3& grown : m_entities.drainGrownTadpoles())
