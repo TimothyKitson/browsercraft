@@ -3186,7 +3186,7 @@ bool Application::inventorySlotKeys()
         return false;
     bool changed = false;
     for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
-        if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)))
+        if (m_keys.pressed(m_input, static_cast<Action>(static_cast<int>(Action::Hotbar1) + i)))
             changed = m_inventory.swapSlots(slot, i) || changed;
     if (m_keys.pressed(m_input, Action::SwapHands)) changed = m_inventory.swapSlots(slot, Inventory::OFFHAND) || changed;
     if (m_keys.pressed(m_input, Action::Drop))

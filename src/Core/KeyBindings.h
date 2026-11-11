@@ -22,6 +22,9 @@ enum class Action
     RenderDistanceDown, RenderDistanceUp,
     SwapHands,
     Advancements,
+    PlayerList,
+    Hotbar1, Hotbar2, Hotbar3, Hotbar4, Hotbar5, Hotbar6, Hotbar7, Hotbar8, Hotbar9,
+    SmoothCamera,
     Count
 };
 

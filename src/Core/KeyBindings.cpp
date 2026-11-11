@@ -54,6 +54,17 @@ namespace
         { Action::RenderDistanceUp,   "RENDER DISTANCE +", "distup",   key(SDL_SCANCODE_RIGHTBRACKET) },
         { Action::SwapHands, "SWAP ITEM WITH OFFHAND", "swaphands", key(SDL_SCANCODE_X) },
         { Action::Advancements, "ADVANCEMENTS", "advancements", key(SDL_SCANCODE_L) },
+        { Action::PlayerList, "LIST PLAYERS", "playerlist", key(SDL_SCANCODE_TAB) },
+        { Action::Hotbar1, "HOTBAR SLOT 1", "hotbar.1", key(SDL_SCANCODE_1) },
+        { Action::Hotbar2, "HOTBAR SLOT 2", "hotbar.2", key(SDL_SCANCODE_2) },
+        { Action::Hotbar3, "HOTBAR SLOT 3", "hotbar.3", key(SDL_SCANCODE_3) },
+        { Action::Hotbar4, "HOTBAR SLOT 4", "hotbar.4", key(SDL_SCANCODE_4) },
+        { Action::Hotbar5, "HOTBAR SLOT 5", "hotbar.5", key(SDL_SCANCODE_5) },
+        { Action::Hotbar6, "HOTBAR SLOT 6", "hotbar.6", key(SDL_SCANCODE_6) },
+        { Action::Hotbar7, "HOTBAR SLOT 7", "hotbar.7", key(SDL_SCANCODE_7) },
+        { Action::Hotbar8, "HOTBAR SLOT 8", "hotbar.8", key(SDL_SCANCODE_8) },
+        { Action::Hotbar9, "HOTBAR SLOT 9", "hotbar.9", key(SDL_SCANCODE_9) },
+        { Action::SmoothCamera, "CINEMATIC CAMERA", "smoothcamera", Binding{} },
     };
 
     static_assert(sizeof(ENTRIES) / sizeof(ENTRIES[0]) == static_cast<size_t>(Action::Count),

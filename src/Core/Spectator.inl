@@ -91,7 +91,7 @@ void Application::updateSpectatorInput()
         return;
     }
     for (int i = 0; i < 9; ++i)
-        if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)))
+        if (m_keys.pressed(m_input, static_cast<Action>(static_cast<int>(Action::Hotbar1) + i)))
         {
             m_spectatorTouched = SDL_GetTicks();
             if (m_spectatorMenu) useSpectatorSlot(i);

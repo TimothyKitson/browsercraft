@@ -822,6 +822,11 @@ private:
     glm::vec3 m_menuFocus{ 0.0f };       // point the title camera orbits
 
     std::string m_playerName;   // empty until the first visit picks one
+    std::map<uint32_t, std::string> m_knownPeers;
+    bool m_smoothCamera = false;
+    glm::vec2 m_smoothLook{ 0.0f };
+    void renderPlayerList();
+    void notePeers();
     std::string m_nameDraft;    // what is being typed on the name screen
 
     bool m_inventoryOpen = false;

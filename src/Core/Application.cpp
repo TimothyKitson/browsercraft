@@ -42,6 +42,7 @@
 #include <emscripten/html5.h> // canvas sizing and device pixel ratio
 #endif
 #include <algorithm>
+#include <cstring>
 #include <functional>
 #include <cmath>
 #include <iterator>
@@ -2255,6 +2256,7 @@ bool Application::frame()
     m_net.setLocalSneaking(m_player.sneaking);
     m_net.update(deltaTime, m_world && !m_menuWorld ? m_world.get() : nullptr,
                  m_player.position, m_camera.yaw, m_camera.pitch, m_timeOfDay);
+    notePeers();
 
     // A guest gets the seed before it has the world; build it now,
     // replacing whatever was on screen.
@@ -9332,6 +9334,16 @@ void Application::updateGameplay(float deltaTime)
         lookX = 0.0f;
         lookY = 0.0f;
     }
+    if (m_keys.pressed(m_input, Action::SmoothCamera)) m_smoothCamera = !m_smoothCamera;
+    if (m_smoothCamera)
+    {
+        const float follow = 1.0f - std::exp(-deltaTime * 5.0f);
+        m_smoothLook += (glm::vec2(lookX, lookY) / std::max(deltaTime, 0.001f) - m_smoothLook) * follow;
+        lookX = m_smoothLook.x * deltaTime;
+        lookY = m_smoothLook.y * deltaTime;
+    }
+    else
+        m_smoothLook = glm::vec2(0.0f);
     m_camera.addLook(lookX, m_invertMouse ? -lookY : lookY, MOUSE_SENSITIVITY * m_mouseSensitivity);
 
     // Flight is a creative-mode privilege.
@@ -9351,7 +9363,7 @@ void Application::updateGameplay(float deltaTime)
         m_spectatorMenu = false;
         m_spectatingMob = 0;
         for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
-            if (m_input.wasKeyPressed(static_cast<SDL_Scancode>(SDL_SCANCODE_1 + i)) && !m_inventoryOpen)
+            if (m_keys.pressed(m_input, static_cast<Action>(static_cast<int>(Action::Hotbar1) + i)) && !m_inventoryOpen)
                 m_inventory.setSelectedSlot(i);
         if (!m_inventoryOpen) m_inventory.scrollSelection(m_input.wheelDelta());
     }
@@ -19758,6 +19770,7 @@ void Application::render()
     if (inWorld && !m_hudHidden) renderHud();
     if (inWorld && !m_hudHidden) renderTitles();
     if (inWorld && !m_hudHidden) renderSidebar();
+    if (m_screen == Screen::Playing && m_world && m_keys.down(m_input, Action::PlayerList) && !m_chatOpen) renderPlayerList();
     if (m_screen == Screen::Playing) renderSleep();
     if (inWorld && (!m_hudHidden || m_chatOpen)) renderChat();
     if (inWorld && m_showDebug && m_world) renderDebugOverlay();
@@ -21189,6 +21202,69 @@ void Application::mobsPickUpGear()
     }
 }
 
+void Application::notePeers()
+{
+    if (!m_net.active())
+    {
+        m_knownPeers.clear();
+        return;
+    }
+    std::map<uint32_t, std::string> now;
+    for (const auto& [id, peer] : m_net.players())
+        if (!peer.name.empty()) now[id] = peer.name;
+    for (const auto& [id, name] : now)
+        if (!m_knownPeers.count(id)) m_chatLog.add("\u00a7e" + name + " joined the game");
+    for (const auto& [id, name] : m_knownPeers)
+        if (!now.count(id)) m_chatLog.add("\u00a7e" + name + " left the game");
+    m_knownPeers.swap(now);
+}
+
+void Application::renderPlayerList()
+{
+    std::vector<std::string> names;
+    names.push_back(scoreHolder());
+    for (const auto& [id, peer] : m_net.players())
+        if (!peer.name.empty()) names.push_back(peer.name);
+    std::sort(names.begin() + 1, names.end());
+    const Scoreboard::Objective* shown = m_scoreboard.displayed("list");
+    m_ui.setScale(static_cast<float>(guiScale()));
+    const float w = m_ui.canvasWidth();
+    const float lineHeight = 9.0f;
+    const int rows = std::min(20, static_cast<int>(names.size()));
+    const int columns = (static_cast<int>(names.size()) + rows - 1) / rows;
+    float nameWidth = 0.0f, scoreWidth = 0.0f;
+    for (const std::string& name : names)
+    {
+        nameWidth = std::max(nameWidth, UIRenderer::textWidth(name, 1.0f));
+        if (shown) scoreWidth = std::max(scoreWidth, UIRenderer::textWidth(std::to_string(m_scoreboard.score(shown->name, name)), 1.0f) + 8.0f);
+    }
+    const float cell = std::min(nameWidth + scoreWidth + 13.0f, (w - 50.0f) / static_cast<float>(columns));
+    const float total = cell * static_cast<float>(columns) + 5.0f * static_cast<float>(columns - 1);
+    const float left = std::floor((w - total) * 0.5f);
+    const float top = 10.0f;
+    m_ui.quad(left - 1.0f, top - 1.0f, total + 2.0f, static_cast<float>(rows) * lineHeight + 1.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
+    for (size_t i = 0; i < names.size(); ++i)
+    {
+        const int column = static_cast<int>(i) / rows;
+        const int row = static_cast<int>(i) % rows;
+        const float x = left + static_cast<float>(column) * (cell + 5.0f);
+        const float y = top + static_cast<float>(row) * lineHeight;
+        m_ui.quad(x, y, cell, 8.0f, glm::vec4(1.0f, 1.0f, 1.0f, 0.125f));
+        m_ui.textWithShadow(names[i], x, y, 1.0f, glm::vec4(1.0f));
+        if (shown)
+        {
+            const std::string score = std::to_string(m_scoreboard.score(shown->name, names[i]));
+            m_ui.textWithShadow(score, x + cell - 12.0f - UIRenderer::textWidth(score, 1.0f), y, 1.0f, glm::vec4(1.0f, 1.0f, 0.33f, 1.0f));
+        }
+        for (int bar = 0; bar < 5; ++bar)
+        {
+            const float bh = 1.0f + static_cast<float>(bar);
+            m_ui.quad(x + cell - 10.0f + static_cast<float>(bar) * 2.0f, y + 7.0f - bh, 1.0f, bh, glm::vec4(0.0f, 1.0f, 0.2f, 1.0f));
+        }
+    }
+    m_ui.setScale(1.0f);
+}
+
 void Application::renderSidebar()
 {
     const Scoreboard::Objective* shown = m_scoreboard.displayed("sidebar");
@@ -22113,11 +22189,23 @@ void Application::renderChat()
             fade = Chat::LINE_SECONDS - line.age;
 
         const float y = bottom - (shown - i) * lineHeight;
+        std::string text = line.text;
+        glm::vec3 ink(1.0f);
+        if (text.size() >= 3 && static_cast<unsigned char>(text[0]) == 0xC2 && static_cast<unsigned char>(text[1]) == 0xA7)
+        {
+            static const char* CODES = "0123456789abcdef";
+            static const glm::vec3 INKS[16] = { { 0, 0, 0 }, { 0, 0, 0.67f }, { 0, 0.67f, 0 }, { 0, 0.67f, 0.67f },
+                                                { 0.67f, 0, 0 }, { 0.67f, 0, 0.67f }, { 1.0f, 0.67f, 0 }, { 0.67f, 0.67f, 0.67f },
+                                                { 0.33f, 0.33f, 0.33f }, { 0.33f, 0.33f, 1.0f }, { 0.33f, 1.0f, 0.33f }, { 0.33f, 1.0f, 1.0f },
+                                                { 1.0f, 0.33f, 0.33f }, { 1.0f, 0.33f, 1.0f }, { 1.0f, 1.0f, 0.33f }, { 1.0f, 1.0f, 1.0f } };
+            if (const char* at = std::strchr(CODES, text[2])) ink = INKS[at - CODES];
+            text = text.substr(3);
+        }
         m_ui.quad(left - 2.0f, y - 1.0f,
-                  UIRenderer::textWidth(line.text, 1.0f) + 4.0f, lineHeight,
+                  UIRenderer::textWidth(text, 1.0f) + 4.0f, lineHeight,
                   glm::vec4(0.0f, 0.0f, 0.0f, 0.7f * m_textBackground * fade * m_chatOpacity));
-        m_ui.textWithShadow(line.text, left, y, 1.0f,
-                            glm::vec4(1.0f, 1.0f, 1.0f, fade * m_chatOpacity));
+        m_ui.textWithShadow(text, left, y, 1.0f,
+                            glm::vec4(ink, fade * m_chatOpacity));
     }
 
     if (m_chatOpen)
