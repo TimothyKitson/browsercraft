@@ -381,6 +381,37 @@ namespace
         check(tallest >= 14, "and cuts a tall, open slot down through the rock");
     }
 
+    void testNetherPortalRuins()
+    {
+        section("ruined portals in the nether");
+        const WorldGen nether(2024u, Dimension::Nether);
+        int found = 0, framed = 0, chested = 0;
+        for (int cz = -20; cz <= 20 && found < 3; ++cz)
+            for (int cx = -20; cx <= 20 && found < 3; ++cx)
+            {
+                int midX = 0, midZ = 0;
+                if (!nether.netherPortalRuinIn(cx, cz, midX, midZ)) continue;
+                ++found;
+                Chunk chunk(ChunkPos{ cx, cz });
+                nether.generate(chunk);
+                int obsidian = 0;
+                for (int y = 30; y < 110; ++y)
+                    for (int dx = -2; dx <= 2; ++dx)
+                    {
+                        const BlockId here = chunk.getBlock(midX - cx * Chunk::SX + dx, y, midZ - cz * Chunk::SZ);
+                        if (here == Blocks::Obsidian || here == Blocks::CryingObsidian) ++obsidian;
+                    }
+                if (obsidian >= 4) ++framed;
+                for (int y = 30; y < 110; ++y)
+                    if (chunk.getBlock(midX + 3 - cx * Chunk::SX, y, midZ + 1 - cz * Chunk::SZ) == Blocks::Chest &&
+                        nether.hoardAt(midX + 3, y, midZ + 1) == WorldGen::Hoard::RuinedPortal)
+                        ++chested;
+            }
+        check(found > 0, "the nether has ruined portals");
+        check(framed > 0, "standing as broken obsidian frames");
+        check(chested > 0, "with a chest on the ruined portal table beside them");
+    }
+
     void testBigTrees()
     {
         section("big trees");
@@ -8654,8 +8685,8 @@ namespace
               "and not in the sand");
         check(WorldGen::landmarkSuits(WorldGen::Landmark::JungleTemple, Biome::Jungle),
               "a temple belongs in the jungle");
-        check(!WorldGen::landmarkSuits(WorldGen::Landmark::RuinedPortal, Biome::Ocean),
-              "and nothing stands on the sea");
+        check(WorldGen::landmarkSuits(WorldGen::Landmark::RuinedPortal, Biome::Ocean),
+              "and a ruined portal can lie on the sea floor too");
 
         // And they are built. Each kind is looked for where its own
         // grid says it should be, and the chunks there generated.
@@ -9334,7 +9365,7 @@ namespace
                 // points, and the stamp must agree to build there.
                 check(over.landmarkStands(kind, midX, midZ),
                       who + ": the place it points at suits it");
-                check(over.surfaceHeight(midX, midZ) > WorldGen::SEA_LEVEL,
+                check(kind == WorldGen::Landmark::RuinedPortal || over.surfaceHeight(midX, midZ) > WorldGen::SEA_LEVEL,
                       who + ": and is out of the sea");
 
                 // And something is actually there.
@@ -17711,6 +17742,7 @@ int runSelfTest()
     testSoundCategories();
     testDripKinds();
     testBigTrees();
+    testNetherPortalRuins();
     testRavines();
     testMineshaftNetwork();
     testCaveAndSpikeFeatures();

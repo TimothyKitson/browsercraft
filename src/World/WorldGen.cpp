@@ -442,6 +442,7 @@ void WorldGen::generate(Chunk& chunk) const
         case Dimension::Nether:
             generateNether(chunk);
             dressNether(chunk);
+            buildNetherRuinedPortal(chunk);
             buildNetherFortresses(chunk);
             buildBastions(chunk);
             return;
@@ -2582,10 +2583,7 @@ bool WorldGen::landmarkSuits(Landmark kind, Biome biome)
             // 80 apart, which is why finding one is a journey.
             return biome == Biome::Forest;
         case Landmark::RuinedPortal:
-            // Anywhere with ground to stand on, which is the point of
-            // it: a ruined portal is the one you find before you know
-            // what you are looking at.
-            return biome != Biome::Ocean;
+            return true;
         case Landmark::Count: break;
     }
     return false;
@@ -2622,6 +2620,7 @@ bool WorldGen::landmarkSuits(Landmark kind, Biomes::Kind biome)
 bool WorldGen::landmarkStands(Landmark kind, int midX, int midZ) const
 {
     if (!landmarkSuits(kind, kindAt(midX, midZ))) return false;
+    if (kind == Landmark::RuinedPortal) return surfaceHeight(midX, midZ) > SEA_LEVEL || surfaceHeight(midX, midZ) < SEA_LEVEL - 3;
     return surfaceHeight(midX, midZ) > SEA_LEVEL;
 }
 
@@ -2733,7 +2732,8 @@ int WorldGen::landmarkChests(Landmark kind, ChestSpot out[2])
 void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const
 {
     const int ground = surfaceHeight(midX, midZ);
-    if (ground <= SEA_LEVEL) return;
+    if (ground <= SEA_LEVEL && kind != Landmark::RuinedPortal) return;
+    const bool sunken = ground <= SEA_LEVEL;
 
     switch (kind)
     {
@@ -2843,7 +2843,8 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
                     if (hashToFloat(hashCoords(midX + dx, 1, midZ + dz, m_seed + 9101)) > 0.35f)
                         continue;
                     const int y = surfaceHeight(midX + dx, midZ + dz);
-                    put(chunk, midX + dx, y, midZ + dz, Blocks::Netherrack);
+                    const float pick = hashToFloat(hashCoords(midX + dx, 2, midZ + dz, m_seed + 9103));
+                    put(chunk, midX + dx, y, midZ + dz, sunken ? (pick < 0.4f ? Blocks::MagmaBlock : Blocks::Gravel) : Blocks::Netherrack);
                 }
 
             putChests(chunk, Landmark::RuinedPortal, midX, ground, midZ);
@@ -4813,6 +4814,55 @@ void WorldGen::growCoralReefs(Chunk& chunk) const
         }
 }
 
+bool WorldGen::netherPortalRuinIn(int chunkX, int chunkZ, int& midX, int& midZ) const
+{
+    const uint32_t h = hashCoords(chunkX, 71, chunkZ, m_seed + 9201);
+    if (hashToFloat(h) >= 0.008f) return false;
+    midX = chunkX * Chunk::SX + 4 + static_cast<int>((h >> 8) % 8u);
+    midZ = chunkZ * Chunk::SZ + 4 + static_cast<int>((h >> 16) % 8u);
+    return true;
+}
+
+void WorldGen::buildNetherRuinedPortal(Chunk& chunk) const
+{
+    int midX = 0, midZ = 0;
+    if (!netherPortalRuinIn(chunk.position().x, chunk.position().z, midX, midZ)) return;
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    const int lx = midX - baseX, lz = midZ - baseZ;
+    int ground = -1;
+    for (int y = 33; y < 100; ++y)
+        if (isSolid(chunk.getBlock(lx, y - 1, lz)) && chunk.getBlock(lx, y, lz) == Blocks::Air && chunk.getBlock(lx, y + 4, lz) == Blocks::Air)
+        {
+            ground = y - 1;
+            break;
+        }
+    if (ground < 0) return;
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dy = 0; dy <= 4; ++dy)
+        {
+            const bool frame = std::abs(dx) == 2 || dy == 0 || dy == 4;
+            if (!frame || hashToFloat(hashCoords(midX + dx, dy, midZ, m_seed + 9202)) < 0.3f) continue;
+            put(chunk, midX + dx, ground + dy, midZ,
+                hashToFloat(hashCoords(midX + dx, dy, midZ, m_seed + 9203)) < 0.25f ? Blocks::CryingObsidian : Blocks::Obsidian);
+        }
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dz = -4; dz <= 4; ++dz)
+        {
+            const float pick = hashToFloat(hashCoords(midX + dx, 3, midZ + dz, m_seed + 9204));
+            if (pick > 0.45f) continue;
+            const int cx = lx + dx, cz = lz + dz;
+            if (cx < 0 || cx >= Chunk::SX || cz < 0 || cz >= Chunk::SZ) continue;
+            for (int y = ground + 2; y >= ground - 3; --y)
+                if (isSolid(chunk.getBlock(cx, y, cz)) && chunk.getBlock(cx, y + 1, cz) == Blocks::Air)
+                {
+                    chunk.setBlockRaw(cx, y, cz, pick < 0.12f ? Blocks::MagmaBlock : pick < 0.3f ? Blocks::Blackstone : Blocks::Netherrack);
+                    break;
+                }
+        }
+    put(chunk, midX + 3, ground + 1, midZ + 1, Blocks::Chest);
+}
+
 void WorldGen::placeIceSpikes(Chunk& chunk) const
 {
     const int baseX = chunk.position().x * Chunk::SX;
@@ -5038,6 +5088,14 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
                     case Landmark::Count:           break;
                 }
             }
+    }
+
+    if (m_dimension == Dimension::Nether)
+    {
+        int midX = 0, midZ = 0;
+        const int cx = static_cast<int>(std::floor(static_cast<float>(x - 3) / Chunk::SX));
+        const int cz = static_cast<int>(std::floor(static_cast<float>(z - 1) / Chunk::SZ));
+        if (netherPortalRuinIn(cx, cz, midX, midZ) && x == midX + 3 && z == midZ + 1) return Hoard::RuinedPortal;
     }
 
     // Buried treasure, which is at the ninth block of its own chunk and
