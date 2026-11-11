@@ -1924,6 +1924,82 @@ namespace
         }
     }
 
+    void autoBox(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, glm::vec3 lo, glm::vec3 hi,
+                 int top, int bottom, int side, std::vector<float>& out)
+    {
+        const PartFace f[6] = { { side, 16.0f - hi.z, 16.0f - hi.y, 16.0f - lo.z, 16.0f - lo.y },
+                                { side, lo.z, 16.0f - hi.y, hi.z, 16.0f - lo.y },
+                                { top, lo.x, lo.z, hi.x, hi.z },
+                                { bottom, lo.x, 16.0f - hi.z, hi.x, 16.0f - lo.z },
+                                { side, lo.x, 16.0f - hi.y, hi.x, 16.0f - lo.y },
+                                { side, 16.0f - hi.x, 16.0f - hi.y, 16.0f - lo.x, 16.0f - lo.y } };
+        emitPart(snap, lx, y, lz, id, lo / 16.0f, hi / 16.0f, f, out);
+    }
+
+    void emitCross(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out);
+
+    void emitWorkBlock(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
+    {
+        const BlockInfo& info = blockInfo(id);
+        auto box = [&](float x0, float y0, float z0, float x1, float y1, float z1, int top, int bottom, int side) {
+            autoBox(snap, lx, y, lz, id, glm::vec3(x0, y0, z0), glm::vec3(x1, y1, z1), top, bottom, side, out);
+        };
+        if (isAnvil(id))
+        {
+            const int body = info.tileSide;
+            box(2, 0, 2, 14, 4, 14, body, body, body);
+            box(4, 4, 3, 12, 5, 13, body, body, body);
+            box(6, 5, 4, 10, 10, 12, body, body, body);
+            box(3, 10, 0, 13, 16, 16, info.tileTop, body, body);
+            return;
+        }
+        if (id == Blocks::EnchantingTable)
+        {
+            box(0, 0, 0, 16, 12, 16, info.tileTop, info.tileBottom, info.tileSide);
+            return;
+        }
+        if (id == Blocks::EndPortalFrame || id == Blocks::EndPortalFrameFilled)
+        {
+            box(0, 0, 0, 16, 13, 16, Tiles::EndFrameTop, info.tileBottom, info.tileSide);
+            if (id == Blocks::EndPortalFrameFilled)
+            {
+                const int eye = Tiles::EndFrameEye;
+                const PartFace f[6] = { { eye, 4, 0, 12, 3 }, { eye, 4, 0, 12, 3 }, { eye, 4, 4, 12, 12 },
+                                        { -1, 0, 0, 16, 16 }, { eye, 4, 0, 12, 3 }, { eye, 4, 0, 12, 3 } };
+                emitPart(snap, lx, y, lz, id, glm::vec3(4.0f, 13.0f, 4.0f) / 16.0f, glm::vec3(12.0f, 16.0f, 12.0f) / 16.0f, f, out);
+            }
+            return;
+        }
+        if (id == Blocks::Hopper)
+        {
+            const int side = info.tileSide;
+            box(0, 10, 0, 16, 16, 16, info.tileTop, side, side);
+            box(4, 4, 4, 12, 10, 12, side, side, side);
+            box(6, 0, 6, 10, 4, 10, side, side, side);
+            return;
+        }
+        if (isComposter(id))
+        {
+            const int side = info.tileSide, bottom = info.tileBottom, rim = Tiles::ComposterTop;
+            box(0, 0, 0, 2, 16, 16, rim, bottom, side);
+            box(14, 0, 0, 16, 16, 16, rim, bottom, side);
+            box(2, 0, 0, 14, 16, 2, rim, bottom, side);
+            box(2, 0, 14, 14, 16, 16, rim, bottom, side);
+            const int level = compostLevel(id);
+            const float height = level == 0 ? 2.0f : level >= 8 ? 15.0f : 1.0f + 2.0f * static_cast<float>(level);
+            box(2, 0, 2, 14, height, 14, level == 0 ? bottom : info.tileTop, bottom, side);
+            return;
+        }
+        if (id == Blocks::BrewingStand)
+        {
+            const int base = Tiles::BrewingBaseTile;
+            box(2, 0, 1, 8, 2, 7, base, base, base);
+            box(2, 0, 9, 8, 2, 15, base, base, base);
+            box(9, 0, 5, 15, 2, 11, base, base, base);
+            emitCross(snap, lx, y, lz, id, out);
+        }
+    }
+
     void emitCauldron(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         const BlockInfo& info = blockInfo(id);
@@ -2297,6 +2373,11 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 else if (id == Blocks::Cactus)
                 {
                     emitCactus(snapshot, lx, y, lz, id, out.opaqueVertices);
+                }
+                else if (isAnvil(id) || id == Blocks::EnchantingTable || id == Blocks::EndPortalFrame ||
+                         id == Blocks::EndPortalFrameFilled || id == Blocks::Hopper || isComposter(id) || id == Blocks::BrewingStand)
+                {
+                    emitWorkBlock(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
                 else if (isAnyCauldron(id))
                 {

@@ -9054,6 +9054,8 @@ namespace
         { Tiles::CauldronTop, paintCauldronTop },
         { Tiles::CauldronSide, paintCauldronSide },
         { Tiles::CauldronRimTile, paintCauldronBottom },
+        { Tiles::HopperInsideTile, paintCauldronBottom },
+        { Tiles::BrewingBaseTile, paintCauldronBottom },
         { Tiles::CauldronBottom, paintCauldronBottom },
         { Tiles::CauldronWater1, paintCauldronWater1 },
         { Tiles::CauldronWater2, paintCauldronWater2 },
@@ -11354,6 +11356,8 @@ namespace
         { Tiles::CauldronBottom,{ "cauldron_bottom", nullptr },                        Tinting::None,    0,   false },
         { Tiles::CauldronTop,   { "cauldron_inner", nullptr },                         Tinting::None,    0,   false },
         { Tiles::CauldronRimTile, { "cauldron_top", nullptr }, Tinting::None, 0, false },
+        { Tiles::HopperInsideTile, { "hopper_inside", nullptr }, Tinting::None, 0, false },
+        { Tiles::BrewingBaseTile, { "brewing_stand_base", nullptr }, Tinting::None, 0, false },
         // Minecraft draws the water in a cauldron as a layer over the
         // inner wall. There is no layer here, so the three levels take
         // the water texture itself and the painted versions keep the

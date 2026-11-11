@@ -3441,6 +3441,12 @@ bool Application::frame()
                     m_world->setBlock(bx + 2, by, bz + 1, cauldronAt(2));
                     m_world->setBlock(bx + 3, by, bz + 1, Blocks::LavaCauldron);
                     m_world->setBlock(bx + 4, by, bz + 1, Blocks::Cauldron0);
+                    m_world->setBlock(bx + 2, by, bz - 1, Blocks::AnvilChipped);
+                    m_world->setBlock(bx + 1, by, bz - 1, Blocks::Hopper);
+                    m_world->setBlock(bx, by, bz - 1, Blocks::EnchantingTable);
+                    m_world->setBlock(bx - 1, by, bz - 1, Blocks::EndPortalFrameFilled);
+                    m_world->setBlock(bx - 2, by, bz - 1, composterAt(5));
+                    m_world->setBlock(bx + 4, by, bz - 1, Blocks::BrewingStand);
                     for (int t = 0; t < 4; ++t)
                         for (int r = 0; r < 2; ++r)
                             m_world->setBlock(bx - 9 + t, by - 1 + 0, bz + 3 + r, glazedOf(static_cast<BlockId>(Blocks::GlazedTerracottaFirst + 14), (t + r) & 3));

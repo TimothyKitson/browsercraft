@@ -397,6 +397,7 @@ namespace Tiles
         BambooStalkTile, BambooSmallLeavesTile, BambooShootTile,
         FarmlandDryTop,
         CauldronRimTile,
+        HopperInsideTile, BrewingBaseTile,
 
         TileCount
     };

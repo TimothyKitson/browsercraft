@@ -294,15 +294,15 @@ namespace
         { "Blast Furnace",BlastFurnaceTop,BlastFurnaceTop,BlastFurnaceSide,true,true,RenderType::Cube,   0,   3.5f, BlastFurnaceFront },
         { "Blast Furnace",BlastFurnaceTop,BlastFurnaceTop,BlastFurnaceSide,true,true,RenderType::Cube,13, 3.5f, BlastFurnaceFrontLit },
 
-        { "Composter",    ComposterTop,  ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
-        { "Composter",    ComposterFill1,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
-        { "Composter",    ComposterFill1,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
-        { "Composter",    ComposterFill2,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
-        { "Composter",    ComposterFill2,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
-        { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
-        { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
-        { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
-        { "Composter",    ComposterReady,ComposterBottom,ComposterSide,  true,  true,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterTop,  ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill1,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill1,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill2,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill2,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterFill3,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
+        { "Composter",    ComposterReady,ComposterBottom,ComposterSide,  true,  false,  RenderType::Cube,   0,   0.6f },
 
         { "Grindstone",   GrindstonePivot,GrindstonePivot,GrindstoneSide,true,  true,  RenderType::Cube,   0,   2.0f },
         { "Lectern",      LecternTop,    LecternBase,    LecternSide,    true,  true,  RenderType::Cube,   0,   2.5f },
@@ -5292,6 +5292,18 @@ bool blockOverlaps(BlockId id, int bx, int by, int bz,
     if (id == Blocks::Bamboo) return overlaps(0.40625f, 0.0f, 0.40625f, 0.59375f, 1.0f, 0.59375f);
     if (id == Blocks::Cactus) return overlaps(0.0625f, 0.0f, 0.0625f, 0.9375f, 0.9375f, 0.9375f);
     if (isAnyCampfire(id)) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.4375f, 1.0f);
+    if (isAnvil(id)) return overlaps(0.125f, 0.0f, 0.0f, 0.875f, 1.0f, 1.0f);
+    if (id == Blocks::EnchantingTable) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.75f, 1.0f);
+    if (id == Blocks::EndPortalFrame) return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.8125f, 1.0f);
+    if (id == Blocks::EndPortalFrameFilled)
+        return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.8125f, 1.0f) || overlaps(0.25f, 0.8125f, 0.25f, 0.75f, 1.0f, 0.75f);
+    if (id == Blocks::Hopper)
+        return overlaps(0.0f, 0.625f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.25f, 0.25f, 0.25f, 0.75f, 0.625f, 0.75f) ||
+               overlaps(0.375f, 0.0f, 0.375f, 0.625f, 0.25f, 0.625f);
+    if (isComposter(id))
+        return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.125f, 1.0f) || overlaps(0.0f, 0.0f, 0.0f, 0.125f, 1.0f, 1.0f) ||
+               overlaps(0.875f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.125f) ||
+               overlaps(0.0f, 0.0f, 0.875f, 1.0f, 1.0f, 1.0f);
     if (isAnyCauldron(id))
         return overlaps(0.0f, 0.0f, 0.0f, 1.0f, 0.25f, 1.0f) || overlaps(0.0f, 0.0f, 0.0f, 0.125f, 1.0f, 1.0f) ||
                overlaps(0.875f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f) || overlaps(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.125f) ||
