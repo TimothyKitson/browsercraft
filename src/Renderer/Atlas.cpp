@@ -6239,6 +6239,7 @@ namespace
     void paintBellTopTile(Tile& t) { paintBellIn(t, 2201); }
     void paintBellSideTile(Tile& t) { paintBellIn(t, 2202); }
     void paintBellBottomTile(Tile& t) { paintBellIn(t, 2203); }
+    void paintBellBodyTile(Tile& t) { paintBellIn(t, 2204); }
     void paintJukeboxTopTile(Tile& t)
     {
         t.fill(Color{ 112, 74, 50 });
@@ -9381,6 +9382,7 @@ namespace
         { Tiles::BellTopTile, paintBellTopTile },
         { Tiles::BellSideTile, paintBellSideTile },
         { Tiles::BellBottomTile, paintBellBottomTile },
+        { Tiles::BellBodyTile, paintBellBodyTile },
         { Tiles::JukeboxTopTile, paintJukeboxTopTile },
         { Tiles::JukeboxSideTile, paintJukeboxSideTile },
         { Tiles::ShelfTopTile, paintShelfTopTile },
@@ -10616,6 +10618,7 @@ namespace
         { Tiles::SuspiciousGravelTileFirst + 3, { "suspicious_gravel_3", nullptr }, Tinting::None, 0, false },
         { Tiles::BellTopTile, { "bell_top", nullptr }, Tinting::None, 0, false },
         { Tiles::BellSideTile, { "bell_side", nullptr }, Tinting::None, 0, false },
+        { Tiles::BellBodyTile, { "../entity/bell/bell_body", nullptr }, Tinting::None, 0, false },
         { Tiles::BellBottomTile, { "bell_bottom", nullptr }, Tinting::None, 0, false },
         { Tiles::JukeboxTopTile, { "jukebox_top", nullptr }, Tinting::None, 0, false },
         { Tiles::JukeboxSideTile, { "jukebox_side", nullptr }, Tinting::None, 0, false },

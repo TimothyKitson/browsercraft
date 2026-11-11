@@ -917,6 +917,17 @@ namespace
         }
     }
 
+    void emitBellBody(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, int facing, std::vector<float>& out)
+    {
+        const int t = Tiles::BellBodyTile;
+        const PartFace body[6] = { { t, 0.0f, 3.0f, 3.0f, 6.5f }, { t, 6.0f, 3.0f, 9.0f, 6.5f }, { t, 3.0f, 0.0f, 6.0f, 3.0f },
+                                   { t, 6.0f, 0.0f, 9.0f, 3.0f }, { t, 3.0f, 3.0f, 6.0f, 6.5f }, { t, 9.0f, 3.0f, 12.0f, 6.5f } };
+        emitRotated(snap, lx, y, lz, id, facing, 5, 6, 5, 11, 13, 11, body, out);
+        const PartFace lip[6] = { { t, 0.0f, 10.5f, 4.0f, 11.5f }, { t, 8.0f, 10.5f, 12.0f, 11.5f }, { t, 4.0f, 6.5f, 8.0f, 10.5f },
+                                  { t, 8.0f, 6.5f, 12.0f, 10.5f }, { t, 4.0f, 10.5f, 8.0f, 11.5f }, { t, 12.0f, 10.5f, 16.0f, 11.5f } };
+        emitRotated(snap, lx, y, lz, id, facing, 4, 4, 4, 12, 6, 12, lip, out);
+    }
+
     void emitLush(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
         auto flat = [&](float yy, float x0, float z0, float x1, float z1, int tile, float shade) {
@@ -972,7 +983,6 @@ namespace
         }
         if (isBell(id))
         {
-            const BlockInfo& info = blockInfo(id);
             const int facing = id - Blocks::BellFirst;
             const PartFace bar{ Tiles::DarkOakPlanks, 2.0f, 2.0f, 14.0f, 4.0f };
             const PartFace bars[6] = { bar, bar, bar, bar, bar, bar };
@@ -981,11 +991,8 @@ namespace
             const PartFace posts[6] = { post, post, cap, cap, post, post };
             emitRotated(snap, lx, y, lz, id, facing, 0, 0, 6, 2, 16, 10, posts, out);
             emitRotated(snap, lx, y, lz, id, facing, 14, 0, 6, 16, 16, 10, posts, out);
-            const PartFace side{ info.tileSide, 0.0f, 0.0f, 16.0f, 16.0f };
-            const PartFace body[6] = { side, side, { info.tileTop, 0.0f, 0.0f, 16.0f, 16.0f }, { info.tileBottom, 0.0f, 0.0f, 16.0f, 16.0f }, side, side };
-            emitRotated(snap, lx, y, lz, id, facing, 5, 6, 5, 11, 12, 11, body, out);
-            emitRotated(snap, lx, y, lz, id, facing, 4, 4, 4, 12, 6, 12, body, out);
-            emitRotated(snap, lx, y, lz, id, facing, 7, 12, 7, 9, 13, 9, body, out);
+            if (lidLifted(snap.pos.x * Chunk::SX + lx, y, snap.pos.z * Chunk::SZ + lz)) return;
+            emitBellBody(snap, lx, y, lz, id, facing, out);
             return;
         }
         if (isChiseledBookshelf(id))
@@ -2571,6 +2578,30 @@ void appendChestLid(BlockId id, const glm::vec3& cell, float lift, float sky, fl
         out.push_back(cell.x + wx);
         out.push_back(cell.y + p.y);
         out.push_back(cell.z + wz);
+        for (size_t k = 3; k < STRIDE; ++k) out.push_back(local[i + k]);
+        out[out.size() - STRIDE + 6] = sky;
+        out[out.size() - STRIDE + 7] = block;
+    }
+}
+
+void appendBellBody(BlockId id, const glm::vec3& cell, float swingX, float swingZ, float sky, float block, std::vector<float>& out)
+{
+    static const MeshSnapshot empty;
+    if (!isBell(id)) return;
+    std::vector<float> local;
+    emitBellBody(empty, 0, 0, 0, id, id - Blocks::BellFirst, local);
+    const glm::vec3 pivot(0.5f, 12.0f / 16.0f, 0.5f);
+    const float cx = std::cos(swingX), sx = std::sin(swingX), cz = std::cos(swingZ), sz = std::sin(swingZ);
+    constexpr size_t STRIDE = 10;
+    for (size_t i = 0; i + STRIDE <= local.size(); i += STRIDE)
+    {
+        glm::vec3 q = glm::vec3(local[i], local[i + 1], local[i + 2]) - pivot;
+        q = glm::vec3(q.x, q.y * cx - q.z * sx, q.y * sx + q.z * cx);
+        q = glm::vec3(q.x * cz - q.y * sz, q.x * sz + q.y * cz, q.z);
+        const glm::vec3 p = cell + pivot + q;
+        out.push_back(p.x);
+        out.push_back(p.y);
+        out.push_back(p.z);
         for (size_t k = 3; k < STRIDE; ++k) out.push_back(local[i + k]);
         out[out.size() - STRIDE + 6] = sky;
         out[out.size() - STRIDE + 7] = block;

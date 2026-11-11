@@ -399,6 +399,7 @@ namespace Tiles
         CauldronRimTile,
         HopperInsideTile, BrewingBaseTile,
         DispenserFrontSide, DropperFrontSide,
+        BellBodyTile,
 
         TileCount
     };

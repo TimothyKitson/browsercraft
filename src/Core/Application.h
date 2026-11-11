@@ -353,6 +353,15 @@ private:
         bool lifted = false;
     };
     std::map<std::tuple<int, int, int>, Lid> m_lids;
+    struct Swing
+    {
+        float ticks = 0.0f;
+        glm::vec2 push{ 0.0f };
+        bool lifted = false;
+        float linger = 0.0f;
+    };
+    std::map<std::tuple<int, int, int>, Swing> m_bellSwings;
+    void ringBell(const glm::ivec3& at, const glm::vec3& from);
     Mesh m_lidMesh;
     std::vector<float> m_lidVertices;
     void liftLid(const glm::ivec3& at);

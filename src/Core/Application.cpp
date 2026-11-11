@@ -808,6 +808,7 @@ void Application::quitToTitle()
         m_world.reset();
     }
     m_lids.clear();
+    m_bellSwings.clear();
     clearLiftedLids();
     m_chatOpen = m_signOpen = m_bookOpen = m_advOpen = m_editorOpen = false;
     m_chatDraft.clear();
@@ -8758,6 +8759,7 @@ void Application::applyMenuAction()
             // Hardcore: the run is over, the world goes with it.
             m_world.reset();
             m_lids.clear();
+            m_bellSwings.clear();
             clearLiftedLids();
             deleteSavedWorld();
             m_drops.clear();
@@ -17339,6 +17341,7 @@ void Application::handlePlacement()
             }
             if (isBell(used))
             {
+                ringBell(bench.block, m_player.eyePosition());
                 m_stats.add(Stats::Custom::BellRing);
                 m_audio.play(Sound::Click, 1.0f, 0.5f);
                 m_audio.play(Sound::DigGlass, 0.5f, 1.8f);
@@ -22208,6 +22211,18 @@ void Application::liftLid(const glm::ivec3& at)
     lid.linger = 0.0f;
 }
 
+void Application::ringBell(const glm::ivec3& at, const glm::vec3& from)
+{
+    if (!m_world || !isBell(m_world->getBlock(at.x, at.y, at.z))) return;
+    glm::vec2 push(static_cast<float>(at.x) + 0.5f - from.x, static_cast<float>(at.z) + 0.5f - from.z);
+    if (std::fabs(push.x) >= std::fabs(push.y)) push = glm::vec2(push.x < 0.0f ? -1.0f : 1.0f, 0.0f);
+    else push = glm::vec2(0.0f, push.y < 0.0f ? -1.0f : 1.0f);
+    Swing& swing = m_bellSwings[{ at.x, at.y, at.z }];
+    swing.ticks = 0.0f;
+    swing.push = push;
+    swing.linger = 0.0f;
+}
+
 void Application::lowerLids()
 {
     for (auto& [at, lid] : m_lids)
@@ -22217,6 +22232,37 @@ void Application::lowerLids()
 void Application::updateLids(float deltaTime)
 {
     if (!m_world) return;
+    for (auto it = m_bellSwings.begin(); it != m_bellSwings.end();)
+    {
+        const auto& [x, y, z] = it->first;
+        Swing& swing = it->second;
+        const bool gone = !isBell(m_world->getBlock(x, y, z));
+        swing.ticks += deltaTime * 20.0f;
+        const bool ringing = !gone && swing.ticks < 50.0f;
+        if (ringing && !swing.lifted)
+        {
+            swing.lifted = true;
+            setLidLifted(x, y, z, true);
+            m_world->remeshChunk(World::floorDiv(x, Chunk::SX), World::floorDiv(z, Chunk::SZ));
+        }
+        if (!ringing)
+        {
+            if (swing.lifted)
+            {
+                swing.lifted = false;
+                setLidLifted(x, y, z, false);
+                m_world->remeshChunk(World::floorDiv(x, Chunk::SX), World::floorDiv(z, Chunk::SZ));
+                swing.linger = gone ? 0.0f : 0.15f;
+            }
+            swing.linger -= deltaTime;
+            if (swing.linger <= 0.0f)
+            {
+                it = m_bellSwings.erase(it);
+                continue;
+            }
+        }
+        ++it;
+    }
     for (auto it = m_lids.begin(); it != m_lids.end();)
     {
         const auto& [x, y, z] = it->first;
@@ -22253,8 +22299,20 @@ void Application::updateLids(float deltaTime)
 
 void Application::renderLids(Shader& shader)
 {
-    if (m_lids.empty() || !m_world) return;
+    if ((m_lids.empty() && m_bellSwings.empty()) || !m_world) return;
     m_lidVertices.clear();
+    for (const auto& [at, swing] : m_bellSwings)
+    {
+        const auto& [x, y, z] = at;
+        const BlockId id = m_world->getBlock(x, y, z);
+        if (!isBell(id)) continue;
+        const float t = std::min(swing.ticks, 50.0f);
+        const float amount = swing.ticks >= 50.0f ? 0.0f : std::sin(t / 3.14159265f) / (4.0f + t / 3.0f);
+        const float sky = static_cast<float>(m_world->skyLight(x, y, z)) / 15.0f;
+        const float block = static_cast<float>(m_world->blockLightAt(x, y, z)) / 15.0f;
+        appendBellBody(id, glm::vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)), -swing.push.y * amount,
+                       swing.push.x * amount, sky, block, m_lidVertices);
+    }
     for (const auto& [at, lid] : m_lids)
     {
         const auto& [x, y, z] = at;

@@ -255,6 +255,15 @@ namespace
         appendChestLid(chestOf(2, 0, 0), glm::vec3(5.0f, 6.0f, 7.0f), 0.5f, 0.25f, 0.75f, lit);
         check(!lit.empty() && lit[6] == 0.25f && lit[7] == 0.75f && lit[0] >= 5.0f && lit[0] <= 6.0f,
               "an ender chest lid is placed at its cell and lit by it");
+        std::vector<float> still, swung;
+        appendBellBody(Blocks::BellFirst, glm::vec3(0.0f), 0.0f, 0.0f, 1.0f, 0.0f, still);
+        appendBellBody(Blocks::BellFirst, glm::vec3(0.0f), -0.3f, 0.0f, 1.0f, 0.0f, swung);
+        float stillLow = 99.0f, swungZ = 0.0f;
+        for (size_t i = 1; i < still.size(); i += 10) stillLow = std::min(stillLow, still[i]);
+        for (size_t i = 2; i < swung.size(); i += 10) swungZ += swung[i];
+        swungZ /= static_cast<float>(std::max<size_t>(1, swung.size() / 10));
+        check(!still.empty() && std::fabs(stillLow - 4.0f / 16.0f) < 0.001f, "a bell hangs with its lip four pixels up");
+        check(swungZ > 0.53f, "and a ring pushed south swings it south");
         setLidLifted(1, 2, 3, true);
         check(lidLifted(1, 2, 3) && !lidLifted(1, 2, 4), "a lifted lid is remembered by its cell");
         clearLiftedLids();
