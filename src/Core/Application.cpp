@@ -475,6 +475,14 @@ void Application::loadOptions()
         else if (std::sscanf(line, "invertYMouse=%d", &value) == 1) m_invertMouse = value != 0;
         else if (std::strncmp(line, "damageTiltStrength=", 19) == 0) m_damageTilt = std::clamp(static_cast<float>(std::atof(line + 19)), 0.0f, 1.0f);
         else if (std::strncmp(line, "soundCategory_master=", 21) == 0) m_masterVolume = std::clamp(static_cast<float>(std::atof(line + 21)), 0.0f, 1.0f);
+        else if (std::sscanf(line, "chatVisibility=%d", &value) == 1) m_chatVisibility = std::clamp(value, 0, 2);
+        else if (std::sscanf(line, "chatColors=%d", &value) == 1) m_chatColors = value != 0;
+        else if (std::strncmp(line, "chatScale=", 10) == 0) m_chatScale = std::clamp(static_cast<float>(std::atof(line + 10)), 0.0f, 1.0f);
+        else if (std::strncmp(line, "chatHeightFocused=", 18) == 0) m_chatFocusedHeight = std::clamp(static_cast<float>(std::atof(line + 18)), 0.0f, 1.0f);
+        else if (std::strncmp(line, "chatHeightUnfocused=", 20) == 0) m_chatUnfocusedHeight = std::clamp(static_cast<float>(std::atof(line + 20)), 0.0f, 1.0f);
+        else if (std::strncmp(line, "chatLineSpacing=", 16) == 0) m_chatLineSpacing = std::clamp(static_cast<float>(std::atof(line + 16)), 0.0f, 1.0f);
+        else if (std::sscanf(line, "autoSuggestions=%d", &value) == 1) m_autoSuggestions = value != 0;
+        else if (std::sscanf(line, "reducedDebugInfo=%d", &value) == 1) m_reducedDebug = value != 0;
         else if (std::strncmp(line, "soundCategory_", 14) == 0)
         {
             for (int c = 1; c < static_cast<int>(SoundCategory::Count); ++c)
@@ -526,6 +534,10 @@ void Application::saveOptions()
                  m_fovSetting, m_brightness, m_guiScaleSetting, m_viewBobbing ? 1 : 0, m_mouseSensitivity, m_invertMouse ? 1 : 0,
                  m_masterVolume, m_maxFps, m_vsync ? 1 : 0);
     std::fprintf(file, "damageTiltStrength=%.3f\n", m_damageTilt);
+    std::fprintf(file, "chatVisibility=%d\nchatColors=%d\nchatScale=%.3f\nchatHeightFocused=%.3f\nchatHeightUnfocused=%.3f\n"
+                       "chatLineSpacing=%.3f\nautoSuggestions=%d\nreducedDebugInfo=%d\n",
+                 m_chatVisibility, m_chatColors ? 1 : 0, m_chatScale, m_chatFocusedHeight, m_chatUnfocusedHeight, m_chatLineSpacing,
+                 m_autoSuggestions ? 1 : 0, m_reducedDebug ? 1 : 0);
     for (int c = 1; c < static_cast<int>(SoundCategory::Count); ++c)
         std::fprintf(file, "soundCategory_%s=%.3f\n", AudioEngine::categoryKey(static_cast<SoundCategory>(c)),
                      m_audio.categoryVolume(static_cast<SoundCategory>(c)));
@@ -1933,12 +1945,13 @@ void Application::run()
     const bool menuOnly = (m_startupScreen == "title" || m_startupScreen == "modes" ||
                            m_startupScreen == "settings" || m_startupScreen == "multiplayer" ||
                            m_startupScreen == "controls" || m_startupScreen == "name" ||
-                           m_startupScreen == "video" || m_startupScreen == "credits" || m_startupScreen == "sounds" || worldMenus || serverMenus || packMenus || accessMenus);
+                           m_startupScreen == "video" || m_startupScreen == "credits" || m_startupScreen == "sounds" || m_startupScreen == "chatsettings" || worldMenus || serverMenus || packMenus || accessMenus);
     migrateLegacySave();
     if (m_startupScreen == "title") m_screen = Screen::Title;
     if (m_startupScreen == "video") m_screen = Screen::VideoSettings;
     if (m_startupScreen == "credits") m_screen = Screen::Credits;
     if (m_startupScreen == "sounds") m_screen = Screen::Sounds;
+    if (m_startupScreen == "chatsettings") m_screen = Screen::ChatSettings;
     if (m_startupScreen == "modes") openWorldList();
     if (m_startupScreen == "accessibility") m_screen = Screen::Accessibility;
     if (m_startupScreen == "language") m_screen = Screen::Language;
@@ -8668,6 +8681,7 @@ void Application::applyMenuAction()
         case MenuAction::GoVideoSettings: m_screen = Screen::VideoSettings; break;
         case MenuAction::GoCredits:       m_screen = Screen::Credits; break;
         case MenuAction::GoSounds:        m_screen = Screen::Sounds; break;
+        case MenuAction::GoChatSettings:  m_chatSettingsList = GuiList{}; m_screen = Screen::ChatSettings; break;
         case MenuAction::CycleCategory:
         {
             const SoundCategory category = static_cast<SoundCategory>(m_pendingCategory);
@@ -8784,6 +8798,19 @@ void Application::applyMenuAction()
             m_player.experience = keptExperience;
             m_deathMessage.clear();
             m_previousHealth = m_player.health;
+            m_screen = Screen::Playing;
+            setMouseCaptured(true);
+            break;
+        }
+
+        case MenuAction::SpectateWorld:
+        {
+            const glm::vec3 where = m_player.position;
+            m_player.respawn(where);
+            setGameMode(GameMode::Spectator);
+            m_deathMessage.clear();
+            m_previousHealth = m_player.health;
+            m_placeOnSurface = false;
             m_screen = Screen::Playing;
             setMouseCaptured(true);
             break;
@@ -8972,7 +8999,8 @@ void Application::handleEvents()
             m_rebinding = Action::Count;
             m_screen = Screen::Settings; // back up one level, not all the way out
         }
-        else if (m_screen == Screen::VideoSettings || m_screen == Screen::Credits || m_screen == Screen::Sounds)
+        else if (m_screen == Screen::VideoSettings || m_screen == Screen::Credits || m_screen == Screen::Sounds ||
+                 m_screen == Screen::ChatSettings)
         {
             m_screen = Screen::Settings;
         }
@@ -19818,6 +19846,7 @@ void Application::render()
         case Screen::VideoSettings: renderVideoScreen(); break;
         case Screen::Credits:      renderCreditsScreen(); break;
         case Screen::Sounds:       renderSoundsScreen(); break;
+        case Screen::ChatSettings: renderChatSettings(); break;
         case Screen::Statistics:   renderStatsScreen(); break;
         case Screen::CreateWorld:  renderCreateWorld(); break;
         case Screen::GameRules:    renderGameRules(); break;
@@ -20410,9 +20439,10 @@ void Application::updateChatInput()
         m_tabCycle = -1;
     }
     const int lineCount = static_cast<int>(m_chatLog.lines().size());
-    const int most = std::max(0, lineCount - Chat::VISIBLE_LINES);
-    if (m_input.wasKeyPressed(SDL_SCANCODE_PAGEUP)) m_chatScroll = std::min(most, m_chatScroll + Chat::VISIBLE_LINES - 1);
-    if (m_input.wasKeyPressed(SDL_SCANCODE_PAGEDOWN)) m_chatScroll = std::max(0, m_chatScroll - (Chat::VISIBLE_LINES - 1));
+    const int page = chatLinesShown(true);
+    const int most = std::max(0, lineCount - page);
+    if (m_input.wasKeyPressed(SDL_SCANCODE_PAGEUP)) m_chatScroll = std::min(most, m_chatScroll + page - 1);
+    if (m_input.wasKeyPressed(SDL_SCANCODE_PAGEDOWN)) m_chatScroll = std::max(0, m_chatScroll - (page - 1));
     if (m_input.wheelDelta() != 0) m_chatScroll = std::clamp(m_chatScroll + m_input.wheelDelta(), 0, most);
 
     if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) || m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER))
@@ -22197,17 +22227,22 @@ void Application::renderChat()
 {
     // Minecraft's chat: nine interface pixels to a line, two in from
     // the left edge, sitting just above the hotbar and the bars.
-    m_ui.setScale(static_cast<float>(guiScale()));
+    if (m_chatVisibility == 2 && !m_chatOpen) return;
+    const float chatScale = std::max(0.25f, m_chatScale);
+    m_ui.setScale(static_cast<float>(guiScale()) * chatScale);
 
     const float h = m_ui.canvasHeight();
-    const float lineHeight = 9.0f;
+    const float lineHeight = 9.0f * (1.0f + m_chatLineSpacing);
     const float left = 2.0f;
-    const float bottom = h - 40.0f;
+    const float bottom = h - 40.0f / chatScale;
 
     const std::vector<Chat::Log::Line>& lines = m_chatLog.lines();
-    const int scroll = m_chatOpen ? std::clamp(m_chatScroll, 0, std::max(0, static_cast<int>(lines.size()) - Chat::VISIBLE_LINES)) : 0;
-    const int shown = std::min<int>(Chat::VISIBLE_LINES, static_cast<int>(lines.size()));
-    const std::vector<std::string> choices = m_chatOpen ? Chat::suggest(m_tabCycle >= 0 ? m_tabBase : m_chatDraft) : std::vector<std::string>();
+    const int visible = chatLinesShown(m_chatOpen);
+    const int scroll = m_chatOpen ? std::clamp(m_chatScroll, 0, std::max(0, static_cast<int>(lines.size()) - visible)) : 0;
+    const int shown = std::min<int>(visible, static_cast<int>(lines.size()));
+    const std::vector<std::string> choices = m_chatOpen && (m_autoSuggestions || m_tabCycle >= 0)
+                                                 ? Chat::suggest(m_tabCycle >= 0 ? m_tabBase : m_chatDraft)
+                                                 : std::vector<std::string>();
     const float hiddenAbove = choices.empty() ? 1e9f : bottom + 1.0f - std::min(8, static_cast<int>(choices.size())) * lineHeight;
 
     for (int i = 0; i < shown; ++i)
@@ -22223,10 +22258,15 @@ void Application::renderChat()
         if (!m_chatOpen && line.age > Chat::LINE_SECONDS - 1.0f)
             fade = Chat::LINE_SECONDS - line.age;
 
+        if (m_chatVisibility == 1 && !line.text.empty() && line.text[0] == '<') continue;
         const float y = bottom - (shown - i) * lineHeight;
         std::string text = line.text;
         glm::vec3 ink(1.0f);
         if (text.size() >= 3 && static_cast<unsigned char>(text[0]) == 0xC2 && static_cast<unsigned char>(text[1]) == 0xA7)
+        {
+            if (!m_chatColors) text = text.substr(3);
+        }
+        if (m_chatColors && text.size() >= 3 && static_cast<unsigned char>(text[0]) == 0xC2 && static_cast<unsigned char>(text[1]) == 0xA7)
         {
             static const char* CODES = "0123456789abcdef";
             static const glm::vec3 INKS[16] = { { 0, 0, 0 }, { 0, 0, 0.67f }, { 0, 0.67f, 0 }, { 0, 0.67f, 0.67f },
@@ -26406,8 +26446,13 @@ void Application::renderSettingsScreen()
     }
     y += buttonHeight + gap;
 
-    if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, m_leftHanded ? "Main Hand: Left" : "Main Hand: Right"))
-        m_pendingAction = MenuAction::ToggleMainHand;
+    {
+        const float half = (buttonWidth - 12.0f) * 0.5f;
+        if (menuButton({ buttonX, y, half, buttonHeight }, m_leftHanded ? "Main Hand: Left" : "Main Hand: Right"))
+            m_pendingAction = MenuAction::ToggleMainHand;
+        if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, "Chat Settings..."))
+            m_pendingAction = MenuAction::GoChatSettings;
+    }
     y += buttonHeight + gap;
 
     if (m_optionsReturn == Screen::Title)
@@ -26424,6 +26469,68 @@ void Application::renderSettingsScreen()
 
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
         m_pendingAction = MenuAction::LeaveOptions;
+}
+
+int Application::chatLinesShown(bool open) const
+{
+    const float pixels = 20.0f + (open ? m_chatFocusedHeight : m_chatUnfocusedHeight) * 160.0f;
+    return std::max(1, static_cast<int>(pixels / (9.0f * (1.0f + m_chatLineSpacing))));
+}
+
+void Application::renderChatSettings()
+{
+    const float unit = static_cast<float>(guiScale());
+    m_ui.setScale(unit);
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    menuScreenBackdrop(w, h);
+    const std::string title = "Chat Settings";
+    m_ui.textWithShadow(title, std::floor((w - UIRenderer::textWidth(title, 1.0f)) / 2.0f), 12.0f, 1.0f, glm::vec4(1.0f));
+    auto percent = [](float value) { return std::to_string(static_cast<int>(std::lround(value * 100.0f))) + "%"; };
+    auto onOff = [](bool value) { return std::string(value ? "ON" : "OFF"); };
+    bool changed = false;
+    m_chatSettingsList.selected = -1;
+    guiList(m_chatSettingsList, 33.0f, std::max(0.0f, h - 66.0f), 25.0f, 310.0f, 5, 0.0f, [&](int row, float x, float y, bool) {
+        const float left = x - 2.0f;
+        const float right = left + 160.0f;
+        auto cycle = [&](float bx, const std::string& label) { return guiButton(bx, y, 150.0f, 20.0f, label, true); };
+        switch (row)
+        {
+            case 0:
+            {
+                static const char* SHOWN[3] = { "Shown", "Commands Only", "Hidden" };
+                if (cycle(left, std::string("Chat: ") + SHOWN[m_chatVisibility])) { m_chatVisibility = (m_chatVisibility + 1) % 3; changed = true; }
+                if (cycle(right, "Colors: " + onOff(m_chatColors))) { m_chatColors = !m_chatColors; changed = true; }
+                break;
+            }
+            case 1:
+                changed |= guiSlider(11, left, y, 150.0f, "Chat Text Opacity: " + percent(m_chatOpacity), m_chatOpacity);
+                m_chatOpacity = std::max(0.1f, m_chatOpacity);
+                changed |= guiSlider(12, right, y, 150.0f, "Text Background Opacity: " + percent(m_textBackground), m_textBackground);
+                break;
+            case 2:
+                changed |= guiSlider(13, left, y, 150.0f, "Scale: " + percent(m_chatScale), m_chatScale);
+                changed |= guiSlider(14, right, y, 150.0f, "Line Spacing: " + percent(m_chatLineSpacing), m_chatLineSpacing);
+                break;
+            case 3:
+                changed |= guiSlider(15, left, y, 150.0f, "Focused Height: " + std::to_string(static_cast<int>(20.0f + m_chatFocusedHeight * 160.0f)) + "px",
+                                     m_chatFocusedHeight);
+                changed |= guiSlider(16, right, y, 150.0f, "Unfocused Height: " + std::to_string(static_cast<int>(20.0f + m_chatUnfocusedHeight * 160.0f)) + "px",
+                                     m_chatUnfocusedHeight);
+                break;
+            default:
+                if (cycle(left, "Command Suggestions: " + onOff(m_autoSuggestions))) { m_autoSuggestions = !m_autoSuggestions; changed = true; }
+                if (cycle(right, "Reduced Debug Info: " + onOff(m_reducedDebug))) { m_reducedDebug = !m_reducedDebug; changed = true; }
+                break;
+        }
+    });
+    if (changed && m_activeSlider < 0) saveOptions();
+    if (guiButton(std::floor((w - 200.0f) / 2.0f), h - 27.0f, 200.0f, 20.0f, "Done"))
+    {
+        saveOptions();
+        m_screen = Screen::Settings;
+    }
+    m_ui.setScale(1.0f);
 }
 
 void Application::renderSoundsScreen()
@@ -27031,6 +27138,9 @@ void Application::renderDeathScreen()
     }
     else
     {
+        if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Spectate World"))
+            m_pendingAction = MenuAction::SpectateWorld;
+        y += buttonHeight + 14.0f;
         if (menuButton({ buttonX, y, buttonWidth, buttonHeight }, "Delete World and Continue"))
             m_pendingAction = MenuAction::DeleteWorld;
     }
@@ -27115,7 +27225,7 @@ void Application::renderDebugOverlay()
         left("");
     }
 
-    const bool reduced = m_rules.on(GameRules::Rule::ReducedDebugInfo);
+    const bool reduced = m_rules.on(GameRules::Rule::ReducedDebugInfo) || m_reducedDebug;
     if (!reduced)
     {
         std::snprintf(buffer, sizeof(buffer), "XYZ: %.3f / %.5f / %.3f", p.x, p.y, p.z);

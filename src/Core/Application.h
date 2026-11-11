@@ -98,6 +98,7 @@ enum class Screen
     VideoSettings,
     Credits,
     Sounds,
+    ChatSettings,
     Controls,
     Playing,
     Paused,
@@ -160,11 +161,13 @@ enum class MenuAction
     QuitGame,
     Respawn,
     DeleteWorld,
+    SpectateWorld,
     TogglePbr,
     ToggleShaders,
     GoVideoSettings,
     GoCredits,
     GoSounds,
+    GoChatSettings,
     CycleCategory,
     BackToOptions,
     LeaveOptions,
@@ -1794,7 +1797,7 @@ private:
     float m_rulesScroll = 0.0f;
     void renderGameRules();
     GuiList m_worldList, m_flatList, m_presetList, m_biomeList;
-    GuiList m_accessList, m_languageList, m_controlsList;
+    GuiList m_accessList, m_languageList, m_controlsList, m_chatSettingsList;
     GuiField m_worldSearch, m_createName, m_createSeed, m_editName, m_presetField;
     std::string m_editFolder;
     std::string m_editNote;
@@ -1923,6 +1926,16 @@ private:
     bool m_invertMouse = false;
     float m_masterVolume = 1.0f;
     int m_pendingCategory = 0;
+    int m_chatVisibility = 0;
+    bool m_chatColors = true;
+    float m_chatScale = 1.0f;
+    float m_chatFocusedHeight = 1.0f;
+    float m_chatUnfocusedHeight = 0.44366196f;
+    float m_chatLineSpacing = 0.0f;
+    bool m_autoSuggestions = true;
+    bool m_reducedDebug = false;
+    void renderChatSettings();
+    int chatLinesShown(bool open) const;
     void renderSoundsScreen();
     void updateBackgroundMusic(float deltaTime);
     bool m_backgroundMusic = false;
