@@ -624,8 +624,9 @@ namespace Tiles
         ItemCompassFrameFirst, ItemCompassFrameLast = ItemCompassFrameFirst + 31,
         ItemClockFirst, ItemClockLast = ItemClockFirst + 63,
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,
+        ItemDebugStick,
 
-        ItemTileEnd = ItemRecoveryLast + 1
+        ItemTileEnd = ItemDebugStick + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

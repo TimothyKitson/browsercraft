@@ -9667,6 +9667,7 @@ namespace
         { Tiles::CraftingSide,  paintCraftingSide },
         { Tiles::CraftingFront, paintCraftingSide },
         { Tiles::ItemStick,     paintItemStick },
+        { Tiles::ItemDebugStick, paintItemStick },
         { Tiles::ItemCoal,      paintItemCoal },
         { Tiles::ItemFlint,     paintItemFlint },
         { Tiles::ItemFlintAndSteel, paintItemFlintAndSteel },
@@ -9831,6 +9832,7 @@ namespace
         { Tiles::ItemBread,      { "bread", nullptr, nullptr } },
 
         { Tiles::ItemStick,      { "stick", nullptr, nullptr } },
+        { Tiles::ItemDebugStick, { "stick", nullptr, nullptr } },
         { Tiles::ItemCoal,       { "coal", nullptr, nullptr } },
         { Tiles::ItemFlint,      { "flint", nullptr, nullptr } },
         { Tiles::ItemFlintAndSteel, { "flint_and_steel", nullptr, nullptr } },

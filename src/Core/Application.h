@@ -1303,6 +1303,7 @@ private:
     void fillCauldronsInRain();
     void tickColdAndThaw();
     void snowGrass(const glm::ivec3& at);
+    void turnWithDebugStick(const glm::ivec3& at, int step);
     void unsnowGrass(const glm::ivec3& at);
     // Looks for a completed ring of eyed frames round a frame that was
     // just filled, and opens the portal inside it if there is one.

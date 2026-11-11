@@ -4454,6 +4454,28 @@ BlockId plateMaterialBase(int material)
     }
 }
 
+BlockId debugStickTurn(BlockId id, int step)
+{
+    int first = id, count = 1;
+    auto group = [&](int from, int size) { first = from; count = size; };
+    if (isStairs(id) && id >= Blocks::StairsRunFirst) group(Blocks::StairsRunFirst + (id - Blocks::StairsRunFirst) / 8 * 8, 8);
+    else if (isSlabBlock(id) && id >= Blocks::SlabRunFirst && id < Blocks::SlabRunFirst + 114) group(Blocks::SlabRunFirst + (id - Blocks::SlabRunFirst) / 3 * 3, 3);
+    else if (isFenceGate(id)) group(Blocks::FenceGateFirst + (id - Blocks::FenceGateFirst) / 8 * 8, 8);
+    else if (isFamilyButton(id)) group(Blocks::ButtonRunFirst + (id - Blocks::ButtonRunFirst) / 24 * 24, 24);
+    else if (isFamilyLever(id)) group(Blocks::LeverRunFirst, 24);
+    else if (isPlate(id)) group(Blocks::PlateRunFirst + (id - Blocks::PlateRunFirst) / 2 * 2, 2);
+    else if (isWallTorch(id)) group(Blocks::WallTorchFirst + (id - Blocks::WallTorchFirst) / 4 * 4, 4);
+    else if (isHead(id)) group(Blocks::HeadRunFirst + (id - Blocks::HeadRunFirst) / 20 * 20, 20);
+    else if (isSnowLayer(id)) group(Blocks::SnowLayerFirst, 8);
+    else if (isCauldron(id)) group(Blocks::Cauldron0, 4);
+    else if (isPowderCauldron(id)) group(Blocks::PowderCauldronFirst, 3);
+    else if (isRepeater(id)) group(Blocks::RepeaterFirst, Blocks::RepeaterLast - Blocks::RepeaterFirst + 1);
+    else if (isFrostedIce(id)) group(Blocks::FrostedIce0, 4);
+    if (count <= 1) return id;
+    const int at = ((id - first + step) % count + count) % count;
+    return static_cast<BlockId>(first + at);
+}
+
 bool snowCanRestOn(BlockId below)
 {
     if (below == Blocks::Ice || below == Blocks::PackedIce || below == Blocks::Barrier) return false;

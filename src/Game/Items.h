@@ -462,6 +462,7 @@ namespace Items
         HangingSignFirst, HangingSignLast = HangingSignFirst + 10,
         CreeperBannerPattern,
         MojangBannerPattern,
+        DebugStick,
         Count
     };
 }

@@ -396,6 +396,7 @@ namespace
         { "Warped Hanging Sign", Tiles::ItemHangingSignFirst + 10, 16 },
         { "Creeper Charge Banner Pattern", Tiles::ItemBannerPatternFirst + 6, 1 },
         { "Thing Banner Pattern", Tiles::ItemBannerPatternFirst + 7, 1 },
+        { "Debug Stick", Tiles::ItemDebugStick, 1 },
     };
 
     static_assert(sizeof(ITEMS) / sizeof(ITEMS[0]) ==

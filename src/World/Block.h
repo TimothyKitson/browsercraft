@@ -817,6 +817,7 @@ inline BlockId snowLayerOf(int layers)
     return static_cast<BlockId>(Blocks::SnowLayerFirst + (layers < 1 ? 0 : layers > 8 ? 7 : layers - 1));
 }
 bool snowCanRestOn(BlockId below);
+BlockId debugStickTurn(BlockId id, int step);
 constexpr int BUTTON_MATERIALS = 13;
 constexpr int PLATE_MATERIALS = 15;
 inline bool isFamilyButton(BlockId id) { return id >= Blocks::ButtonRunFirst && id <= Blocks::ButtonRunLast; }

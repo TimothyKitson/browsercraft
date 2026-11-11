@@ -8959,6 +8959,13 @@ void Application::updateMining(float deltaTime)
     }
 
     if (!hit.hit && m_keys.pressed(m_input, Action::Attack)) m_attackTicker = 0.0f;
+    if (hit.hit && m_inventory.selected().id == Items::DebugStick)
+    {
+        if (m_keys.pressed(m_input, Action::Attack) && m_player.creative()) turnWithDebugStick(hit.block, -1);
+        m_hasTarget = false;
+        m_breakProgress = 0.0f;
+        return;
+    }
     if (!hit.hit || !m_keys.down(m_input, Action::Attack) || !modeCanBuild(m_player.mode) || !m_border.containsBlock(hit.block.x, hit.block.z))
     {
         m_hasTarget = false;
@@ -15473,6 +15480,13 @@ void Application::handlePlacement()
 
     if (useArmorStand()) return;
 
+    if (m_inventory.selected().id == Items::DebugStick)
+    {
+        const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, REACH_DISTANCE);
+        if (m_player.creative() && hit.hit) turnWithDebugStick(hit.block, 1);
+        return;
+    }
+
     if (Mob* aimed = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH))
         if (aimed->alive())
         {
@@ -20405,6 +20419,18 @@ void Application::fillCauldronsInRain()
         m_world->setBlock(x, y, z, now);
         m_net.onLocalBlockChange(x, y, z, now);
     }
+}
+
+void Application::turnWithDebugStick(const glm::ivec3& at, int step)
+{
+    const BlockId here = m_world->getBlock(at.x, at.y, at.z);
+    const BlockId turned = debugStickTurn(here, step);
+    m_heldItem.swing();
+    if (turned == here) return;
+    m_world->setBlock(at.x, at.y, at.z, turned);
+    m_net.onLocalBlockChange(at.x, at.y, at.z, turned);
+    m_audio.play(Sound::Click, 0.4f, step > 0 ? 1.2f : 0.9f);
+    m_chatLog.add(std::string(blockInfo(turned).name) + ": state " + std::to_string(turned));
 }
 
 void Application::snowGrass(const glm::ivec3& at)

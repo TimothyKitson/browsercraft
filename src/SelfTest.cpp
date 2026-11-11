@@ -13689,6 +13689,11 @@ namespace
         check(!creeper.charged(), "a creeper starts uncharged");
         creeper.setCharged(true);
         check(creeper.charged(), "and lightning charges it");
+        check(debugStickTurn(snowLayerOf(8), 1) == snowLayerOf(1) && debugStickTurn(snowLayerOf(1), -1) == snowLayerOf(8) &&
+              debugStickTurn(headOf(2, false, 15), 1) == headOf(2, true, 0) && debugStickTurn(Blocks::Stone, 1) == Blocks::Stone,
+              "the debug stick steps a block through its own states and leaves stateless ones alone");
+        check(maxStackOf(Items::DebugStick) == 1 && RecipeBook::stackNamed("debug_stick") == static_cast<StackId>(Items::DebugStick),
+              "and is one unstackable item under its 1.21.1 name");
     }
 
     void testGameRules()

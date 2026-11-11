@@ -175,7 +175,7 @@ namespace
         Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
         Blocks::BannerFirst + 2, Blocks::BannerFirst + 10, Blocks::BannerFirst + 18, Blocks::BannerFirst + 26, Blocks::BannerFirst + 34, Blocks::BannerFirst + 42, Blocks::BannerFirst + 50, Blocks::BannerFirst + 58, Blocks::BannerFirst + 66, Blocks::BannerFirst + 74, Blocks::BannerFirst + 82, Blocks::BannerFirst + 90, Blocks::BannerFirst + 98, Blocks::BannerFirst + 106, Blocks::BannerFirst + 114, Blocks::BannerFirst + 122,
         Items::FlowerBannerPattern, Items::SkullBannerPattern, Items::GlobeBannerPattern, Items::PiglinBannerPattern,
-        Items::FlowBannerPattern, Items::GusterBannerPattern, Items::CreeperBannerPattern, Items::MojangBannerPattern,
+        Items::FlowBannerPattern, Items::GusterBannerPattern, Items::CreeperBannerPattern, Items::MojangBannerPattern, Items::DebugStick,
     };
 
     // The twenty-five tools, their materials, and the two benches you
