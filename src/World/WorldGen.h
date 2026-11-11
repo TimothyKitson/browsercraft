@@ -431,6 +431,9 @@ private:
     void placeLavaLakes(Chunk& chunk) const;
     void placeOreVeins(Chunk& chunk) const;
     void placeSeaMagma(Chunk& chunk) const;
+    void placeIceSpikes(Chunk& chunk) const;
+    void growLargeDripstone(Chunk& chunk) const;
+    void spreadSculkPatches(Chunk& chunk) const;
     void dressNether(Chunk& chunk) const;
     void buildDesertWells(Chunk& chunk) const;
     void buildOceanRuins(Chunk& chunk) const;

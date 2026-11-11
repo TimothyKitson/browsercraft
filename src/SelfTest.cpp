@@ -226,6 +226,72 @@ namespace
         check(inventory.slot(0).count == 32, "and comes back to the hotbar");
     }
 
+    void testCaveAndSpikeFeatures()
+    {
+        section("ice spikes and large dripstone");
+        const WorldGen generator(2024u);
+        auto chunkOf = [](int v, int size) { return v >= 0 ? v / size : -((-v + size - 1) / size); };
+        int spikeX = 0, spikeZ = 0;
+        bool icy = false;
+        for (int r = 0; r < 4000 && !icy; r += 32)
+            for (int a = 0; a < 16 && !icy; ++a)
+            {
+                const int x = static_cast<int>(std::cos(a * 0.3927f) * r), z = static_cast<int>(std::sin(a * 0.3927f) * r);
+                if (generator.kindAt(x, z) == Biomes::Kind::IceSpikes && generator.kindAt(x + 40, z) == Biomes::Kind::IceSpikes &&
+                    generator.kindAt(x, z + 40) == Biomes::Kind::IceSpikes)
+                {
+                    spikeX = x;
+                    spikeZ = z;
+                    icy = true;
+                }
+            }
+        check(icy, "there is an ice spikes plain nearby");
+        if (icy)
+        {
+            int tallest = 0;
+            for (int dz = -1; dz <= 1; ++dz)
+                for (int dx = -1; dx <= 1; ++dx)
+                {
+                    Chunk chunk(ChunkPos{ chunkOf(spikeX, Chunk::SX) + dx, chunkOf(spikeZ, Chunk::SZ) + dz });
+                    generator.generate(chunk);
+                    for (int lz = 0; lz < Chunk::SZ; ++lz)
+                        for (int lx = 0; lx < Chunk::SX; ++lx)
+                        {
+                            const int ground = generator.surfaceHeight(chunk.position().x * Chunk::SX + lx, chunk.position().z * Chunk::SZ + lz);
+                            for (int y = Chunk::SY - 1; y > ground; --y)
+                                if (chunk.getBlock(lx, y, lz) == Blocks::PackedIce)
+                                {
+                                    tallest = std::max(tallest, y - ground);
+                                    break;
+                                }
+                        }
+                }
+            check(tallest >= 6, "and its spikes stand at least six blocks off the snow");
+        }
+
+        int cones = 0;
+        for (int cz = -8; cz <= 8 && cones == 0; ++cz)
+            for (int cx = -8; cx <= 8 && cones == 0; ++cx)
+            {
+                if (generator.caveKindAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8) != WorldGen::CaveKind::Dripstone) continue;
+                Chunk chunk(ChunkPos{ cx, cz });
+                generator.generate(chunk);
+                for (int lz = 1; lz < Chunk::SZ - 1; ++lz)
+                    for (int lx = 1; lx < Chunk::SX - 1; ++lx)
+                        for (int y = 6; y < Chunk::SY - 4; ++y)
+                        {
+                            if (chunk.getBlock(lx, y, lz) != Blocks::DripstoneBlock || chunk.getBlock(lx, y + 1, lz) != Blocks::DripstoneBlock ||
+                                chunk.getBlock(lx, y + 2, lz) != Blocks::DripstoneBlock)
+                                continue;
+                            int open = 0;
+                            for (const auto& [ox, oz] : { std::pair{ 1, 0 }, std::pair{ -1, 0 }, std::pair{ 0, 1 }, std::pair{ 0, -1 } })
+                                if (chunk.getBlock(lx + ox * 2, y + 1, lz + oz * 2) == Blocks::Air) ++open;
+                            if (open >= 2) ++cones;
+                        }
+            }
+        check(cones > 0, "dripstone caves grow large dripstone columns");
+    }
+
     void testBigTrees()
     {
         section("big trees");
@@ -17556,6 +17622,7 @@ int runSelfTest()
     testSoundCategories();
     testDripKinds();
     testBigTrees();
+    testCaveAndSpikeFeatures();
     testCrafting();
     testKeyBindings();
     testPlayerAnimation();

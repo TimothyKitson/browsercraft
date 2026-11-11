@@ -469,9 +469,12 @@ void WorldGen::generate(Chunk& chunk) const
     placeOres(chunk);
     placeOreVeins(chunk);
     dressCaves(chunk);
+    growLargeDripstone(chunk);
+    spreadSculkPatches(chunk);
     placeLavaLakes(chunk);
     placeSprings(chunk);
     decorate(chunk);
+    placeIceSpikes(chunk);
     if (structures)
     {
         buildDungeons(chunk);
@@ -3746,14 +3749,6 @@ void WorldGen::decorate(Chunk& chunk) const
                 continue;
             }
 
-            if (variant == Biomes::Kind::IceSpikes && (ground == Blocks::SnowGrass || ground == Blocks::Snow) && roll < 0.012f)
-            {
-                const float size = hashToFloat(hashCoords(wx, 21, wz, m_seed + 6611));
-                const int spire = 5 + static_cast<int>(size * size * 16.0f);
-                for (int k = 0; k < spire && above + k < Chunk::SY; ++k)
-                    chunk.setBlockRaw(lx, above + k, lz, Blocks::PackedIce);
-                continue;
-            }
 
             if ((variant == Biomes::Kind::OldGrowthPineTaiga || variant == Biomes::Kind::OldGrowthSpruceTaiga) && roll >= 0.6f && roll < 0.6025f)
             {
@@ -4532,6 +4527,128 @@ void WorldGen::placeOreVeins(Chunk& chunk) const
         z = std::clamp(z + static_cast<int>((g >> 2) % 3u) - 1, 1, Chunk::SZ - 2);
         y = std::clamp(y + static_cast<int>((g >> 4) % 3u) - 1, copper ? 22 : 2, copper ? 52 : 18);
     }
+}
+
+void WorldGen::placeIceSpikes(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    for (int wx = baseX - 6; wx < baseX + Chunk::SX + 6; ++wx)
+        for (int wz = baseZ - 6; wz < baseZ + Chunk::SZ + 6; ++wz)
+        {
+            if (hashToFloat(hashCoords(wx, 23, wz, m_seed + 6613)) >= 0.006f) continue;
+            if (kindAt(wx, wz) != Biomes::Kind::IceSpikes) continue;
+            const int ground = surfaceHeight(wx, wz);
+            if (ground <= SEA_LEVEL) continue;
+            const float size = hashToFloat(hashCoords(wx, 21, wz, m_seed + 6611));
+            const bool huge = size > 0.92f;
+            const int tall = std::min(Chunk::SY - ground - 2, huge ? 30 + static_cast<int>(size * 20.0f) : 6 + static_cast<int>(size * size * 14.0f));
+            const float base = huge ? 3.2f : 1.0f + size * 1.6f;
+            for (int k = -3; k < tall; ++k)
+            {
+                const float along = k <= 0 ? 0.0f : static_cast<float>(k) / static_cast<float>(tall);
+                const float radius = std::max(0.0f, base * (1.0f - along * along * (huge ? 0.85f : 1.0f)));
+                const int reach = static_cast<int>(std::ceil(radius));
+                for (int dx = -reach; dx <= reach; ++dx)
+                    for (int dz = -reach; dz <= reach; ++dz)
+                    {
+                        if (static_cast<float>(dx * dx + dz * dz) > radius * radius + 0.3f) continue;
+                        const int lx = wx + dx - baseX, lz = wz + dz - baseZ, y = ground + 1 + k;
+                        if (!Chunk::inBounds(lx, y, lz)) continue;
+                        const BlockId here = chunk.getBlock(lx, y, lz);
+                        if (k < 0 && here == Blocks::Air) continue;
+                        chunk.setBlockRaw(lx, y, lz, Blocks::PackedIce);
+                    }
+            }
+        }
+}
+
+void WorldGen::growLargeDripstone(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    for (int lx = 3; lx < Chunk::SX - 3; ++lx)
+        for (int lz = 3; lz < Chunk::SZ - 3; ++lz)
+        {
+            const int wx = baseX + lx, wz = baseZ + lz;
+            if (caveKindAt(wx, wz) != CaveKind::Dripstone) continue;
+            if (hashToFloat(hashCoords(wx, 31, wz, m_seed + 7711)) >= 0.012f) continue;
+            const int top = std::min(surfaceHeight(wx, wz) - 6, Chunk::SY - 2);
+            for (int y = 6; y < top; ++y)
+            {
+                if (chunk.getBlock(lx, y, lz) != Blocks::Air || !isSolid(chunk.getBlock(lx, y - 1, lz))) continue;
+                int ceiling = y;
+                while (ceiling < top && chunk.getBlock(lx, ceiling, lz) == Blocks::Air) ++ceiling;
+                const int gap = ceiling - y;
+                if (gap < 6 || !isSolid(chunk.getBlock(lx, ceiling, lz))) break;
+                const float size = hashToFloat(hashCoords(wx, y, wz, m_seed + 7712));
+                const float radius = 1.0f + size * 2.0f;
+                const int up = std::max(2, static_cast<int>(static_cast<float>(gap) * (0.35f + size * 0.3f)));
+                const int down = std::max(2, static_cast<int>(static_cast<float>(gap) * (0.25f + (1.0f - size) * 0.3f)));
+                auto cone = [&](int from, int length, int step) {
+                    for (int k = 0; k < length; ++k)
+                    {
+                        const float r = radius * (1.0f - static_cast<float>(k) / static_cast<float>(length));
+                        const int reach = static_cast<int>(std::ceil(r));
+                        for (int dx = -reach; dx <= reach; ++dx)
+                            for (int dz = -reach; dz <= reach; ++dz)
+                            {
+                                if (static_cast<float>(dx * dx + dz * dz) > r * r + 0.2f) continue;
+                                const int cy = from + k * step;
+                                if (!Chunk::inBounds(lx + dx, cy, lz + dz) || chunk.getBlock(lx + dx, cy, lz + dz) != Blocks::Air) continue;
+                                chunk.setBlockRaw(lx + dx, cy, lz + dz, Blocks::DripstoneBlock);
+                            }
+                    }
+                    const int tip = from + length * step;
+                    if (Chunk::inBounds(lx, tip, lz) && chunk.getBlock(lx, tip, lz) == Blocks::Air)
+                        chunk.setBlockRaw(lx, tip, lz, step > 0 ? Blocks::DripstoneUp : Blocks::DripstoneDown);
+                };
+                cone(y, std::min(up, gap - 2), 1);
+                cone(ceiling - 1, std::min(down, gap - up - 1), -1);
+                break;
+            }
+        }
+}
+
+void WorldGen::spreadSculkPatches(Chunk& chunk) const
+{
+    const int baseX = chunk.position().x * Chunk::SX;
+    const int baseZ = chunk.position().z * Chunk::SZ;
+    for (int lx = 0; lx < Chunk::SX; ++lx)
+        for (int lz = 0; lz < Chunk::SZ; ++lz)
+        {
+            const int wx = baseX + lx, wz = baseZ + lz;
+            if (caveKindAt(wx, wz) != CaveKind::Plain) continue;
+            if (hashToFloat(hashCoords(wx >> 6, 40, wz >> 6, m_seed + 7720)) >= 0.3f) continue;
+            float strength = 0.0f;
+            for (int cx = (wx >> 3) - 1; cx <= (wx >> 3) + 1; ++cx)
+                for (int cz = (wz >> 3) - 1; cz <= (wz >> 3) + 1; ++cz)
+                {
+                    const uint32_t h = hashCoords(cx, 41, cz, m_seed + 7721);
+                    if (hashToFloat(h) >= 0.3f) continue;
+                    const float px = static_cast<float>(cx * 8) + hashToFloat(h * 2654435761u) * 8.0f;
+                    const float pz = static_cast<float>(cz * 8) + hashToFloat(h * 40503u + 17u) * 8.0f;
+                    const float r = 2.5f + hashToFloat(h ^ 0x5bd1e995u) * 3.5f;
+                    const float d = std::sqrt((wx + 0.5f - px) * (wx + 0.5f - px) + (wz + 0.5f - pz) * (wz + 0.5f - pz));
+                    strength = std::max(strength, 1.0f - d / r);
+                }
+            if (strength <= -0.25f) continue;
+            for (int y = 2; y <= CITY_FLOOR + 16; ++y)
+            {
+                if (chunk.getBlock(lx, y, lz) != Blocks::Air) continue;
+                const BlockId under = chunk.getBlock(lx, y - 1, lz);
+                if (!isOpaque(under) || under == Blocks::Bedrock) continue;
+                const float roll = hashToFloat(hashCoords(wx, y, wz, m_seed + 7722));
+                if (strength > 0.0f)
+                {
+                    chunk.setBlockRaw(lx, y - 1, lz, Blocks::Sculk);
+                    if (roll < 0.025f) chunk.setBlockRaw(lx, y, lz, Blocks::SculkSensor);
+                    else if (roll < 0.03f && strength > 0.5f) chunk.setBlockRaw(lx, y, lz, Blocks::SculkCatalyst);
+                }
+                else if (roll < 0.6f)
+                    chunk.setBlockRaw(lx, y, lz, sculkVeinOn(0));
+            }
+        }
 }
 
 void WorldGen::placeSeaMagma(Chunk& chunk) const
