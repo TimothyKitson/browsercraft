@@ -796,6 +796,7 @@ namespace
             else if (isDispenser(id) || isDropper(id) || isObserver(id)) why = "a dispenser, dropper or observer turned to face its placer";
             else if (isRailSlope(id))            why = "a rail climbing to the rail a block above";
             else if (doorHinged(id))             why = "a door hung the other way to pair with the door beside it";
+            else if (frameLay(id) != 0)           why = "an item frame laid on a floor or hung from a ceiling";
             else if (id >= Blocks::PickleFirst && id <= Blocks::PickleLast) why = "sea pickles grouped or left out of the water";
             else if (vineMask(id) != 0 || (id >= Blocks::VineMaskFirst && id <= Blocks::VineMaskLast)) why = "vines hung on particular faces of their cell";
             else if (shelfMasked(id))            why = "a chiseled bookshelf with books in particular slots";

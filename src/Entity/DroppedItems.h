@@ -86,6 +86,8 @@ public:
         float height = 0.0f;
         float outset = 0.46f;
         bool glow = false;
+        int spin = 0;
+        int lay = 0;
     };
     struct Held
     {

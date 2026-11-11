@@ -2588,6 +2588,13 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 {
                     emitWallTorch(snapshot, lx, y, lz, id, out.opaqueVertices);
                 }
+                else if (isFrame(id) && frameLay(id) != 0)
+                {
+                    const float h = frameLay(id) == 1 ? 1.0f / 16.0f : 15.0f / 16.0f;
+                    const glm::vec3 panel[4] = { { 1.0f / 16.0f, h, 15.0f / 16.0f }, { 15.0f / 16.0f, h, 15.0f / 16.0f },
+                                                 { 15.0f / 16.0f, h, 1.0f / 16.0f }, { 1.0f / 16.0f, h, 1.0f / 16.0f } };
+                    pushQuad(snapshot, lx, y, lz, id, panel, blockInfo(id).tileSide, 1.0f, 1.0f, 15.0f, 15.0f, 1.0f, true, out.opaqueVertices);
+                }
                 else if (isSeaPickle(id))
                 {
                     emitPickles(snapshot, lx, y, lz, id, out.opaqueVertices);

@@ -10005,6 +10005,10 @@ namespace
                 check(stone.kind == Chat::Kind::Give && stone.item == static_cast<StackId>(Blocks::Stone) && stone.count == 5,
                       "and still gives plain blocks after a target");
             }
+            check(isFrame(Blocks::FrameFloor) && isFrame(Blocks::GlowFrameCeiling) && isGlowFrame(Blocks::GlowFrameFloor) &&
+                      frameLay(Blocks::FrameFloor) == 1 && frameLay(Blocks::GlowFrameCeiling) == 2 && frameLay(frameFacingAs(2)) == 0 &&
+                      blockDrop(Blocks::FrameCeiling) == blockDrop(frameFacingAs(0)) && blockDrop(Blocks::GlowFrameFloor) == blockDrop(frameFacingAs(1, true)),
+                  "item frames lie on floors and hang from ceilings");
             check(isStonecutter(Blocks::StonecutterTurned) && blockDrop(Blocks::StonecutterTurned) == static_cast<StackId>(Blocks::Stonecutter),
                   "a turned stonecutter is still a stonecutter");
             check(shelfMask(shelfOf(1, 3)) == 7 && shelfBooks(shelfOf(1, 3)) == 3 && shelfFacing(shelfOf(1, 3)) == 1,

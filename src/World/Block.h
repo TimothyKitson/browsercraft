@@ -725,6 +725,7 @@ namespace Blocks
         PickleFirst, PickleLast = PickleFirst + 7,
         LichenMaskFirst, LichenMaskLast = LichenMaskFirst + 63,
         VeinMaskFirst, VeinMaskLast = VeinMaskFirst + 63,
+        FrameFloor, FrameCeiling, GlowFrameFloor, GlowFrameCeiling,
         ExtCount
     };
 }
@@ -1299,14 +1300,21 @@ inline BlockId signFacingAs(int facing) { return signFacingAs(Blocks::SignNorth,
 // the same arithmetic.
 inline bool isGlowFrame(BlockId id)
 {
-    return id >= Blocks::GlowFrameNorth && id <= Blocks::GlowFrameWest;
+    return (id >= Blocks::GlowFrameNorth && id <= Blocks::GlowFrameWest) || id == Blocks::GlowFrameFloor || id == Blocks::GlowFrameCeiling;
 }
 inline bool isFrame(BlockId id)
 {
-    return (id >= Blocks::FrameNorth && id <= Blocks::FrameWest) || isGlowFrame(id);
+    return (id >= Blocks::FrameNorth && id <= Blocks::FrameWest) || isGlowFrame(id) || id == Blocks::FrameFloor || id == Blocks::FrameCeiling;
+}
+inline int frameLay(BlockId id)
+{
+    if (id == Blocks::FrameFloor || id == Blocks::GlowFrameFloor) return 1;
+    if (id == Blocks::FrameCeiling || id == Blocks::GlowFrameCeiling) return 2;
+    return 0;
 }
 inline int frameFacing(BlockId id)
 {
+    if (frameLay(id) != 0) return 0;
     if (isGlowFrame(id)) return id - Blocks::GlowFrameNorth;
     return isFrame(id) ? id - Blocks::FrameNorth : 0;
 }

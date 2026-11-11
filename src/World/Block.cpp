@@ -4977,6 +4977,10 @@ namespace
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -5241,6 +5245,8 @@ BlockId axisBase(BlockId id)
     if (id >= Blocks::PickleFirst && id <= Blocks::PickleLast) return Blocks::SeaPickle;
     if (id >= Blocks::LichenMaskFirst && id <= Blocks::LichenMaskLast) return Blocks::GlowLichenFirst;
     if (id >= Blocks::VeinMaskFirst && id <= Blocks::VeinMaskLast) return Blocks::SculkVeinFirst;
+    if (id == Blocks::FrameFloor || id == Blocks::FrameCeiling) return Blocks::FrameNorth;
+    if (id == Blocks::GlowFrameFloor || id == Blocks::GlowFrameCeiling) return Blocks::GlowFrameNorth;
     return id;
 }
 
@@ -5285,7 +5291,8 @@ const BlockInfo& blockInfo(BlockId id)
     if (id < Blocks::Count) return TABLE[id];
     if ((id >= Blocks::AxisRunFirst && id <= Blocks::AxisRunLast) || (id >= Blocks::GlazedTurnFirst && id <= Blocks::GlazedTurnLast) ||
         (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || (id >= Blocks::ThrowerTurnFirst && id <= Blocks::VineMaskLast) ||
-        (id >= Blocks::LichenMaskFirst && id <= Blocks::VeinMaskLast))
+        (id >= Blocks::LichenMaskFirst && id <= Blocks::VeinMaskLast) ||
+        (id >= Blocks::FrameFloor && id <= Blocks::GlowFrameCeiling))
         return blockInfo(axisBase(id));
     if (id >= Blocks::ExtFirst && id < Blocks::ExtCount) return EXT_TABLE[id - Blocks::ExtFirst];
     return TABLE[Blocks::Air];

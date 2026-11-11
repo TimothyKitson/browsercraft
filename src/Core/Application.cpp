@@ -7836,6 +7836,15 @@ bool Application::frame()
                     m_world->setBlock(bx + 8, by + h, bz + 3, Blocks::Stone);
                     m_world->setBlock(bx + 7, by + h, bz + 3, h == 1 ? glowLichenWith(0b001000 | 0b000100) : sculkVeinWith(h == 0 ? 0b001001 : 0b001000));
                 }
+                for (int k = 0; k < 4; ++k)
+                {
+                    const glm::ivec3 framed(bx + 5 - k, by, bz + 1);
+                    m_world->setBlock(framed.x, framed.y, framed.z, k % 2 == 0 ? Blocks::FrameFloor : Blocks::GlowFrameFloor);
+                    m_frames.at(framed) = ItemStack{ Items::Arrow, 1 + k * 2 };
+                }
+                m_world->setBlock(bx - 3, by + 2, bz + 1, Blocks::Planks);
+                m_world->setBlock(bx - 3, by + 1, bz + 1, Blocks::FrameCeiling);
+                m_frames.at(glm::ivec3(bx - 3, by + 1, bz + 1)) = ItemStack{ Items::Diamond, 2 };
                 m_world->setBlock(bx - 8, by + 3, bz + 5, Blocks::Cobblestone);
                 m_world->setBlock(bx - 8, by + 2, bz + 5, vineWith(2 | 16));
                 for (int half = 0; half < 2; ++half)
@@ -10191,8 +10200,11 @@ void Application::updateMining(float deltaTime)
             {
                 if (const ItemStack* inside = m_frames.find(hit.block))
                     if (!inside->empty())
-                        m_drops.spawnFromBrokenBlock(hit.block, inside->id,
-                                                     inside->count);
+                    {
+                        ItemStack popped = *inside;
+                        popped.count = 1;
+                        m_drops.spawnStack(glm::vec3(hit.block) + glm::vec3(0.5f), popped);
+                    }
                 m_frames.remove(hit.block);
             }
 
@@ -19328,10 +19340,14 @@ void Application::handlePlacement()
     if (isFrame(placing))
     {
         const glm::ivec3 n = hit.normal;
-        if (n.y != 0) return;
-
-        const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
-        placing = frameFacingAs(facing, isGlowFrame(placing));
+        const bool glow = isGlowFrame(placing);
+        if (n.y > 0) placing = glow ? Blocks::GlowFrameFloor : Blocks::FrameFloor;
+        else if (n.y < 0) placing = glow ? Blocks::GlowFrameCeiling : Blocks::FrameCeiling;
+        else
+        {
+            const int facing = (n.z > 0) ? 0 : (n.x < 0) ? 1 : (n.z < 0) ? 2 : 3;
+            placing = frameFacingAs(facing, glow);
+        }
     }
 
     // A rail is nailed to the floor, and bends to meet whatever is
@@ -23882,9 +23898,16 @@ bool Application::useFrame(const glm::ivec3& at, BlockId block)
         return true;
     }
 
-    // Taking it back: into the hand if there is room, onto the floor
-    // if there is not. Dropping it is better than losing it.
+    if (!m_keys.down(m_input, Action::Sneak))
+    {
+        inside.count = 1 + (inside.count % 8);
+        m_audio.play(Sound::Click, 0.5f, 1.0f + 0.05f * static_cast<float>(inside.count));
+        settleRedstone(at);
+        return true;
+    }
+
     ItemStack back = inside;
+    back.count = 1;
     m_frames.remove(at);
     if (m_inventory.addStack(back) > 0) m_drops.spawnStack(m_player.position, back);
 
@@ -24141,6 +24164,9 @@ void Application::pinFramedItems()
         shown.facing = frameFacing(block);
         shown.item = frame.held.id;
         shown.glow = isGlowFrame(block);
+        shown.lay = frameLay(block);
+        if (shown.lay != 0) shown.outset = 0.42f;
+        shown.spin = std::max(0, frame.held.count - 1) % 8;
         m_drops.pin(shown);
     }
 }

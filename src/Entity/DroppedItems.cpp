@@ -517,7 +517,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
     {
         if (shown.item == Blocks::Air && shown.tile < 0) continue;
 
-        const glm::vec3 out = wallOut(shown.facing);
+        const glm::vec3 out = shown.lay == 1 ? glm::vec3(0.0f, -1.0f, 0.0f) : shown.lay == 2 ? glm::vec3(0.0f, 1.0f, 0.0f) : wallOut(shown.facing);
         const glm::vec3 centre = shown.position + out * shown.outset;
 
         int lx = static_cast<int>(std::floor(centre.x));
@@ -548,9 +548,16 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
         // the way the frame looks.
         const float half = shown.tile >= 0 ? shown.halfWidth : FRAME_SIZE * 0.5f;
         const float tall = shown.tile >= 0 ? shown.height : FRAME_SIZE;
-        const glm::vec3 across = glm::vec3(-out.z, 0.0f, out.x) * half;
-        const glm::vec3 up(0.0f, tall, 0.0f);
-        const glm::vec3 foot = centre - glm::vec3(0.0f, tall * 0.5f, 0.0f);
+        glm::vec3 across = shown.lay != 0 ? glm::vec3(half, 0.0f, 0.0f) : glm::vec3(-out.z, 0.0f, out.x) * half;
+        glm::vec3 up = shown.lay != 0 ? glm::vec3(0.0f, 0.0f, shown.lay == 1 ? -tall : tall) : glm::vec3(0.0f, tall, 0.0f);
+        if (shown.spin != 0)
+        {
+            const float turn = glm::radians(45.0f * static_cast<float>(shown.spin));
+            const glm::vec3 a = across, u = up * (half / std::max(0.0001f, tall * 0.5f));
+            across = a * std::cos(turn) + u * std::sin(turn);
+            up = (u * std::cos(turn) - a * std::sin(turn)) * (tall * 0.5f / std::max(0.0001f, half));
+        }
+        const glm::vec3 foot = centre - up * 0.5f;
 
         const TileUV uv = tileUV(shown.tile >= 0 ? shown.tile : atlasTileFor(shown.item));
         const glm::vec3 corner[4] = {
