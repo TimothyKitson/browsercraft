@@ -1,4 +1,5 @@
 #pragma once
+#include <unordered_map>
 #include <array>
 #include "World/Biomes.h"
 #include "Mob.h"
@@ -100,6 +101,7 @@ public:
     void spawnJockey(MobId rider, MobId mount, const glm::vec3& feet, const World& world, bool babyRider);
     std::vector<Death> drainDeaths();
     std::vector<glm::vec3> drainGrazes() { std::vector<glm::vec3> out; out.swap(m_grazes); return out; }
+    std::vector<glm::vec3> drainSnowTrail() { std::vector<glm::vec3> out; out.swap(m_snowTrail); return out; }
 
     // Where a chicken has just laid an egg. Drained the same way a
     // death is, and for the same reason: the egg belongs where the
@@ -214,6 +216,9 @@ private:
     bool m_traders = true;
     float random01();
     float m_golemTimer = 5.0f;
+    std::vector<glm::vec3> m_snowTrail;
+    std::unordered_map<uint32_t, float> m_castTimers;
+    void tickHelpers(float deltaTime, const World& world, const glm::vec3& playerPosition);
     void trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight);
     int surfaceBelow(const World& world, int x, int startY, int z) const;
 

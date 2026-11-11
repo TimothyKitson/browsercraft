@@ -323,6 +323,7 @@ public:
     uint32_t mount() const { return m_mount; }
     void seatAt(const glm::vec3& at) { m_position = at; m_velocity = glm::vec3(0.0f); m_onGround = true; }
     void setCaptain(bool on) { m_captain = on; }
+    std::vector<MobShot>& shotQueue() { return m_shots; }
     bool captain() const { return m_captain; }
 
     // Stands where it is for this long, as a villager does while it is

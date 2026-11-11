@@ -536,6 +536,23 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                                (mobType(species).spawnClass == SpawnClass::Passive && mobType(species).breedingFood != Blocks::Air &&
                                 species != MobId::Villager && random01() < 0.05f);
         if (!spawnAt(species, mobFeet, world, youngster)) continue;
+        {
+            const MobType& kindType = mobType(species);
+            const bool herd = (kindType.spawnClass == SpawnClass::Hostile || kindType.spawnClass == SpawnClass::Passive) &&
+                              species != MobId::Villager && species != MobId::WanderingTrader && species != MobId::Witch &&
+                              species != MobId::Creeper && !kindType.lavaWalker && species != MobId::Bat;
+            if (herd)
+            {
+                const int extra = static_cast<int>(random01() * 4.0f);
+                for (int k = 0; k < extra; ++k)
+                {
+                    const glm::vec3 near = mobFeet + glm::vec3(std::floor(random01() * 5.0f) - 2.0f, 0.0f, std::floor(random01() * 5.0f) - 2.0f);
+                    const glm::ivec3 cell = glm::ivec3(glm::floor(near));
+                    if (!isSolid(world.getBlock(cell.x, cell.y - 1, cell.z))) continue;
+                    spawnAt(species, near, world, (zombieKind || kindType.spawnClass == SpawnClass::Passive) && random01() < 0.05f);
+                }
+            }
+        }
         if (youngster && zombieKind && species != MobId::Drowned && random01() < 0.05f)
         {
             const size_t rider = m_mobs.size() - 1;
@@ -574,6 +591,71 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         }
 
         return;   // one per wave keeps it gradual
+    }
+}
+
+void EntityManager::tickHelpers(float deltaTime, const World& world, const glm::vec3& playerPosition)
+{
+    for (auto& entry : m_castTimers) entry.second -= deltaTime;
+    const size_t count = m_mobs.size();
+    for (size_t i = 0; i < count; ++i)
+    {
+        Mob& mob = m_mobs[i];
+        if (!mob.alive()) continue;
+        const MobId kind = mob.typeId();
+        float& wait = m_castTimers[mob.serial()];
+
+        if (kind == MobId::SnowGolem)
+        {
+            const glm::ivec3 feet = glm::ivec3(glm::floor(mob.position() + glm::vec3(0.0f, 0.1f, 0.0f)));
+            if (world.getBlock(feet.x, feet.y, feet.z) == Blocks::Air && isOpaque(world.getBlock(feet.x, feet.y - 1, feet.z)))
+                m_snowTrail.push_back(glm::vec3(feet));
+            if (wait > 0.0f) continue;
+            size_t quarry = m_mobs.size();
+            float nearest = 10.0f;
+            for (size_t j = 0; j < m_mobs.size(); ++j)
+            {
+                if (j == i || !m_mobs[j].alive() || mobType(m_mobs[j].typeId()).spawnClass != SpawnClass::Hostile) continue;
+                const float apart = glm::length(m_mobs[j].position() - mob.position());
+                if (apart < nearest) { nearest = apart; quarry = j; }
+            }
+            if (quarry >= m_mobs.size()) continue;
+            wait = 1.0f;
+            const glm::vec3 eye = mob.position() + glm::vec3(0.0f, mob.height() * 0.8f, 0.0f);
+            const glm::vec3 aim = m_mobs[quarry].position() + glm::vec3(0.0f, m_mobs[quarry].height() * 0.5f, 0.0f) - eye;
+            MobShot shot;
+            shot.from = eye + glm::normalize(aim) * 0.6f;
+            shot.velocity = glm::normalize(aim + glm::vec3(0.0f, glm::length(aim) * 0.08f, 0.0f)) * 18.0f;
+            shot.damage = m_mobs[quarry].typeId() == MobId::Blaze ? 3 : 0;
+            shot.kind = Arrows::Kind::Snowball;
+            mob.shotQueue().push_back(shot);
+        }
+        else if (kind == MobId::Witch)
+        {
+            if (wait > 0.0f) continue;
+            if (mob.health() * 2 < mob.type().maxHealth)
+            {
+                wait = 4.0f;
+                mob.setGear(Mob::MainHand, static_cast<uint16_t>(Items::Potion));
+                mob.heal(4);
+            }
+            else if (mob.gear(Mob::MainHand) == static_cast<uint16_t>(Items::Potion))
+                mob.setGear(Mob::MainHand, 0);
+        }
+        else if (kind == MobId::Evoker)
+        {
+            if (wait > 0.0f || glm::length(mob.position() - playerPosition) > 16.0f) continue;
+            int vexes = 0;
+            for (const Mob& other : m_mobs)
+                if (other.alive() && other.typeId() == MobId::Vex && glm::length(other.position() - mob.position()) < 24.0f) ++vexes;
+            wait = 17.0f;
+            for (int k = 0; k < 3 && vexes < 8; ++k)
+            {
+                const float angle = random01() * 6.2831853f;
+                const glm::vec3 spot = mob.position() + glm::vec3(std::cos(angle) * 1.5f, 1.0f, std::sin(angle) * 1.5f);
+                if (spawnAt(MobId::Vex, spot, world)) ++vexes;
+            }
+        }
     }
 }
 
@@ -792,6 +874,8 @@ void EntityManager::update(float deltaTime, const World& world,
                 steed.huntTowards(target);
         }
     }
+
+    tickHelpers(deltaTime, world, target);
 
     m_golemTimer -= deltaTime;
     if (m_golemTimer <= 0.0f)

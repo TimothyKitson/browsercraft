@@ -7781,6 +7781,7 @@ bool Application::frame()
                 for (int x = -6; x <= 8; ++x) m_world->setBlock(bx + x, by, bz + 10, Blocks::RailEastWest);
                 if (m_entities.spawnAt(MobId::Minecart, glm::vec3(bx + 1.5f, by + Mob::RAIL_LIFT, bz + 10.5f), *m_world))
                     m_entities.mobs().back().setVariant(6);
+                m_entities.spawnAt(MobId::SnowGolem, glm::vec3(bx + 6.5f, static_cast<float>(by), bz + 4.5f), *m_world);
             }
 
             if (m_startupScreen == "turned")
@@ -23483,6 +23484,29 @@ void Application::updateMobs(float deltaTime)
     // what they ought to drop -- leather, bone, string -- are items, and
     // this engine only has blocks.
     for (const auto& [at, count] : m_entities.drainInfestations()) spawnSilverfish(at, count);
+    m_meltClock += m_worldDelta;
+    if (m_meltClock >= 1.0f)
+    {
+        m_meltClock = 0.0f;
+        for (Mob& golem : m_entities.mobs())
+        {
+            if (!golem.alive() || golem.typeId() != MobId::SnowGolem) continue;
+            const glm::ivec3 cell = glm::ivec3(glm::floor(golem.position() + glm::vec3(0.0f, 1.0f, 0.0f)));
+            const bool hot = m_dimension == Dimension::Nether ||
+                             Biomes::info(m_world->generator().kindIn(m_dimension, cell.x, cell.y, cell.z)).temperature > 1.0f;
+            const bool wet = isWater(m_world->getBlock(cell.x, cell.y - 1, cell.z)) ||
+                             (hasSky() && m_weather.depth > 0.2f && !m_snowing && m_world->skyLight(cell.x, cell.y, cell.z) >= 15);
+            if (hot || wet) golem.damage(1, glm::vec3(0.0f));
+        }
+    }
+    for (const glm::vec3& spot : m_entities.drainSnowTrail())
+    {
+        const glm::ivec3 cell = glm::ivec3(spot);
+        if (m_dimension != Dimension::Overworld || m_world->getBlock(cell.x, cell.y, cell.z) != Blocks::Air) continue;
+        if (Biomes::info(m_world->generator().kindIn(m_dimension, cell.x, cell.y, cell.z)).temperature >= 0.8f) continue;
+        m_world->setBlock(cell.x, cell.y, cell.z, snowLayerOf(1));
+        m_net.onLocalBlockChange(cell.x, cell.y, cell.z, snowLayerOf(1));
+    }
 
     for (const EntityManager::Death& death : m_entities.drainDeaths())
     {

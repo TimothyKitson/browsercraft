@@ -588,6 +588,7 @@ private:
     void tickArmorStands(float deltaTime);
     void pushArmorStands(const Piston::Moved& moved);
     float m_patrolTimer = 600.0f;
+    float m_meltClock = 0.0f;
     bool usePot(const glm::ivec3& at);
     bool useShelf(const glm::ivec3& at, BlockId used);
     std::vector<ArmorStands::Stand> standsHere(float reach) const;
