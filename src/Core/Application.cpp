@@ -27590,6 +27590,56 @@ void Application::renderDebugOverlay()
         right(buffer);
     }
 
+    if (!minimal && !m_reducedDebug && !m_rules.on(GameRules::Rule::ReducedDebugInfo))
+    {
+        const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, 20.0f);
+        if (hit.hit)
+        {
+            const BlockId target = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
+            if (rightY > 2.0f) right("");
+            std::snprintf(buffer, sizeof(buffer), "Targeted Block: %d, %d, %d", hit.block.x, hit.block.y, hit.block.z);
+            right(buffer);
+            right(("minecraft:" + RecipeBook::idOf(static_cast<StackId>(axisBase(target)))).c_str());
+            if (lightEmission(target) > 0)
+            {
+                std::snprintf(buffer, sizeof(buffer), "light: %d", lightEmission(target));
+                right(buffer);
+            }
+            const glm::ivec3 face = hit.block + hit.normal;
+            const BlockId fluid = m_world->getBlock(face.x, face.y, face.z);
+            if (isFluid(fluid))
+            {
+                right("");
+                std::snprintf(buffer, sizeof(buffer), "Targeted Fluid: %d, %d, %d", face.x, face.y, face.z);
+                right(buffer);
+                right(isLava(fluid) ? "minecraft:lava" : "minecraft:water");
+            }
+        }
+        const Mob* looked = nullptr;
+        float nearest = 8.0f;
+        for (const Mob& mob : m_entities.mobs())
+        {
+            if (!mob.alive()) continue;
+            const glm::vec3 centre = mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f);
+            const glm::vec3 to = centre - m_camera.position;
+            const float along = glm::dot(to, m_camera.front);
+            if (along <= 0.0f || along > nearest) continue;
+            const float off = glm::length(to - m_camera.front * along);
+            if (off > std::max(mob.width(), mob.height()) * 0.6f) continue;
+            nearest = along;
+            looked = &mob;
+        }
+        if (looked)
+        {
+            right("");
+            right("Targeted Entity");
+            std::string id = "minecraft:";
+            for (const char* c = looked->type().name; c && *c; ++c)
+                id.push_back(*c == ' ' ? '_' : static_cast<char>(std::tolower(static_cast<unsigned char>(*c))));
+            right(id.c_str());
+        }
+    }
+
     // The footer names the key, because a view you cannot get back from
     // is worse than no view at all.
     const char* detailName = minimal ? "Minimal" : (detailed ? "Full" : "Default");
