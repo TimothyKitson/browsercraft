@@ -9347,6 +9347,24 @@ void Application::updateGameplay(float deltaTime)
             if (!mount->saddled()) { leap = false; m_horseJumpHeld = 0.0f; }
         mount->steer(m_camera.yaw, mount->saddled() && m_keys.down(m_input, Action::Forward), leap, power);
         }
+        else if (mount->typeId() == MobId::Camel)
+        {
+            if (m_horseJumpCooldown > 0.0f) m_horseJumpCooldown = std::max(0.0f, m_horseJumpCooldown - deltaTime);
+            if (jumpHeld && mount->onGround() && m_horseJumpCooldown <= 0.0f) m_horseJumpHeld += deltaTime;
+            else if (!jumpHeld && m_horseJumpHeld > 0.0f)
+            {
+                if (mount->saddled() && mount->onGround())
+                {
+                    const float charge = std::min(1.0f, m_horseJumpHeld);
+                    const float yaw = glm::radians(m_camera.yaw);
+                    mount->shove(glm::vec3(std::cos(yaw), 0.0f, std::sin(yaw)) * (8.0f + 10.0f * charge) + glm::vec3(0.0f, 3.5f + 2.0f * charge, 0.0f));
+                    m_audio.play(Sound::MobCamelSay, 0.7f, 1.3f);
+                    m_horseJumpCooldown = 2.75f;
+                }
+                m_horseJumpHeld = 0.0f;
+            }
+            mount->steer(m_camera.yaw, mount->saddled() && m_keys.down(m_input, Action::Forward), false);
+        }
         else if (mount->type().saddleRide)
         {
             const StackId stick = mount->typeId() == MobId::Pig ? static_cast<StackId>(Items::CarrotOnAStick)
@@ -12714,6 +12732,40 @@ void Application::tickTrialSpawners(float deltaTime)
         trial.since += deltaTime;
 
         const glm::vec3 middle = glm::vec3(trial.at) + glm::vec3(0.5f);
+        if (trial.ominous && !m_player.exempt() && glm::length(m_player.position - middle) < 14.0f)
+        {
+            trial.drop -= deltaTime;
+            if (trial.drop <= 0.0f)
+            {
+                const uint32_t roll = hashCoords(trial.at.x, static_cast<int>(trial.since * 10.0f), trial.at.z, 0x0A15u);
+                trial.drop = 6.0f + static_cast<float>(roll % 5u);
+                const glm::vec3 above = m_player.position + glm::vec3(static_cast<float>(roll % 3u) - 1.0f, 4.0f, static_cast<float>((roll >> 3) % 3u) - 1.0f);
+                if (m_sprites) m_sprites->spawn(SpriteParticles::Kind::Poof, above, glm::vec3(0.0f), 1.0f, 0.6f);
+                m_audio.play(Sound::OmenTrial, 0.5f, 1.6f);
+                const glm::vec3 fall(0.0f, -6.0f, 0.0f);
+                switch ((roll >> 6) % 4u)
+                {
+                    case 0:
+                    {
+                        static const Brewing::Potion HARM[4] = { Brewing::Potion::Poison, Brewing::Potion::Slowness, Brewing::Potion::Weakness,
+                                                                 Brewing::Potion::Oozing };
+                        m_arrows.spawn(above, fall, 0, false, Arrows::Kind::Potion,
+                                       Brewing::encode(Brewing::Brew{ HARM[(roll >> 9) % 4u], true, false }));
+                        break;
+                    }
+                    case 1:
+                        for (int k = 0; k < 3; ++k)
+                            m_arrows.spawn(above + glm::vec3(0.3f * static_cast<float>(k - 1), 0.0f, 0.0f), fall * 2.0f, Arrows::damageFor(1.0f), false, Arrows::Kind::Shaft);
+                        break;
+                    case 2:
+                        m_arrows.spawn(above, fall * 1.5f, 0, false, Arrows::Kind::Wind);
+                        break;
+                    default:
+                        m_arrows.spawn(above, fall * 1.5f, 5, false, Arrows::Kind::Fire);
+                        break;
+                }
+            }
+        }
 
         // Somebody broke it, or the world was reloaded under it.
         if (!isTrialSpawnerActive(m_world->getBlock(trial.at.x, trial.at.y, trial.at.z)))

@@ -1148,6 +1148,7 @@ private:
         // Decided when the spawner woke, not when it pays out: the
         // omen that made it ominous will have run out by then.
         bool ominous = false;
+        float drop = 5.0f;
     };
     std::vector<ActiveTrial> m_trials;
     float m_trialScan = 0.0f;
