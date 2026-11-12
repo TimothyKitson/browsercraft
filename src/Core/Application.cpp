@@ -10220,6 +10220,7 @@ void Application::updateMining(float deltaTime)
                 if (!m_player.creative()) m_player.addExhaustion(0.1f);
                 if (target->strike(blow, target->position() - m_player.position))
                 {
+                    if (Tools::kindOf(weapon) == Tools::Kind::Mace && blow >= 100) award("adventure/overoverkill", "overoverkill");
                     const int knock = Enchanting::levelOf(edge, Enchanting::Kind::Knockback) + (sprintHit ? 1 : 0) +
                                       static_cast<int>(m_player.attributes.value(Attributes::Kind::AttackKnockback));
                     m_audio.playNamed(critical ? "entity/player/attack/crit" : knock > 0 ? "entity/player/attack/knockback"
@@ -10453,6 +10454,14 @@ void Application::updateMining(float deltaTime)
                 const bool silk = Enchanting::has(onTool, Enchanting::Kind::SilkTouch);
                 if (silk && drop != Blocks::Air && isObtainable(id)) drop = id;
                 if (silk && isHive(id)) drop = hiveOf(isBeeNest(id), 2, 0);
+                if (silk && isBeeNest(id))
+                {
+                    int bees = 0;
+                    for (const Mob& bee : m_entities.mobs())
+                        if (bee.alive() && bee.typeId() == MobId::Bee && glm::length(bee.position() - (glm::vec3(hit.block) + glm::vec3(0.5f))) < 6.0f)
+                            ++bees;
+                    if (bees >= 3) award("husbandry/silk_touch_nest", "silk_touch_nest");
+                }
                 if (silk && (isLiveCoralPlant(id) || isDeadCoralPlant(id) || isAnyCoralFan(id))) drop = id;
                 if (silk && isAnyCoralWallFan(id))
                     drop = static_cast<StackId>((isDeadCoralWallFan(id) ? Blocks::DeadCoralFanFirst : Blocks::CoralFanFirst) + coralKind(id));
@@ -11105,6 +11114,8 @@ bool Application::fireCrafter(const glm::ivec3& block)
 
     const CraftOutput made = Crafting::match(grid, 3);
     if (!made.valid()) return false;
+    if (!isItem(made.id) && isCrafter(asBlock(made.id)) && glm::length(glm::vec3(block) + glm::vec3(0.5f) - m_player.position) <= 5.0f)
+        award("adventure/crafters_crafting_crafters", "crafter_crafted_crafter");
 
     const int bottles = Crafting::consume(grid, 3);
     for (int i = 0; i < CRAFTER_SLOTS; ++i) held[i] = grid[i];
@@ -12254,6 +12265,7 @@ bool Application::tryRespawnDragon()
     m_dragonSlain = false;
     m_dragonSeen = false;
     m_audio.play(Sound::Thunder, 1.0f, 0.6f);
+    award("end/respawn_dragon", "summoned_dragon");
     return true;
 }
 
@@ -13182,7 +13194,10 @@ void Application::tickTridents(float deltaTime)
                 const glm::ivec3 top = glm::ivec3(glm::floor(feet));
                 if (Enchanting::tridentLevel(t.stack.enchantments, Enchanting::TridentKind::Channeling) > 0 &&
                     m_weather.kind == Weather::Kind::Storm && m_world->skyLight(top.x, top.y + 1, top.z) >= 15)
+                {
+                    if (mob.typeId() == MobId::Villager) award("adventure/very_very_frightening", "struck_villager");
                     boltAt(feet);
+                }
                 break;
             }
         }
@@ -13274,6 +13289,14 @@ void Application::strikeLightning()
         strike = glm::vec3(cx + 0.5f, top + 1.0f, cz + 0.5f);
     }
 
+    if (found)
+        for (const Mob& villager : m_entities.mobs())
+            if (villager.alive() && villager.typeId() == MobId::Villager && glm::length(villager.position() - strike) <= 30.0f &&
+                glm::length(villager.position() - strike) > 4.0f)
+            {
+                award("adventure/lightning_rod_with_villager_no_fire", "lightning_rod_with_villager_no_fire");
+                break;
+            }
     boltStrikes(strike);
     if (!found && m_worldMeta.difficulty != Worlds::Difficulty::Peaceful && next() < 0.04f)
         for (int k = 0; k < 4; ++k)
@@ -14839,7 +14862,11 @@ void Application::updatePortal(float deltaTime)
     if (inside == Blocks::EndGateway || feet == Blocks::EndGateway)
     {
         m_portalTimer = 0.0f;
-        if (m_gatewayCooldown <= 0.0f) stepThroughGateway();
+        if (m_gatewayCooldown <= 0.0f)
+        {
+            award("end/enter_end_gateway", "entered_end_gateway");
+            stepThroughGateway();
+        }
         return;
     }
     m_gatewayCooldown = std::max(0.0f, m_gatewayCooldown - deltaTime);
@@ -15274,6 +15301,13 @@ namespace
     }
 }
 
+void Application::launchedByWind()
+{
+    m_windLaunched = true;
+    m_windLaunchY = m_player.position.y;
+    m_windLaunchAge = 0.0f;
+}
+
 void Application::windBurst(const glm::vec3& at)
 {
     sprites(SpriteParticles::Kind::Gust, at, 1, 0.0f, 0.0f, 2.2f, 0.6f);
@@ -15284,6 +15318,7 @@ void Application::windBurst(const glm::vec3& at)
     {
         m_player.velocity += push;
         m_player.clearFall();
+        launchedByWind();
     }
     for (Mob& mob : m_entities.mobs())
     {
@@ -16610,8 +16645,10 @@ void Application::updateCrossbow(float deltaTime)
         const glm::vec3 aim = glm::rotate(glm::mat4(1.0f), glm::radians(10.0f * static_cast<float>(spread)), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(m_camera.front, 0.0f);
         m_arrows.spawn(from, aim * Crossbows::ARROW_SPEED, 9, true, kind, Crossbows::effectOf(held.enchantments));
         m_arrows.enchantLast(0, false, pierce, spread == 0 && !m_player.creative());
+        m_arrows.tagLast(m_shotCount + 1, true);
     }
     award("adventure/ol_betsy", "shot_crossbow");
+    ++m_shotCount;
     held.enchantments = Crossbows::withLoad(held.enchantments, Crossbows::Empty);
     m_crossbowHeldOver = true;
     m_heldItem.swing();
@@ -16847,7 +16884,9 @@ namespace
                             if (glm::length(push) > 0.01f) mob.shove(glm::normalize(push) * (0.6f * static_cast<float>(punch)) + glm::vec3(0.0f, 0.1f, 0.0f));
                         }
                         if (flame) mob.ignite(5.0f);
-                        mob.markPlayerHit(striking == Arrows::Kind::Trident ? 3 : 1, glm::length(feet - player->position));
+                        mob.markPlayerHit(striking == Arrows::Kind::Trident ? 3 : (striking == Arrows::Kind::Wind && deflected) ? 5 : crossbow ? 4 : 1,
+                                          glm::length(feet - player->position));
+                        mob.setPlayerShot(shot);
                         if (striking == Arrows::Kind::Trident) ++tridentHits;
                         if (striking == Arrows::Kind::Shaft || striking == Arrows::Kind::Spectral || striking == Arrows::Kind::Tipped) ++arrowHits;
                     }
@@ -16953,6 +16992,7 @@ void Application::updateArrows(float deltaTime)
     }
     for (const glm::vec3& at : targets.windBursts)
     {
+        if (glm::length(Arrows::windImpulse(at, m_player.position)) > 0.0f) launchedByWind();
         sprites(SpriteParticles::Kind::Gust, at, 1, 0.0f, 0.0f, 2.2f, 0.6f);
         sprites(SpriteParticles::Kind::SmallGust, at, 6, 0.8f, 1.5f, 0.6f, 0.5f);
     }
@@ -17089,6 +17129,7 @@ void Application::handleBrushing(float deltaTime)
     m_net.onLocalBlockChange(hit.block.x, hit.block.y, hit.block.z, bare);
     if (find.id != Blocks::Air)
         m_drops.spawn(glm::vec3(hit.block) + glm::vec3(0.5f) + glm::vec3(hit.normal) * 0.7f, find.id, find.count);
+    if (Archaeology::sherdIndex(find.id) >= 0) award("adventure/salvage_sherd", "salvage_sherd");
     m_audio.play(Sound::Pickup, 0.6f, 1.2f);
     if (!m_player.creative() && ++brush.damage >= Archaeology::BRUSH_DURABILITY)
     {
@@ -17633,6 +17674,8 @@ bool Application::useJukebox(const glm::ivec3& at)
     if (disc < 0) return false;
     m_jukeboxes[key] = ItemStack{ held.id, 1 };
     m_stats.add(Stats::Custom::PlayRecord);
+    if (m_dimension == Dimension::Overworld && m_world->generator().kindIn(m_dimension, at.x, at.y, at.z) == Biomes::Kind::Meadow)
+        award("adventure/play_jukebox_in_meadows", "play_jukebox_in_meadows");
     m_jukeboxClock[key] = 0.0f;
     if (!m_player.creative())
     {
@@ -17798,6 +17841,11 @@ void Application::handlePlacement()
         if (aimed->alive())
         {
             ItemStack& held = m_inventory.selected();
+            if (aimed->typeId() == MobId::Allay && useOnAllay(*aimed))
+            {
+                m_heldItem.swing();
+                return;
+            }
             if (aimed->typeId() == MobId::Piglin && held.id == Items::GoldIngot && !aimed->admiring() && !aimed->baby())
             {
                 aimed->admire(Items::GoldIngot);
@@ -17847,6 +17895,11 @@ void Application::handlePlacement()
             if (held.id == Items::Lead && Mob::leashable(aimed->type()) && !aimed->leashed() && !aimed->ridden())
             {
                 aimed->setLeashed(true);
+                if (aimed->typeId() == MobId::Frog)
+                {
+                    static const char* KINDS[3] = { "temperate", "warm", "cold" };
+                    award("husbandry/leash_all_frog_variants", KINDS[frogKindOf(aimed->birthSeed()) % 3]);
+                }
                 m_leashes.push_back(Leash{ aimed->serial(), false, glm::ivec3(0) });
                 if (!m_player.creative() && --held.count <= 0) held.clear();
                 m_audio.play(Sound::DigWool, 0.6f, 1.2f);
@@ -18103,6 +18156,7 @@ void Application::handlePlacement()
                     const BlockId fuller = anchorOf(charge + 1);
                     m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, fuller);
                     m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, fuller);
+                    if (charge + 1 == 4) award("nether/charge_respawn_anchor", "charge_respawn_anchor");
                     if (!m_player.creative() && --held.count <= 0) held.clear();
                     m_audio.play(Sound::Click, 0.7f, 0.6f + 0.15f * charge);
                     return;
@@ -18467,6 +18521,7 @@ void Application::handlePlacement()
             if (scrapedCopper != log)
             {
                 if (Copper::waxed(scrapedCopper) == log) award("husbandry/wax_off", "wax_off");
+                else if (isCopperBulb(log)) award("adventure/lighten_up", "lighten_up");
                 setCopper(bark.block, scrapedCopper);
                 if (m_sprites)
                     m_sprites->burst(Copper::waxed(scrapedCopper) == log ? SpriteParticles::Kind::WaxOff : SpriteParticles::Kind::Scrape,
@@ -18946,9 +19001,26 @@ void Application::handlePlacement()
     // A bone offered to a wolf tames it, which comes before feeding
     // for the same reason feeding comes before placing: what is in
     // front of you takes it.
+    Mob* tamingTarget = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH);
     if (m_entities.tame(m_camera.position, m_camera.front, ATTACK_REACH, stack.id))
     {
         award("husbandry/tame_an_animal", "tamed_animal");
+        if (tamingTarget && tamingTarget->tamed())
+        {
+            const uint32_t pick = ((tamingTarget->birthSeed() * 2654435761u) >> 8) % 1000u;
+            if (tamingTarget->typeId() == MobId::Cat)
+            {
+                static const char* BREEDS[11] = { "tabby", "black", "red", "siamese", "british_shorthair", "calico",
+                                                  "persian", "ragdoll", "white", "jellie", "all_black" };
+                const int v = tamingTarget->variant();
+                award("husbandry/complete_catalogue", BREEDS[v >= 1 && v <= 11 ? v - 1 : static_cast<int>(pick % 11u)]);
+            }
+            if (tamingTarget->typeId() == MobId::Wolf)
+            {
+                static const char* COATS[9] = { "pale", "ashen", "black", "chestnut", "rusty", "snowy", "spotted", "striped", "woods" };
+                award("husbandry/whole_pack", COATS[pick % 9u]);
+            }
+        }
         if (!m_player.creative())
         {
             stack.count -= 1;
@@ -18963,8 +19035,10 @@ void Application::handlePlacement()
     const Mob* beingFed = stack.empty() ? nullptr : m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH);
     const glm::vec3 fedAt = beingFed ? beingFed->position() + glm::vec3(0.0f, beingFed->type().height, 0.0f)
                                      : glm::vec3(0.0f);
+    const bool snifflet = beingFed && beingFed->typeId() == MobId::Sniffer && beingFed->baby();
     if (beingFed && m_entities.feed(m_camera.position, m_camera.front, ATTACK_REACH, stack.id))
     {
+        if (snifflet) award("husbandry/feed_snifflet", "feed_snifflet");
         if (beingFed) sprites(SpriteParticles::Kind::Heart, fedAt, 6, 0.4f, 0.4f, 0.3f, 1.2f);
         if (!m_player.creative())
         {
@@ -20456,6 +20530,23 @@ void Application::handlePlacement()
     placing = static_cast<BlockId>(placing & ~WATERLOGGED);
     m_audio.playPlace(placing);
     checkFalling(target);
+    {
+        static const int DX[4] = { 0, 1, 0, -1 };
+        static const int DZ[4] = { -1, 0, 1, 0 };
+        if (isComparator(placing))
+        {
+            const int back = (comparatorOut(placing) + 2) & 3;
+            if (isChiseledBookshelf(m_world->getBlock(target.x + DX[back], target.y, target.z + DZ[back])))
+                award("adventure/read_power_of_chiseled_bookshelf", "comparator");
+        }
+        if (isChiseledBookshelf(placing))
+            for (int d = 0; d < 4; ++d)
+            {
+                const BlockId beside = m_world->getBlock(target.x + DX[d], target.y, target.z + DZ[d]);
+                if (isComparator(beside) && ((comparatorOut(beside) + 2) & 3) == ((d + 2) & 3))
+                    award("adventure/read_power_of_chiseled_bookshelf", "chiseled_bookshelf");
+            }
+    }
     if (isLeaves(placing)) m_placedLeaves.insert({ static_cast<int>(m_dimension), target.x, target.y, target.z });
     if (isShulkerBox(placing) && stack.damage > 0 && stack.damage <= static_cast<int>(m_shulkerStore.size()))
         m_chests.at(target) = m_shulkerStore[static_cast<size_t>(stack.damage - 1)];
@@ -24710,8 +24801,122 @@ int Application::noteInstrument(const glm::ivec3& at) const
     return 0;
 }
 
+void Application::allaysHear(const glm::ivec3& note)
+{
+    for (const Mob& allay : m_entities.mobs())
+    {
+        if (!allay.alive() || allay.typeId() != MobId::Allay || allay.gear(Mob::MainHand) == 0) continue;
+        if (glm::length(allay.position() - (glm::vec3(note) + glm::vec3(0.5f))) > 16.0f) continue;
+        AllayState& state = m_allays[allay.serial()];
+        state.note = note;
+        state.noteTime = 30.0f;
+    }
+}
+
+bool Application::useOnAllay(Mob& allay)
+{
+    ItemStack& held = m_inventory.selected();
+    AllayState& state = m_allays[allay.serial()];
+    if (allay.gear(Mob::MainHand) != 0 && held.empty())
+    {
+        ItemStack back{ static_cast<StackId>(allay.gear(Mob::MainHand)), 1 };
+        if (m_inventory.addStack(back) > 0) m_drops.spawnStack(m_player.position, back);
+        if (!state.load.empty() && m_inventory.addStack(state.load) > 0) m_drops.spawnStack(m_player.position, state.load);
+        allay.setGear(Mob::MainHand, 0, true);
+        m_allays.erase(allay.serial());
+        m_audio.play(Sound::Pickup, 0.6f, 1.4f);
+        return true;
+    }
+    if (allay.gear(Mob::MainHand) == 0 && !held.empty())
+    {
+        allay.setGear(Mob::MainHand, static_cast<uint16_t>(held.id), true);
+        allay.keepFromDespawning();
+        state = AllayState{};
+        state.load.id = held.id;
+        state.load.count = 0;
+        if (!m_player.creative() && --held.count <= 0) held.clear();
+        m_audio.play(Sound::Pickup, 0.6f, 1.8f);
+        return true;
+    }
+    return false;
+}
+
+void Application::tickAllays(float deltaTime)
+{
+    for (const Mob& mob : m_entities.mobs())
+        if (mob.alive() && mob.typeId() == MobId::Allay && mob.gear(Mob::MainHand) != 0 && !m_allays.count(mob.serial()))
+            m_allays[mob.serial()].load.id = static_cast<StackId>(mob.gear(Mob::MainHand));
+    for (auto it = m_allays.begin(); it != m_allays.end();)
+    {
+        Mob* allay = nullptr;
+        for (Mob& mob : m_entities.mobs())
+            if (mob.serial() == it->first && mob.alive()) allay = &mob;
+        if (!allay || allay->gear(Mob::MainHand) == 0)
+        {
+            it = m_allays.erase(it);
+            continue;
+        }
+        AllayState& state = it->second;
+        const StackId liked = static_cast<StackId>(allay->gear(Mob::MainHand));
+        state.noteTime = std::max(0.0f, state.noteTime - deltaTime);
+        state.cooldown = std::max(0.0f, state.cooldown - deltaTime);
+        const glm::vec3 at = allay->position();
+        auto steer = [&](const glm::vec3& goal) {
+            glm::vec3 toward = goal - at;
+            if (glm::length(toward) < 0.05f) return;
+            toward = glm::normalize(toward) * 4.5f;
+            allay->huntTowards(goal);
+            allay->shove((toward - allay->velocity()) * std::min(1.0f, 6.0f * deltaTime));
+        };
+
+        glm::vec3 item;
+        const bool wanting = state.cooldown <= 0.0f && state.load.count < 64 &&
+                             m_drops.nearestOf(liked, at, 32.0f, item);
+        if (wanting)
+        {
+            steer(item + glm::vec3(0.0f, 0.3f, 0.0f));
+            if (glm::length(item - at) < 1.4f)
+            {
+                const int got = m_drops.takeOf(liked, at, 1.6f, 64 - state.load.count);
+                if (got > 0)
+                {
+                    state.load.id = liked;
+                    state.load.count += got;
+                    m_audio.play(Sound::Pickup, 0.4f, 1.6f);
+                }
+            }
+            ++it;
+            continue;
+        }
+
+        const bool toNote = state.noteTime > 0.0f && isNoteBlock(m_world->getBlock(state.note.x, state.note.y, state.note.z));
+        const glm::vec3 goal = toNote ? glm::vec3(state.note) + glm::vec3(0.5f, 1.2f, 0.5f) : m_player.position + glm::vec3(0.0f, 1.2f, 0.0f);
+        const float away = glm::length(goal - at);
+        if (!toNote && away > 64.0f)
+        {
+            ++it;
+            continue;
+        }
+        if (away > 2.0f) steer(goal);
+        if (state.load.count > 0 && away < 2.5f && state.cooldown <= 0.0f)
+        {
+            ItemStack thrown = state.load;
+            const glm::vec3 feet = toNote ? glm::vec3(state.note) + glm::vec3(0.5f, 1.1f, 0.5f) : m_player.position + glm::vec3(0.0f, 0.4f, 0.0f);
+            m_drops.spawnStack(at + (feet - at) * 0.7f, thrown);
+            m_drops.flingLast((feet - at) * 0.6f + glm::vec3(0.0f, 1.5f, 0.0f));
+            if (toNote && thrown.id == Items::Cake) award("husbandry/allay_deliver_cake_to_note_block", "allay_deliver_cake_to_note_block");
+            if (!toNote) award("husbandry/allay_deliver_item_to_player", "allay_deliver_item_to_player");
+            state.load.count = 0;
+            state.cooldown = 3.0f;
+            m_audio.play(Sound::Pickup, 0.5f, 1.2f);
+        }
+        ++it;
+    }
+}
+
 void Application::playNote(const glm::ivec3& at)
 {
+    allaysHear(at);
     const BlockId over = m_world->getBlock(at.x, at.y + 1, at.z);
     if (isHead(over) || over == Blocks::WitherSkull)
     {
@@ -25069,6 +25274,7 @@ void Application::updateMobs(float deltaTime)
     m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia) && m_stats.get(Stats::Custom::TimeSinceRest) >= 72000,
                              m_rules.on(GameRules::Rule::DoTraderSpawning));
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
+    tickAllays(mobTime);
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
     tickPiglins();
     m_gearPickupClock += mobTime;
@@ -25304,6 +25510,7 @@ void Application::updateMobs(float deltaTime)
             if (death.saddled) m_drops.spawn(lift, Items::Saddle, 1);
             if (death.worn != 0 && death.worn != Items::WolfArmor) m_drops.spawn(lift, static_cast<StackId>(death.worn), 1);
         }
+        if (death.captain && death.byPlayer) award("adventure/voluntary_exile", "voluntary_exile");
         if (death.captain && m_rules.on(GameRules::Rule::DoMobLoot))
             m_drops.spawnStack(death.position + glm::vec3(0.0f, 0.5f, 0.0f),
                                ItemStack{ Items::OminousBottle, 1, static_cast<int>(death.serial % 5u) });
@@ -25317,7 +25524,18 @@ void Application::updateMobs(float deltaTime)
             const std::string kind = entityId(death.type);
             award("adventure/kill_a_mob", kind.c_str());
             award("adventure/kill_all_mobs", kind.c_str());
-            if (death.type == MobId::Skeleton && death.how == 1 && death.distance >= 50.0f) award("adventure/sniper_duel", "killed_skeleton");
+            if (death.type == MobId::Skeleton && (death.how == 1 || death.how == 4) && death.distance >= 50.0f) award("adventure/sniper_duel", "killed_skeleton");
+            if (death.type == MobId::Breeze && death.how == 5) award("adventure/blowback", "blowback");
+            if (death.how == 4)
+            {
+                if (death.type == MobId::Pillager) award("adventure/whos_the_pillager_now", "kill_pillager");
+                ShotTally& tally = m_shotKills[death.shot];
+                tally.kinds.insert(static_cast<int>(death.type));
+                if (death.type == MobId::Phantom) ++tally.phantoms;
+                if (tally.kinds.size() >= 5) award("adventure/arbalistic", "arbalistic");
+                if (tally.phantoms >= 2) award("adventure/two_birds_one_arrow", "two_birds");
+                if (m_shotKills.size() > 64) m_shotKills.erase(m_shotKills.begin());
+            }
             if (death.type == MobId::Ghast && m_dimension == Dimension::Overworld) award("nether/uneasy_alliance", "killed_ghast");
         }
         if (death.type == MobId::EnderDragon) award("end/kill_dragon", "killed_dragon");
@@ -25522,6 +25740,17 @@ void Application::updateMobs(float deltaTime)
     // A chicken lays an egg every few minutes whether anybody is
     // watching or not, which is what makes a flock worth keeping.
     const bool playerShots = m_arrows.takePlayerBlockHits() > 0;
+    for (const Projectiles::BlockHit& detail : m_arrows.drainBlockHitDetails())
+    {
+        if (!detail.fromPlayer || !isTarget(m_world->getBlock(detail.cell.x, detail.cell.y, detail.cell.z))) continue;
+        const glm::vec3 local = detail.point - glm::vec3(detail.cell);
+        float off = 0.0f;
+        for (int axis = 0; axis < 3; ++axis)
+            if (axis != detail.axis) off = std::max(off, std::fabs(local[axis] - 0.5f));
+        const int signal = std::max(1, static_cast<int>(std::ceil(15.0f * std::clamp((0.5f - off) / 0.5f, 0.0f, 1.0f))));
+        if (signal >= 15 && glm::length(glm::vec3(detail.cell) + glm::vec3(0.5f) - m_player.position) >= 30.0f)
+            award("adventure/bullseye", "bullseye");
+    }
     for (const glm::ivec3& struck : m_arrows.drainBlockHits())
     {
         vibrate(glm::vec3(struck) + glm::vec3(0.5f), 2);
@@ -25617,6 +25846,7 @@ void Application::updateMobs(float deltaTime)
             m_entities.mobs().back().setYaw(turned.yaw);
             if (turned.into == MobId::Villager && glm::length(turned.at - m_player.position) < 16.0f)
                 gossip(turned.at, m_entities.mobs().back().birthSeed(), 40, 5);
+            if (turned.into == MobId::Villager) award("story/cure_zombie_villager", "cured_zombie");
         }
         const float distance = glm::length(turned.at - m_camera.position);
         if (distance < 32.0f)

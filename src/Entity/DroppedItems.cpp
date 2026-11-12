@@ -605,3 +605,42 @@ std::vector<ItemStack> DroppedItems::takeNear(const glm::vec3& at, float radius)
     }
     return taken;
 }
+
+bool DroppedItems::nearestOf(StackId id, const glm::vec3& from, float range, glm::vec3& out) const
+{
+    float best = range;
+    bool found = false;
+    for (const Item& item : m_items)
+    {
+        if (item.block != id || item.age < 0.5f) continue;
+        const float away = glm::length(item.position - from);
+        if (away > best) continue;
+        best = away;
+        out = item.position;
+        found = true;
+    }
+    return found;
+}
+
+int DroppedItems::takeOf(StackId id, const glm::vec3& at, float radius, int most)
+{
+    int taken = 0;
+    for (size_t i = 0; i < m_items.size() && taken < most;)
+    {
+        Item& item = m_items[i];
+        if (item.block == id && item.age > 0.5f && glm::length(item.position - at) <= radius)
+        {
+            const int part = std::min(item.count, most - taken);
+            taken += part;
+            item.count -= part;
+            if (item.count <= 0)
+            {
+                m_items[i] = m_items.back();
+                m_items.pop_back();
+                continue;
+            }
+        }
+        ++i;
+    }
+    return taken;
+}

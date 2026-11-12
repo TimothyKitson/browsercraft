@@ -18,6 +18,7 @@ enum class Biome : uint8_t;
 class EntityManager
 {
 public:
+    int takeAxolotlAssists() { const int n = m_axolotlAssists; m_axolotlAssists = 0; return n; }
     // What the night sends. Exposed so --selftest can ask what can
     // turn up without waiting for dark -- which is how the breeze
     // being in this list went unnoticed until there were chambers.
@@ -96,6 +97,7 @@ public:
         int how = 0;
         float distance = 0.0f;
         bool captain = false;
+        uint32_t shot = 0;
         bool saddled = false;
         uint16_t worn = 0;
     };
@@ -214,6 +216,7 @@ public:
     void setMoonPhase(int phase) { m_moonPhase = phase; }
 
 private:
+    int m_axolotlAssists = 0;
     std::vector<MobSound> m_orphanSounds;
     std::vector<ShedHorn> m_horns;
     bool m_playerHidden = false;

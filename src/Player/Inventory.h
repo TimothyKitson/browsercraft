@@ -196,6 +196,7 @@ public:
     // The grid is addressed as 3x3 even while only the top-left 2x2 is
     // reachable, so opening a bigger grid later changes one number.
     int craftSize() const { return m_craftSize; }
+    int takeSherdPots() { const int n = m_sherdPots; m_sherdPots = 0; return n; }
     std::vector<std::pair<StackId, int>> takeCrafted()
     {
         std::vector<std::pair<StackId, int>> out;
@@ -242,6 +243,8 @@ public:
     void takeFromPalette(BlockId id);
 
 private:
+    void noteSherdPot(const ItemStack& result);
+    int m_sherdPots = 0;
     std::array<ItemStack, SLOT_COUNT> m_slots{};
     std::vector<std::pair<StackId, int>> m_crafted;
     int m_craftSize = 2;

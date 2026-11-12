@@ -182,6 +182,8 @@ public:
     }
     bool hitByPlayer() const { return m_playerHitAge < 5.0f; }
     int playerHitHow() const { return m_playerHitHow; }
+    void setPlayerShot(uint32_t shot) { m_playerShot = shot; }
+    uint32_t playerShot() const { return m_playerShot; }
     float playerHitDistance() const { return m_playerHitDistance; }
     static float noticeScale();
     const Effects::Set& effects() const { return m_effects; }
@@ -676,6 +678,7 @@ private:
     int m_silverfish = 0;
     float m_playerHitAge = 1.0e9f;
     int m_playerHitHow = 0;
+    uint32_t m_playerShot = 0;
     float m_playerHitDistance = 0.0f;
     float m_poisonTimer = 0.0f;
     float m_poisonClock = 0.0f;

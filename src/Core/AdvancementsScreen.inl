@@ -43,6 +43,62 @@ bool Application::inventoryHolds(const std::string& items) const
 void Application::tickAdvancements(float deltaTime)
 {
     if (!m_world) return;
+    if (const Mob* boat = riddenMob(); boat && (boat->typeId() == MobId::Boat || boat->typeId() == MobId::Raft))
+        for (const Mob& goat : m_entities.mobs())
+            if (goat.typeId() == MobId::Goat && goat.alive() && goat.mount() == boat->serial())
+                award("husbandry/ride_a_boat_with_a_goat", "ride_a_boat_with_a_goat");
+    if (m_entities.takeAxolotlAssists() > 0 && m_player.health > 0)
+    {
+        Effects::give(m_player.effects, Effects::Kind::Regeneration, 0, 5.0f);
+        Effects::remove(m_player.effects, Effects::Kind::MiningFatigue);
+        award("husbandry/kill_axolotl_target", "kill_axolotl_target");
+    }
+    if (m_player.honeySliding)
+    {
+        m_player.honeySliding = false;
+        award("adventure/honey_block_slide", "honey_block_slide");
+    }
+    if (m_windLaunched)
+    {
+        m_windLaunchAge += deltaTime;
+        if (m_player.position.y - m_windLaunchY >= 8.0f) award("adventure/who_needs_rockets", "who_needs_rockets");
+        if ((m_player.onGround && m_windLaunchAge > 0.3f) || m_windLaunchAge > 10.0f) m_windLaunched = false;
+    }
+    if (!m_player.onGround && !m_player.flying && !m_player.isInWater(*m_world))
+    {
+        if (!m_fallTracking) { m_fallTracking = true; m_fallPeakY = m_player.position.y; }
+        m_fallPeakY = std::max(m_fallPeakY, m_player.position.y);
+    }
+    else if (m_fallTracking)
+    {
+        m_fallTracking = false;
+        if (m_player.onGround && m_player.health > 0 && m_fallPeakY >= static_cast<float>(Chunk::SY - 1) && m_player.position.y <= 6.0f)
+            award("adventure/fall_from_world_height", "fall_from_world_height");
+    }
+    if (Mob* mount = riddenMob(); mount && mount->typeId() == MobId::Strider && m_dimension == Dimension::Overworld &&
+                                  isLava(m_world->getBlock(static_cast<int>(std::floor(mount->position().x)),
+                                                           static_cast<int>(std::floor(mount->position().y)),
+                                                           static_cast<int>(std::floor(mount->position().z)))))
+    {
+        if (!m_striderRiding) { m_striderRiding = true; m_striderStart = mount->position(); }
+        if (glm::length(glm::vec2(mount->position().x - m_striderStart.x, mount->position().z - m_striderStart.z)) >= 50.0f)
+            award("nether/ride_strider_in_overworld_lava", "ride_entity_distance");
+    }
+    else if (!riddenMob() || riddenMob()->typeId() != MobId::Strider)
+        m_striderRiding = false;
+    {
+        const int dimension = static_cast<int>(m_dimension);
+        if (m_dimension == Dimension::Overworld && m_lastAdvDimension == static_cast<int>(Dimension::Nether) && m_netherEntryKnown &&
+            glm::length(glm::vec2(m_player.position.x, m_player.position.z) - m_netherEntry) >= 7000.0f)
+            award("nether/fast_travel", "travelled");
+        if (m_dimension == Dimension::Nether && m_lastAdvDimension == static_cast<int>(Dimension::Overworld))
+        {
+            m_netherEntry = m_overworldSpot;
+            m_netherEntryKnown = true;
+        }
+        if (m_dimension == Dimension::Overworld) m_overworldSpot = glm::vec2(m_player.position.x, m_player.position.z);
+        m_lastAdvDimension = dimension;
+    }
     m_advCheck += deltaTime;
     if (m_advCheck >= 0.5f)
     {

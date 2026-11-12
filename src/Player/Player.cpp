@@ -912,6 +912,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     {
         velocity.y = -1.0f;
         m_falling = false;
+        honeySliding = true;
     }
     else if (inWater && pose == Pose::Swimming)
     {

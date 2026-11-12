@@ -71,6 +71,7 @@ void Application::statUsed(const ItemStack& before, const ItemStack& after)
 void Application::drainStatEvents()
 {
     for (const auto& [id, count] : m_inventory.takeCrafted()) m_stats.item(Stats::ItemStat::Crafted, id, count);
+    if (m_inventory.takeSherdPots() > 0) award("adventure/craft_decorated_pot_using_only_sherds", "pot_crafted_using_only_sherds");
     for (const auto& [id, count] : m_drops.takePicked()) m_stats.item(Stats::ItemStat::PickedUp, id, count);
     const Player::Tally tally = m_player.takeTally();
     if (tally.taken > 0) m_stats.add(Stats::Custom::DamageTaken, tally.taken * 10);

@@ -109,6 +109,8 @@ public:
     };
     void carry(const Cargo& one) { m_cargo.push_back(one); }
     std::vector<ItemStack> takeNear(const glm::vec3& at, float radius);
+    bool nearestOf(StackId id, const glm::vec3& from, float range, glm::vec3& out) const;
+    int takeOf(StackId id, const glm::vec3& at, float radius, int most);
 
     void clear() { m_items.clear(); m_pinned.clear(); m_cargo.clear(); m_falling.clear(); }
     int count() const { return static_cast<int>(m_items.size()); }

@@ -103,6 +103,9 @@ struct Arrow
     int pierce = 0;
     float passing = 0.0f;
     bool pickup = false;
+    uint32_t shot = 0;
+    bool crossbow = false;
+    bool deflected = false;
 
     bool shaft() const
     {
@@ -144,6 +147,9 @@ public:
         int shooter = -1;
         int punch = 0;
         bool flame = false;
+        uint32_t shot = 0;
+        bool crossbow = false;
+        bool deflected = false;
         glm::vec3 heading{ 0.0f };
         virtual ~Targets() = default;
 
@@ -191,6 +197,12 @@ public:
     void update(float deltaTime, const World& world, Targets& targets);
 
     void clear() { m_arrows.clear(); }
+    void tagLast(uint32_t shot, bool crossbow)
+    {
+        if (m_arrows.empty()) return;
+        m_arrows.back().shot = shot;
+        m_arrows.back().crossbow = crossbow;
+    }
     void enchantLast(int punch, bool flame, int pierce, bool pickup = true)
     {
         if (m_arrows.empty()) return;
@@ -216,6 +228,19 @@ public:
         all.swap(m_blockHits);
         return all;
     }
+    struct BlockHit
+    {
+        glm::ivec3 cell{ 0 };
+        glm::vec3 point{ 0.0f };
+        int axis = 1;
+        bool fromPlayer = false;
+    };
+    std::vector<BlockHit> drainBlockHitDetails()
+    {
+        std::vector<BlockHit> all;
+        all.swap(m_blockHitDetails);
+        return all;
+    }
 
     void render(Shader& shader, const Camera& camera, const Atlas& atlas, const World& world);
 
@@ -226,6 +251,7 @@ private:
     std::vector<Arrow> m_arrows;
     std::vector<Arrow> m_visuals;
     std::vector<glm::ivec3> m_blockHits;
+    std::vector<BlockHit> m_blockHitDetails;
     int m_playerBlockHits = 0;
     std::vector<float> m_vertices;
     Mesh m_mesh;

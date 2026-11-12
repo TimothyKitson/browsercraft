@@ -800,6 +800,7 @@ void EntityManager::update(float deltaTime, const World& world,
             death.saddled = mob.saddled();
             death.worn = mob.horseArmour();
             death.how = mob.playerHitHow();
+            death.shot = mob.playerShot();
             death.distance = mob.playerHitDistance();
             death.captain = mob.captain();
             m_deaths.push_back(death);
@@ -936,6 +937,32 @@ void EntityManager::update(float deltaTime, const World& world,
         m_mobs.end());
 
     {
+        auto isBoat = [](MobId id) {
+            return id == MobId::Boat || id == MobId::ChestBoat || id == MobId::Raft || id == MobId::ChestRaft;
+        };
+        for (size_t b = 0; b < m_mobs.size(); ++b)
+        {
+            const Mob& boat = m_mobs[b];
+            if (!boat.alive() || !isBoat(boat.typeId())) continue;
+            const int seats = (boat.typeId() == MobId::ChestBoat || boat.typeId() == MobId::ChestRaft) ? 1 : 2;
+            int taken = boat.ridden() ? 1 : 0;
+            for (const Mob& other : m_mobs)
+                if (other.mount() == boat.serial()) ++taken;
+            if (taken >= seats) continue;
+            for (Mob& passenger : m_mobs)
+            {
+                if (taken >= seats) break;
+                if (&passenger == &boat || !passenger.alive() || passenger.mount() != 0 || passenger.ridden() || passenger.leashed()) continue;
+                const MobId kind = passenger.typeId();
+                if (isBoat(kind) || kind == MobId::Minecart || mobType(kind).aquatic || passenger.width() >= 1.375f) continue;
+                if (kind == MobId::EnderDragon || kind == MobId::Wither || kind == MobId::Warden || kind == MobId::Ghast) continue;
+                const glm::vec3 apart = passenger.position() - boat.position();
+                if (std::fabs(apart.y) > 0.8f || glm::length(glm::vec2(apart.x, apart.z)) > 0.9f) continue;
+                passenger.ride(boat.serial());
+                ++taken;
+            }
+        }
+
         std::unordered_map<uint32_t, size_t> bySerial;
         for (size_t k = 0; k < m_mobs.size(); ++k) bySerial[m_mobs[k].serial()] = k;
         for (Mob& rider : m_mobs)
@@ -948,6 +975,14 @@ void EntityManager::update(float deltaTime, const World& world,
                 continue;
             }
             Mob& steed = m_mobs[found->second];
+            if (isBoat(steed.typeId()))
+            {
+                glm::vec3 seat = steed.position() + glm::vec3(0.0f, 0.1f, 0.0f);
+                const glm::vec3 away(steed.position().x - target.x, 0.0f, steed.position().z - target.z);
+                if (steed.ridden() && glm::length(away) > 0.01f) seat += glm::normalize(away) * 0.6f;
+                rider.seatAt(seat);
+                continue;
+            }
             rider.seatAt(steed.position() + glm::vec3(0.0f, steed.height() * 0.75f, 0.0f));
             const glm::vec3 toPlayer = target - steed.position();
             if (mobType(rider.typeId()).spawnClass == SpawnClass::Hostile && glm::length(toPlayer) < 16.0f)
@@ -1281,6 +1316,7 @@ void EntityManager::setWolvesOnHostiles(float deltaTime, const glm::vec3& player
                         const glm::vec3 away = m_mobs[quarry].position() - from;
                         const int bite = t.attackDamage > 0 ? t.attackDamage : Mob::BITE_DAMAGE;
                         m_mobs[quarry].damage(bite, away);
+                        if (hunter == MobId::Axolotl && !m_mobs[quarry].alive() && m_mobs[quarry].hitByPlayer()) ++m_axolotlAssists;
                         const bool zombie = hunter == MobId::Zombie || hunter == MobId::Husk || hunter == MobId::Drowned ||
                                             hunter == MobId::ZombieVillager;
                         if (zombie && m_mobs[quarry].typeId() == MobId::Villager && !m_mobs[quarry].alive() &&

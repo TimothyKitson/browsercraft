@@ -4600,6 +4600,13 @@ void Application::fillVillageChest(const glm::ivec3& block)
         const WorldGen::Hoard hoard =
             m_world->generator().hoardAt(block.x, block.y, block.z);
         loot = StructureLoot::rollFor(hoard, block.x, block.y, block.z, m_world->seed());
+        if (!loot.empty())
+        {
+            if (hoard == WorldGen::Hoard::Bastion) award("nether/loot_bastion", "loot_bastion_other");
+            else if (hoard == WorldGen::Hoard::BastionTreasure) award("nether/loot_bastion", "loot_bastion_treasure");
+            else if (hoard == WorldGen::Hoard::BastionBridge) award("nether/loot_bastion", "loot_bastion_bridge");
+            else if (hoard == WorldGen::Hoard::BastionStable) award("nether/loot_bastion", "loot_bastion_hoglin_stable");
+        }
     }
 
     if (loot.empty()) return;

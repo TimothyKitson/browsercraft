@@ -535,6 +535,32 @@ private:
     bool m_wasWet = false;
     bool m_mountAirborne = false;
     float m_jumpTapTimer = 0.0f;
+    struct ShotTally { std::set<int> kinds; int phantoms = 0; };
+    std::map<uint32_t, ShotTally> m_shotKills;
+    uint32_t m_shotCount = 0;
+    void launchedByWind();
+    bool m_windLaunched = false;
+    float m_windLaunchY = 0.0f;
+    float m_windLaunchAge = 0.0f;
+    float m_fallPeakY = 0.0f;
+    bool m_fallTracking = false;
+    int m_lastAdvDimension = -1;
+    glm::vec2 m_overworldSpot{ 0.0f };
+    glm::vec2 m_netherEntry{ 0.0f };
+    bool m_netherEntryKnown = false;
+    glm::vec3 m_striderStart{ 0.0f };
+    bool m_striderRiding = false;
+    struct AllayState
+    {
+        ItemStack load;
+        glm::ivec3 note{ 0 };
+        float noteTime = 0.0f;
+        float cooldown = 0.0f;
+    };
+    std::map<uint32_t, AllayState> m_allays;
+    void tickAllays(float deltaTime);
+    bool useOnAllay(Mob& allay);
+    void allaysHear(const glm::ivec3& note);
     unsigned m_skinParts = 0x7Fu;
     int m_pendingSkinPart = 0;
     float m_wildTurn = 0.0f;

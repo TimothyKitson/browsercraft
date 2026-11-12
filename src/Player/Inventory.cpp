@@ -5,6 +5,7 @@
 #include "Game/Crafting.h"
 #include "Game/Items.h"
 #include "Game/Banners.h"
+#include "Game/Archaeology.h"
 #include <algorithm>
 
 int Inventory::addStack(const ItemStack& stack)
@@ -169,6 +170,7 @@ bool Inventory::takeCraftResult()
     }
 
     m_crafted.emplace_back(result.id, result.count);
+    noteSherdPot(result);
     const int bottles = Crafting::consume(&m_slots[CRAFT_FIRST], m_craftSize);
     if (bottles > 0) add(Items::GlassBottle, bottles);
     refreshCraftResult();
@@ -444,8 +446,9 @@ void Inventory::quickMove(int index)
         {
             const ItemStack result = m_slots[CRAFT_RESULT];
             if (findDestination(result, 0, MAIN_SLOTS) < 0) break;
-            if (add(result.id, result.count) > 0) break;
+            if (addStack(result) > 0) break;
             m_crafted.emplace_back(result.id, result.count);
+            noteSherdPot(result);
             const int bottles = Crafting::consume(&m_slots[CRAFT_FIRST], m_craftSize);
             if (bottles > 0) add(Items::GlassBottle, bottles);
             refreshCraftResult();
@@ -534,4 +537,12 @@ std::vector<ItemStack> Inventory::evictMisfitArmour()
         if (moving.count > 0) overflow.push_back(moving);
     }
     return overflow;
+}
+
+void Inventory::noteSherdPot(const ItemStack& result)
+{
+    if (result.id < Blocks::DecoratedPotFirst || result.id > Blocks::DecoratedPotLast) return;
+    for (int side = 0; side < 4; ++side)
+        if (Archaeology::potSide(static_cast<uint32_t>(result.enchantments), side) < 0) return;
+    ++m_sherdPots;
 }

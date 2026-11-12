@@ -143,6 +143,9 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
             targets.shooter = arrow.shooter;
             targets.punch = arrow.punch;
             targets.flame = arrow.flame;
+            targets.shot = arrow.shot;
+            targets.crossbow = arrow.crossbow;
+            targets.deflected = arrow.deflected;
             targets.heading = arrow.velocity;
             if (arrow.passing > 0.0f) arrow.passing -= glm::length(slice);
             else if (targets.strike(next, arrow.damage, arrow.fromPlayer, arrow.kind))
@@ -164,8 +167,32 @@ void Projectiles::update(float deltaTime, const Blocks& blocks, Targets& targets
                                static_cast<int>(std::floor(next.y)),
                                static_cast<int>(std::floor(next.z))))
             {
-                m_blockHits.push_back(glm::ivec3(static_cast<int>(std::floor(next.x)), static_cast<int>(std::floor(next.y)),
-                                                 static_cast<int>(std::floor(next.z))));
+                const glm::ivec3 cell(static_cast<int>(std::floor(next.x)), static_cast<int>(std::floor(next.y)),
+                                      static_cast<int>(std::floor(next.z)));
+                m_blockHits.push_back(cell);
+                {
+                    BlockHit detail;
+                    detail.cell = cell;
+                    detail.fromPlayer = arrow.fromPlayer;
+                    detail.point = next;
+                    detail.axis = 1;
+                    float enter = 0.0f;
+                    for (int axis = 0; axis < 3; ++axis)
+                    {
+                        const float from = arrow.position[axis];
+                        const float delta = next[axis] - from;
+                        if (std::fabs(delta) < 1e-6f) continue;
+                        const float face = static_cast<float>(cell[axis]) + (delta > 0.0f ? 0.0f : 1.0f);
+                        const float t = (face - from) / delta;
+                        if (t >= enter && t <= 1.0f)
+                        {
+                            enter = t;
+                            detail.axis = axis;
+                        }
+                    }
+                    detail.point = arrow.position + (next - arrow.position) * enter;
+                    m_blockHitDetails.push_back(detail);
+                }
                 if (arrow.fromPlayer) m_playerBlockHits += 1;
                 // A charge bursts rather than sticking: nothing is left
                 // in the wall to look at. So does a potion, which is
@@ -338,7 +365,7 @@ bool Projectiles::deflect(const glm::vec3& eye, const glm::vec3& look, float rea
     {
         Arrow& arrow = m_arrows[i];
         if (arrow.fromPlayer || arrow.stuck) continue;
-        if (arrow.kind != Arrows::Kind::Fire && arrow.kind != Arrows::Kind::Bullet) continue;
+        if (arrow.kind != Arrows::Kind::Fire && arrow.kind != Arrows::Kind::Bullet && arrow.kind != Arrows::Kind::Wind) continue;
         const glm::vec3 offset = arrow.position - eye;
         const float along = glm::dot(offset, look);
         if (along < 0.0f || along > reach) continue;
@@ -351,6 +378,7 @@ bool Projectiles::deflect(const glm::vec3& eye, const glm::vec3& look, float rea
         }
         arrow.velocity = look * std::max(16.0f, glm::length(arrow.velocity));
         arrow.fromPlayer = true;
+        arrow.deflected = true;
         arrow.age = 0.0f;
         return true;
     }
