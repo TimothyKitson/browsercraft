@@ -1,6 +1,7 @@
 #include "WorldSave.h"
 #include <filesystem>
 #include <fstream>
+#include <algorithm>
 #include <cstdio>
 
 namespace fs = std::filesystem;
@@ -463,6 +464,14 @@ void WorldSave::saveLevel(const std::string& saveDirectory, const LevelState& st
             write(out, gear.damage);
             write(out, gear.enchantments);
         }
+    }
+    write(out, static_cast<uint32_t>(state.structures.size()));
+    for (const LevelState::SavedStructure& structure : state.structures)
+    {
+        write(out, structure.rotation);
+        write(out, structure.mirror);
+        write(out, structure.integrity);
+        write(out, structure.seed);
     }
 }
 
@@ -1027,6 +1036,17 @@ bool WorldSave::loadLevel(const std::string& saveDirectory, LevelState& out)
                                                                     read(in, gear.damage) && read(in, gear.enchantments);
                                                         if (!whole) break;
                                                         out.stands.push_back(stand);
+                                                    }
+                                                uint32_t extraCount = 0;
+                                                if (paintingsWhole && read(in, extraCount) && extraCount == out.structures.size())
+                                                    for (LevelState::SavedStructure& structure : out.structures)
+                                                    {
+                                                        if (!(read(in, structure.rotation) && read(in, structure.mirror) &&
+                                                              read(in, structure.integrity) && read(in, structure.seed)))
+                                                            break;
+                                                        structure.rotation = static_cast<int8_t>(structure.rotation & 3);
+                                                        structure.mirror = static_cast<int8_t>(std::clamp<int>(structure.mirror, 0, 2));
+                                                        structure.integrity = std::clamp(structure.integrity, 0.0f, 1.0f);
                                                     }
                                             }
                                         }

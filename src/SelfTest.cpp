@@ -15029,6 +15029,22 @@ namespace
         buildChunkMesh(lone, alone);
         check(beside.transparentVertices.size() < wet.transparentVertices.size() + alone.transparentVertices.size(),
               "water beside it joins it with no wall in between");
+
+        section("structure blocks: rotation and mirror");
+        check(transformBlock(Blocks::StoneStairsNorth, 1, 0) == Blocks::StoneStairsEast &&
+                  transformBlock(Blocks::StoneStairsNorth, 2, 0) == Blocks::StoneStairsSouth,
+              "a quarter turn takes north-facing stairs to east, a half turn to south");
+        check(transformBlock(Blocks::StoneStairsNorth, 0, 1) == Blocks::StoneStairsSouth &&
+                  transformBlock(Blocks::StoneStairsEast, 0, 1) == Blocks::StoneStairsEast &&
+                  transformBlock(Blocks::StoneStairsEast, 0, 2) == Blocks::StoneStairsWest,
+              "left-right mirroring flips north and south, front-back flips east and west");
+        check(transformBlock(Blocks::RailNorthSouth, 1, 0) == Blocks::RailEastWest && transformBlock(Blocks::RailNorthEast, 1, 0) == Blocks::RailSouthEast,
+              "rails turn with the structure");
+        check(transformBlock(Blocks::LadderNorth, 3, 0) == static_cast<BlockId>(Blocks::LadderNorth + 3),
+              "three quarter turns take a ladder from north to west");
+        check(transformBlock(Blocks::Stone, 1, 1) == Blocks::Stone, "a block with no facing is left alone");
+        check(transformBlock(standingSignOf(0, 0), 1, 0) == standingSignOf(0, 4) && transformBlock(standingSignOf(0, 2), 0, 2) == standingSignOf(0, 14),
+              "a standing sign's sixteen turns follow Minecraft's");
     }
 
     void testSnowLayers()
@@ -15779,7 +15795,8 @@ namespace
             std::error_code ec;
             const auto size = std::filesystem::file_size(path, ec);
             if (!ec) std::filesystem::resize_file(path, size - sizeof(uint16_t) - sizeof(uint8_t) - 3 * sizeof(int) - sizeof(uint32_t) - sizeof(int32_t) - 6 * sizeof(uint32_t) -
-                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 10 * sizeof(uint32_t) - sizeof(uint8_t), ec);
+                                                        sizeof(uint8_t) - 3 * sizeof(float) - sizeof(int8_t) - sizeof(uint32_t) - 10 * sizeof(uint32_t) - sizeof(uint8_t) -
+                                                        sizeof(uint32_t), ec);
 
             LevelState back;
             check(WorldSave::loadLevel(dir, back), "a level from before items moved up still loads");

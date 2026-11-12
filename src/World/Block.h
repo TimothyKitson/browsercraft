@@ -2146,6 +2146,7 @@ constexpr BlockId WATERLOGGED = 0x8000;
 constexpr BlockId DRAINED = 0x4000;
 static_assert(Blocks::ExtCount < DRAINED, "block ids must leave the top two bits free");
 bool canWaterlog(BlockId id);
+BlockId transformBlock(BlockId id, int turns, int mirror);
 inline BlockId trapdoorBaseOf(int wood) { return woodSet(wood).trapdoor; }
 inline int trapdoorWood(BlockId id)
 {

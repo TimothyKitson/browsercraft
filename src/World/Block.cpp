@@ -6429,3 +6429,96 @@ bool canWaterlog(BlockId id)
             return false;
     }
 }
+
+namespace
+{
+    int turnFour(int facing, int turns, int mirror)
+    {
+        facing &= 3;
+        if (mirror == 1 && (facing == 0 || facing == 2)) facing ^= 2;
+        if (mirror == 2 && (facing == 1 || facing == 3)) facing ^= 2;
+        return (facing + turns) & 3;
+    }
+
+    int turnSix(int facing, int turns, int mirror)
+    {
+        return facing >= 4 ? facing : turnFour(facing, turns, mirror);
+    }
+
+    int turnSixteen(int rotation, int turns, int mirror)
+    {
+        int r = rotation & 15;
+        const int signedR = r > 8 ? r - 16 : r;
+        if (mirror == 2) r = (16 - signedR) % 16;
+        if (mirror == 1) r = (8 - signedR + 16) % 16;
+        return (r + turns * 4) & 15;
+    }
+}
+
+BlockId transformBlock(BlockId id, int turns, int mirror)
+{
+    turns &= 3;
+    if (turns == 0 && mirror == 0) return id;
+    if (isStairs(id)) return stairsOf(stairsMaterial(id), stairsUpsideDown(id), turnFour(stairsFacingOf(id), turns, mirror));
+    if (isFenceGate(id)) return gateOf(gateWood(id), gateOpen(id), turnFour(gateFacing(id), turns, mirror));
+    if (isHead(id))
+        return headOnWall(id) ? headOf(headKind(id), true, turnFour(headFacing(id), turns, mirror))
+                              : headOf(headKind(id), false, turnSixteen(headRotation(id), turns, mirror));
+    if (isWallTorch(id)) return wallTorchOf(wallTorchKind(id), turnFour(wallTorchFacing(id), turns, mirror));
+    if (isFamilyButton(id)) return buttonOf(buttonMaterial(id), buttonFace(id), turnFour(buttonFacing(id), turns, mirror), buttonPowered(id));
+    if (isFamilyLever(id)) return leverOf(leverFace(id), turnFour(leverFacing(id), turns, mirror), leverOn(id));
+    if (isRepeater(id)) return repeaterOf(turnFour(repeaterOut(id), turns, mirror), repeaterDelay(id), repeaterLit(id));
+    if (isComparator(id)) return comparatorOf(turnFour(comparatorOut(id), turns, mirror), comparatorSubtracts(id), comparatorLit(id));
+    if (isTripwireHook(id)) return hookOf(turnFour(hookFacing(id), turns, mirror), hookAttached(id), hookPowered(id));
+    if (isChestFamily(id))
+    {
+        const ChestState state = chestState(id);
+        const int half = mirror != 0 && state.half != 0 ? 3 - state.half : state.half;
+        return chestOf(state.kind, turnFour(state.facing, turns, mirror), half, state.open);
+    }
+    if (isColourBed(id)) return bedOf(bedColour(id), turnFour(bedFacing(id), turns, mirror), bedIsHead(id));
+    if (isBanner(id))
+        return bannerOf(bannerColour(id), bannerOnWall(id), turnFour(bannerFacing(id), turns, mirror));
+    if (isStandingSign(id)) return standingSignOf(signWood(id), turnSixteen(signRotation(id), turns, mirror));
+    if (isCeilingHangingSign(id)) return hangingSignOf(signWood(id), turnSixteen(signRotation(id), turns, mirror));
+    if (isWallHangingSign(id)) return wallHangingSignOf(signWood(id), turnFour(signFacing(id), turns, mirror));
+    if (isWallSign(id)) return signFacingAs(signBase(id), turnFour(signFacing(id), turns, mirror));
+    if (isLadder(id)) return static_cast<BlockId>(Blocks::LadderNorth + turnFour(id - Blocks::LadderNorth, turns, mirror));
+    if (isDoor(id)) return doorPart(doorBase(id), turnFour((id - doorBase(id)) & 3, turns, mirror), doorIsTop(id), doorIsOpen(id));
+    if (isTrapdoor(id))
+        return trapdoorPart(trapdoorBase(id), turnFour(trapdoorFacing(id), turns, mirror), trapdoorIsTop(id), trapdoorIsOpen(id));
+    if (isPistonHead(id)) return pistonHead(turnSix(pistonFacing(id), turns, mirror), pistonSticky(id));
+    if (isPiston(id)) return pistonBody(turnSix(pistonFacing(id), turns, mirror), pistonSticky(id), pistonOut(id));
+    if (furnaceSlot(id) >= 0) return furnaceTurned(id, turnFour(furnaceFacing(id), turns, mirror));
+    if (isDispenser(id)) return dispenserFacingTo(turnSix(sixFacing(id), turns, mirror));
+    if (isDropper(id)) return dropperFacingTo(turnSix(sixFacing(id), turns, mirror));
+    if (isObserver(id)) return observerFacingTo(turnSix(sixFacing(id), turns, mirror), observerLit(id));
+    if (isHopper(id)) return hopperFacing(id) < 0 ? id : hopperFacingTo(turnFour(hopperFacing(id), turns, mirror));
+    if (isLightningRod(id)) return lightningRodOf(turnSix(lightningRodFacing(id), turns, mirror), lightningRodPowered(id));
+    if (isCarvedPumpkin(id)) return static_cast<BlockId>(Blocks::CarvedPumpkinFirst + turnFour(id - Blocks::CarvedPumpkinFirst, turns, mirror));
+    if (isJackOLantern(id)) return static_cast<BlockId>(Blocks::JackOLanternFirst + turnFour(id - Blocks::JackOLanternFirst, turns, mirror));
+    if (isGlazedTerracotta(axisBase(id)) && id != Blocks::Air) return glazedOf(axisBase(id), turnFour(glazedTurn(id), turns, mirror));
+    if (isAnvil(id)) return anvilOf(anvilWear(id), (turns & 1) ? !anvilAlongX(id) : anvilAlongX(id));
+    if (blockAxis(id) != 0) return withAxis(axisBase(id), (turns & 1) ? 3 - blockAxis(id) : blockAxis(id));
+    if (id == Blocks::RailNorthSouth || id == Blocks::RailEastWest)
+        return (turns & 1) ? (id == Blocks::RailNorthSouth ? Blocks::RailEastWest : Blocks::RailNorthSouth) : id;
+    if (id >= Blocks::RailNorthEast && id <= Blocks::RailNorthWest)
+    {
+        static const int CORNER_N[4] = { 0, 2, 2, 0 };
+        static const int CORNER_E[4] = { 1, 1, 3, 3 };
+        const int k = id - Blocks::RailNorthEast;
+        const int a = turnFour(CORNER_N[k], turns, mirror);
+        const int b = turnFour(CORNER_E[k], turns, mirror);
+        for (int c = 0; c < 4; ++c)
+        {
+            const int x = CORNER_N[c], y = CORNER_E[c];
+            if ((x == a && y == b) || (x == b && y == a)) return static_cast<BlockId>(Blocks::RailNorthEast + c);
+        }
+        return id;
+    }
+    if (isRailSlope(id))
+        return railSlopeOf(specialRailFamily(id), turnFour(railSlopeDir(id), turns, mirror), specialRailPowered(id));
+    if (isSpecialRail(id))
+        return specialRailOf(specialRailFamily(id), (turns & 1) ? !specialRailEastWest(id) : specialRailEastWest(id), specialRailPowered(id));
+    return id;
+}

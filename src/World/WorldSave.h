@@ -159,6 +159,10 @@ struct LevelState
         std::string name;
         int offset[3] = { 0, 1, 0 };
         int size[3] = { 5, 5, 5 };
+        int8_t rotation = 0;
+        int8_t mirror = 0;
+        float integrity = 1.0f;
+        uint32_t seed = 0;
     };
     std::vector<SavedStructure> structures;
     std::vector<std::string> itemNames;

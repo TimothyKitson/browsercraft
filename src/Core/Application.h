@@ -1609,6 +1609,10 @@ private:
         std::string name = "structure";
         glm::ivec3 offset{ 0, 1, 0 };
         glm::ivec3 size{ 5, 5, 5 };
+        int rotation = 0;
+        int mirror = 0;
+        float integrity = 1.0f;
+        uint32_t seed = 0;
     };
     std::map<std::array<int, 4>, CommandState> m_commands;
     std::map<std::array<int, 4>, StructureState> m_structures;
@@ -1622,7 +1626,11 @@ private:
     bool m_editorOpen = false;
     bool m_editorStructure = false;
     glm::ivec3 m_editorAt{ 0 };
-    std::array<std::string, 3> m_editorFields;
+    std::array<std::string, 5> m_editorFields;
+    int m_editorRotation = 0;
+    void editorIntoState(StructureState& state);
+    bool detectStructure(const glm::ivec3& at, StructureState& state, std::string& message);
+    int m_editorMirror = 0;
     int m_editorFocus = 0;
     int m_editorKind = 0;
     bool m_editorConditional = false;

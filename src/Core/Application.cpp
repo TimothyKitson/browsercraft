@@ -1299,6 +1299,10 @@ void Application::loadLevel()
             structure.name = saved.name;
             structure.offset = glm::ivec3(saved.offset[0], saved.offset[1], saved.offset[2]);
             structure.size = glm::ivec3(saved.size[0], saved.size[1], saved.size[2]);
+            structure.rotation = saved.rotation;
+            structure.mirror = saved.mirror;
+            structure.integrity = saved.integrity;
+            structure.seed = saved.seed;
             m_structures[{ static_cast<int>(saved.dimension), saved.x, saved.y, saved.z }] = structure;
         }
 
@@ -1707,6 +1711,10 @@ void Application::saveLevel()
         saved.y = entry.first[2];
         saved.z = entry.first[3];
         saved.name = entry.second.name;
+        saved.rotation = static_cast<int8_t>(entry.second.rotation);
+        saved.mirror = static_cast<int8_t>(entry.second.mirror);
+        saved.integrity = entry.second.integrity;
+        saved.seed = entry.second.seed;
         for (int k = 0; k < 3; ++k)
         {
             saved.offset[k] = entry.second.offset[k];
@@ -22626,13 +22634,19 @@ void Application::openBlockEditor(const glm::ivec3& at)
     m_editorFocus = 0;
     m_editorStatus.clear();
     m_editorStructure = isStructureBlock(block);
-    m_editorFields = { std::string(), std::string(), std::string() };
+    m_editorFields = { std::string(), std::string(), std::string(), std::string(), std::string() };
     if (m_editorStructure)
     {
         const StructureState& state = m_structures[blockKey(at)];
         m_editorFields[0] = state.name;
         m_editorFields[1] = tripleText(state.offset);
         m_editorFields[2] = tripleText(state.size);
+        char integrity[16];
+        std::snprintf(integrity, sizeof(integrity), "%.1f", state.integrity);
+        m_editorFields[3] = integrity;
+        m_editorFields[4] = std::to_string(state.seed);
+        m_editorRotation = state.rotation;
+        m_editorMirror = state.mirror;
         m_editorMode = structureMode(block);
     }
     else
@@ -22662,11 +22676,7 @@ void Application::closeBlockEditor(bool keep)
     if (keep && m_editorStructure && isStructureBlock(block))
     {
         StructureState& state = m_structures[blockKey(m_editorAt)];
-        const std::string name = cleanName(m_editorFields[0]);
-        if (!name.empty()) state.name = name;
-        glm::ivec3 value;
-        if (readTriple(m_editorFields[1], value)) state.offset = glm::clamp(value, glm::ivec3(-48), glm::ivec3(48));
-        if (readTriple(m_editorFields[2], value)) state.size = glm::clamp(value, glm::ivec3(1), glm::ivec3(48));
+        editorIntoState(state);
         const BlockId now = static_cast<BlockId>(Blocks::StructureBlockFirst + m_editorMode);
         m_world->setBlock(m_editorAt.x, m_editorAt.y, m_editorAt.z, now);
         m_net.onLocalBlockChange(m_editorAt.x, m_editorAt.y, m_editorAt.z, now);
@@ -22699,13 +22709,20 @@ void Application::updateBlockEditor()
         if (!m_inventoryOpen) setMouseCaptured(true);
         return;
     }
-    const int fields = m_editorStructure ? 3 : 1;
-    m_editorFocus = std::clamp(m_editorFocus, 0, fields - 1);
+    std::vector<int> shown{ 0 };
+    if (m_editorStructure && m_editorMode == 0) shown = { 0, 1, 2 };
+    if (m_editorStructure && m_editorMode == 1) shown = { 0, 1, 3, 4 };
+    if (m_editorStructure && m_editorMode == 3) shown = { 0 };
+    if (std::find(shown.begin(), shown.end(), m_editorFocus) == shown.end()) m_editorFocus = shown.front();
     std::string& field = m_editorFields[static_cast<size_t>(m_editorFocus)];
     const size_t limit = m_editorStructure ? 32u : 255u;
     for (int i = 0; i < m_input.backspaces() && !field.empty(); ++i) Utf8::popBack(field);
     Utf8::type(field, m_input.typedText(), limit);
-    if (m_input.wasKeyPressed(SDL_SCANCODE_TAB)) m_editorFocus = (m_editorFocus + 1) % fields;
+    if (m_input.wasKeyPressed(SDL_SCANCODE_TAB))
+    {
+        const auto at = std::find(shown.begin(), shown.end(), m_editorFocus);
+        m_editorFocus = (at == shown.end() || at + 1 == shown.end()) ? shown.front() : *(at + 1);
+    }
     if (m_input.wasKeyPressed(SDL_SCANCODE_RETURN) || m_input.wasKeyPressed(SDL_SCANCODE_KP_ENTER)) closeBlockEditor(true);
 }
 
@@ -22722,20 +22739,21 @@ void Application::renderBlockEditor()
     const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
     const bool clicked = !m_automated && m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT);
 
-    auto field = [&](int index, const char* label, float y, bool editable) {
-        m_ui.textWithShadow(label, left, y - 44.0f, PANEL_TEXT, DIM_TEXT);
+    auto boxField = [&](int index, const char* label, float y, bool editable, float fx, float fw) {
+        m_ui.textWithShadow(label, fx, y - 44.0f, PANEL_TEXT, DIM_TEXT);
         const bool focused = editable && m_editorFocus == index;
-        m_ui.quad(left - 3.0f, y - 3.0f, width + 6.0f, 56.0f, focused ? glm::vec4(1.0f) : glm::vec4(0.63f, 0.63f, 0.63f, 1.0f));
-        m_ui.quad(left, y, width, 50.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        m_ui.quad(fx - 3.0f, y - 3.0f, fw + 6.0f, 56.0f, focused ? glm::vec4(1.0f) : glm::vec4(0.63f, 0.63f, 0.63f, 1.0f));
+        m_ui.quad(fx, y, fw, 50.0f, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
         std::string text = editable ? m_editorFields[static_cast<size_t>(index)] : m_editorStatus;
-        const float room = width - 24.0f;
+        const float room = fw - 24.0f;
         while (!text.empty() && UIRenderer::textWidth(text + "_", PANEL_TEXT) > room) text.erase(text.begin());
         if (focused && static_cast<int>(m_elapsedSeconds * 2.0f) % 2 == 0) text += "_";
-        m_ui.textWithShadow(text, left + 12.0f, y + 25.0f - UIRenderer::textHeight(PANEL_TEXT) * 0.5f, PANEL_TEXT,
+        m_ui.textWithShadow(text, fx + 12.0f, y + 25.0f - UIRenderer::textHeight(PANEL_TEXT) * 0.5f, PANEL_TEXT,
                             editable ? glm::vec4(0.88f, 0.88f, 0.88f, 1.0f) : DIM_TEXT);
-        if (editable && clicked && mouseX >= left && mouseX <= left + width && mouseY >= y && mouseY <= y + 50.0f)
+        if (editable && clicked && mouseX >= fx && mouseX <= fx + fw && mouseY >= y && mouseY <= y + 50.0f)
             m_editorFocus = index;
     };
+    auto field = [&](int index, const char* label, float y, bool editable) { boxField(index, label, y, editable, left, width); };
 
     const float buttonHeight = 50.0f;
     const float gap = 16.0f;
@@ -22759,33 +22777,104 @@ void Application::renderBlockEditor()
     else
     {
         centredText("Structure Block", h * 0.07f, 2.0f, TEXT_COLOR);
-        field(0, "Structure Name", h * 0.20f, true);
-        field(1, "Relative Position", h * 0.33f, true);
-        field(2, "Structure Size", h * 0.46f, true);
+        static const char* NAME_LABELS[4] = { "Structure Name", "Structure Name", "Structure Name", "Custom Data Tag Name" };
+        field(0, NAME_LABELS[m_editorMode], h * 0.20f, true);
+        if (m_editorMode == 0 || m_editorMode == 1) field(1, "Relative Position", h * 0.33f, true);
+        if (m_editorMode == 0) field(2, "Structure Size", h * 0.46f, true);
         const float half = (width - gap) * 0.5f;
+        if (m_editorMode == 1)
+        {
+            boxField(3, "Integrity", h * 0.46f, true, left, half);
+            boxField(4, "Seed", h * 0.46f, true, left + half + gap, half);
+        }
         const float y = h * 0.58f;
         static const char* MODES[4] = { "Mode: Save", "Mode: Load", "Mode: Corner", "Mode: Data" };
-        if (menuButton({ left, y, half, buttonHeight }, MODES[m_editorMode])) m_editorMode = (m_editorMode + 1) % 4;
-        const bool acts = m_editorMode == 0 || m_editorMode == 1;
-        if (menuButton({ left + half + gap, y, half, buttonHeight }, m_editorMode == 1 ? "LOAD" : "SAVE", acts))
-        {
+        auto act = [&](bool load) {
             StructureState state = m_structures[blockKey(m_editorAt)];
-            const std::string name = cleanName(m_editorFields[0]);
-            if (!name.empty()) state.name = name;
-            glm::ivec3 value;
-            if (readTriple(m_editorFields[1], value)) state.offset = glm::clamp(value, glm::ivec3(-48), glm::ivec3(48));
-            if (readTriple(m_editorFields[2], value)) state.size = glm::clamp(value, glm::ivec3(1), glm::ivec3(48));
-            if (m_editorMode == 0) saveStructure(m_editorAt, state, m_editorStatus);
-            else loadStructure(m_editorAt, state, m_editorStatus);
+            editorIntoState(state);
+            if (load) loadStructure(m_editorAt, state, m_editorStatus);
+            else saveStructure(m_editorAt, state, m_editorStatus);
+        };
+        if (m_editorMode == 1)
+        {
+            const float third = (width - gap * 2.0f) / 3.0f;
+            static const char* MIRRORS[3] = { "Mirror: |", "Mirror: < >", "Mirror: ^ v" };
+            if (menuButton({ left, y, third, buttonHeight }, MODES[m_editorMode])) m_editorMode = (m_editorMode + 1) % 4;
+            if (menuButton({ left + third + gap, y, third, buttonHeight }, MIRRORS[m_editorMirror % 3])) m_editorMirror = (m_editorMirror + 1) % 3;
+            if (menuButton({ left + (third + gap) * 2.0f, y, third, buttonHeight }, "LOAD")) act(true);
+            const float quarter = (width - gap * 3.0f) / 4.0f;
+            static const char* TURNS[4] = { "0", "90", "180", "270" };
+            for (int turn = 0; turn < 4; ++turn)
+                if (menuButton({ left + (quarter + gap) * static_cast<float>(turn), y + buttonHeight + gap, quarter, buttonHeight }, TURNS[turn],
+                               (m_editorRotation & 3) != turn))
+                    m_editorRotation = turn;
         }
-        if (!m_editorStatus.empty()) centredText(m_editorStatus, y + buttonHeight + 20.0f, PANEL_TEXT, DIM_TEXT);
+        else if (m_editorMode == 0)
+        {
+            const float third = (width - gap * 2.0f) / 3.0f;
+            if (menuButton({ left, y, third, buttonHeight }, MODES[m_editorMode])) m_editorMode = (m_editorMode + 1) % 4;
+            if (menuButton({ left + third + gap, y, third, buttonHeight }, "DETECT"))
+            {
+                StructureState& state = m_structures[blockKey(m_editorAt)];
+                editorIntoState(state);
+                if (detectStructure(m_editorAt, state, m_editorStatus))
+                {
+                    m_editorFields[1] = tripleText(state.offset);
+                    m_editorFields[2] = tripleText(state.size);
+                }
+            }
+            if (menuButton({ left + (third + gap) * 2.0f, y, third, buttonHeight }, "SAVE")) act(false);
+        }
+        else if (menuButton({ left, y, width, buttonHeight }, MODES[m_editorMode])) m_editorMode = (m_editorMode + 1) % 4;
+        if (!m_editorStatus.empty())
+            centredText(m_editorStatus, y + buttonHeight * (m_editorMode == 1 ? 2.0f : 1.0f) + gap + 20.0f, PANEL_TEXT, DIM_TEXT);
     }
 
     const float half = (width - gap) * 0.5f;
-    const float bottom = h * 0.78f;
+    const float bottom = h * 0.80f;
     if (menuButton({ left, bottom, half, buttonHeight }, "Done")) closeBlockEditor(true);
     else if (menuButton({ left + half + gap, bottom, half, buttonHeight }, "Cancel")) closeBlockEditor(false);
     m_ui.setScale(1.0f);
+}
+
+void Application::editorIntoState(StructureState& state)
+{
+    const std::string name = cleanName(m_editorFields[0]);
+    if (!name.empty()) state.name = name;
+    glm::ivec3 value;
+    if (readTriple(m_editorFields[1], value)) state.offset = glm::clamp(value, glm::ivec3(-48), glm::ivec3(48));
+    if (readTriple(m_editorFields[2], value)) state.size = glm::clamp(value, glm::ivec3(1), glm::ivec3(48));
+    float integrity = 1.0f;
+    if (std::sscanf(m_editorFields[3].c_str(), "%f", &integrity) == 1) state.integrity = std::clamp(integrity, 0.0f, 1.0f);
+    long long seed = 0;
+    if (std::sscanf(m_editorFields[4].c_str(), "%lld", &seed) == 1) state.seed = static_cast<uint32_t>(seed);
+    state.rotation = m_editorRotation & 3;
+    state.mirror = m_editorMirror % 3;
+}
+
+bool Application::detectStructure(const glm::ivec3& at, StructureState& state, std::string& message)
+{
+    glm::ivec3 low(1 << 30), high(-(1 << 30));
+    int corners = 0;
+    for (const auto& [key, other] : m_structures)
+    {
+        if (key[0] != static_cast<int>(m_dimension) || other.name != state.name) continue;
+        const glm::ivec3 spot(key[1], key[2], key[3]);
+        if (glm::length(glm::vec3(spot - at)) > 80.0f) continue;
+        if (structureMode(m_world->getBlock(spot.x, spot.y, spot.z)) != 2) continue;
+        low = glm::min(low, spot);
+        high = glm::max(high, spot);
+        ++corners;
+    }
+    if (corners < 2 || glm::any(glm::lessThan(high - low, glm::ivec3(2))))
+    {
+        message = "Unable to detect structure size. Add corners with matching structure names";
+        return false;
+    }
+    state.offset = glm::clamp(low + glm::ivec3(1) - at, glm::ivec3(-48), glm::ivec3(48));
+    state.size = glm::clamp(high - low - glm::ivec3(1), glm::ivec3(1), glm::ivec3(48));
+    message = "Size successfully detected for '" + state.name + "'";
+    return true;
 }
 
 bool Application::saveStructure(const glm::ivec3& at, const StructureState& state, std::string& message)
@@ -22811,7 +22900,7 @@ bool Application::saveStructure(const glm::ivec3& at, const StructureState& stat
         for (int z = 0; z < state.size.z; ++z)
             for (int x = 0; x < state.size.x; ++x)
             {
-                const BlockId here = m_world->getBlock(origin.x + x, origin.y + y, origin.z + z);
+                const BlockId here = m_world->rawBlock(origin.x + x, origin.y + y, origin.z + z);
                 const uint16_t stored = here == Blocks::StructureVoid ? 0xFFFFu : static_cast<uint16_t>(here);
                 out.write(reinterpret_cast<const char*>(&stored), sizeof(stored));
             }
@@ -22842,8 +22931,28 @@ bool Application::loadStructure(const glm::ivec3& at, const StructureState& stat
             {
                 uint16_t stored = 0;
                 if (!in.read(reinterpret_cast<char*>(&stored), sizeof(stored))) break;
-                if (stored == 0xFFFFu || !isBlockId(stored)) continue;
-                const glm::ivec3 p = origin + glm::ivec3(x, y, z);
+                if (stored == 0xFFFFu) continue;
+                const bool soaked = (stored & WATERLOGGED) != 0;
+                stored = static_cast<uint16_t>(stored & ~WATERLOGGED);
+                if (!isBlockId(stored)) continue;
+                if (state.integrity < 1.0f)
+                {
+                    const uint32_t roll = state.seed != 0 ? hashCoords(x, y, z, state.seed)
+                                                          : hashCoords(x, y, z, static_cast<uint32_t>(m_elapsedSeconds * 1000.0f) + 7u);
+                    if (static_cast<float>(roll % 10000u) / 10000.0f >= state.integrity) continue;
+                }
+                int lx = x, lz = z;
+                if (state.mirror == 1) lz = -lz;
+                if (state.mirror == 2) lx = -lx;
+                for (int turn = 0; turn < (state.rotation & 3); ++turn)
+                {
+                    const int was = lx;
+                    lx = -lz;
+                    lz = was;
+                }
+                stored = transformBlock(static_cast<BlockId>(stored), state.rotation & 3, state.mirror);
+                if (soaked) stored = static_cast<uint16_t>(stored | WATERLOGGED);
+                const glm::ivec3 p = origin + glm::ivec3(lx, y, lz);
                 if (p == at || p.y < 0 || p.y >= Chunk::SY) continue;
                 m_world->setBlock(p.x, p.y, p.z, static_cast<BlockId>(stored));
                 m_net.onLocalBlockChange(p.x, p.y, p.z, static_cast<BlockId>(stored));
