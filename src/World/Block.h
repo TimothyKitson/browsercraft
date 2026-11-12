@@ -728,6 +728,7 @@ namespace Blocks
         FrameFloor, FrameCeiling, GlowFrameFloor, GlowFrameCeiling,
         CrafterTurnFirst, CrafterTurnLast = CrafterTurnFirst + 35,
         ChorusFlowerDead,
+        DustLevelFirst, DustLevelLast = DustLevelFirst + 13,
         ExtCount
     };
 }
@@ -1909,6 +1910,25 @@ inline bool isCrafter(BlockId id)
 }
 
 inline bool isChorusFlower(BlockId id) { return id == Blocks::ChorusFlower || id == Blocks::ChorusFlowerDead; }
+
+inline bool isDustBlock(BlockId id)
+{
+    return id == Blocks::RedstoneDust || id == Blocks::RedstoneDustLit || (id >= Blocks::DustLevelFirst && id <= Blocks::DustLevelLast);
+}
+
+inline int dustPower(BlockId id)
+{
+    if (id == Blocks::RedstoneDustLit) return 15;
+    if (id >= Blocks::DustLevelFirst && id <= Blocks::DustLevelLast) return id - Blocks::DustLevelFirst + 1;
+    return 0;
+}
+
+inline BlockId dustOfPower(int power)
+{
+    if (power <= 0) return Blocks::RedstoneDust;
+    if (power >= 15) return Blocks::RedstoneDustLit;
+    return static_cast<BlockId>(Blocks::DustLevelFirst + power - 1);
+}
 
 inline bool crafterLit(BlockId id)
 {

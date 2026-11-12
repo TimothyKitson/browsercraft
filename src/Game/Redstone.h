@@ -36,6 +36,7 @@ namespace Redstone
         virtual ~Cells() = default;
         virtual BlockId at(int x, int y, int z) const = 0;
         virtual void set(int x, int y, int z, BlockId block) = 0;
+        virtual int comparatorLevel(int, int, int) const { return 15; }
     };
 
     // Gives power out for nothing: a torch, a block of redstone, a lever
@@ -76,4 +77,9 @@ namespace Redstone
     bool feeds(const Cells& cells, int x, int y, int z, int step);
     bool diodeInput(const Cells& cells, int x, int y, int z);
     bool diodeSide(const Cells& cells, int x, int y, int z);
+
+    int levelInto(const Cells& cells, int x, int y, int z, int step);
+    int levelAt(const Cells& cells, int x, int y, int z);
+    int diodeInputLevel(const Cells& cells, int x, int y, int z);
+    int diodeSideLevel(const Cells& cells, int x, int y, int z);
 }

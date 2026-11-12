@@ -1,4 +1,5 @@
 #include "Redstone.h"
+#include <algorithm>
 #include <array>
 #include <queue>
 #include <vector>
@@ -45,7 +46,7 @@ namespace Redstone
 
     bool isWire(BlockId id)
     {
-        return id == Blocks::RedstoneDust || id == Blocks::RedstoneDustLit;
+        return isDustBlock(id);
     }
 
     bool isSink(BlockId id)
@@ -57,7 +58,7 @@ namespace Redstone
 
     BlockId lit(BlockId id)
     {
-        if (id == Blocks::RedstoneDust) return Blocks::RedstoneDustLit;
+        if (isDustBlock(id)) return Blocks::RedstoneDustLit;
         if (id == Blocks::RedstoneLamp) return Blocks::RedstoneLampLit;
         if (id == Blocks::NoteBlock) return Blocks::NoteBlockLit;
         if (isObserver(id) && !observerLit(id)) return id == Blocks::Observer ? Blocks::ObserverLit : observerFacingTo(sixFacing(id), true);
@@ -75,7 +76,7 @@ namespace Redstone
     {
         if (id == Blocks::NoteBlockLit) return Blocks::NoteBlock;
         if (isObserver(id) && observerLit(id)) return id == Blocks::ObserverLit ? Blocks::Observer : observerFacingTo(sixFacing(id), false);
-        if (id == Blocks::RedstoneDustLit) return Blocks::RedstoneDust;
+        if (isDustBlock(id)) return Blocks::RedstoneDust;
         if (id == Blocks::RedstoneLampLit) return Blocks::RedstoneLamp;
         if (specialRailFamily(id) == 1 || specialRailFamily(id) == 3)
             return specialRailWithPower(id, false);
@@ -136,7 +137,7 @@ namespace Redstone
         const BlockId near = cells.at(x, y, z);
         if (isObserver(near)) return (observerLit(near) && observerBack(near) == step) || carries(cells, x, y, z);
         if (isSource(near)) return true;
-        if (near == Blocks::RedstoneDustLit) return true;
+        if (isWire(near)) return dustPower(near) > 0;
         if (isDiode(near)) return diodeLit(near) && stepOf(diodeOut(near)) == step;
         return carries(cells, x, y, z);
     }
@@ -155,6 +156,47 @@ namespace Redstone
         const int forward = stepOf(diodeOut(self));
         const int back = forward ^ 1;
         return feeds(cells, x + DX[back], y + DY[back], z + DZ[back], forward);
+    }
+
+    int levelInto(const Cells& cells, int x, int y, int z, int step)
+    {
+        const BlockId near = cells.at(x, y, z);
+        if (isWire(near)) return dustPower(near);
+        if (isComparator(near)) return comparatorLit(near) && stepOf(diodeOut(near)) == step ? cells.comparatorLevel(x, y, z) : 0;
+        return feeds(cells, x, y, z, step) ? 15 : 0;
+    }
+
+    int levelAt(const Cells& cells, int x, int y, int z)
+    {
+        int best = 0;
+        for (int k = 0; k < 6; ++k)
+            best = std::max(best, levelInto(cells, x + DX[k], y + DY[k], z + DZ[k], k ^ 1));
+        return best;
+    }
+
+    int diodeInputLevel(const Cells& cells, int x, int y, int z)
+    {
+        const BlockId self = cells.at(x, y, z);
+        if (!isDiode(self)) return 0;
+        const int forward = stepOf(diodeOut(self));
+        const int back = forward ^ 1;
+        return levelInto(cells, x + DX[back], y + DY[back], z + DZ[back], forward);
+    }
+
+    int diodeSideLevel(const Cells& cells, int x, int y, int z)
+    {
+        const BlockId self = cells.at(x, y, z);
+        if (!isDiode(self)) return 0;
+        const int forward = stepOf(diodeOut(self));
+        int best = 0;
+        for (int k = 0; k < 6; ++k)
+        {
+            if (DY[k] != 0 || k == forward || k == (forward ^ 1)) continue;
+            const BlockId near = cells.at(x + DX[k], y, z + DZ[k]);
+            if (!isWire(near) && !isDiode(near) && near != Blocks::RedstoneBlock) continue;
+            best = std::max(best, levelInto(cells, x + DX[k], y, z + DZ[k], k ^ 1));
+        }
+        return best;
     }
 
     bool diodeSide(const Cells& cells, int x, int y, int z)
@@ -179,78 +221,58 @@ namespace Redstone
     void update(Cells& cells, int x, int y, int z)
     {
         std::vector<uint8_t> reached(static_cast<size_t>(SPAN) * SPAN * SPAN, 0);
-        std::queue<glm::ivec4> open;   // x, y, z, steps used
+        std::array<std::vector<glm::ivec3>, 16> buckets;
 
-        // Dust next to a source is lit, and the walk goes on from there.
+        auto offer = [&](int nx, int ny, int nz, int power) {
+            const int ox = nx - x, oy = ny - y, oz = nz - z;
+            if (power <= 0 || std::abs(ox) > REACH || std::abs(oy) > REACH || std::abs(oz) > REACH) return;
+            if (!isWire(cells.at(nx, ny, nz))) return;
+            uint8_t& level = reached[indexOf(ox, oy, oz)];
+            if (level >= power) return;
+            level = static_cast<uint8_t>(power);
+            buckets[static_cast<size_t>(power)].push_back(glm::ivec3(nx, ny, nz));
+        };
+
         for (int dx = -REACH; dx <= REACH; ++dx)
             for (int dy = -REACH; dy <= REACH; ++dy)
                 for (int dz = -REACH; dz <= REACH; ++dz)
                 {
                     const int cx = x + dx, cy = y + dy, cz = z + dz;
-
-                    // A source, or the block one is standing on: a
-                    // lever on a cobble has no dust of its own to
-                    // touch, and the cobble is what the line is laid
-                    // against.
                     const BlockId start = cells.at(cx, cy, cz);
                     const bool aimed = isDiode(start) && diodeLit(start);
                     const bool watcher = isObserver(start) && observerLit(start);
                     if (!isSource(start) && !aimed && !carries(cells, cx, cy, cz))
                         continue;
+                    const int power = aimed && isComparator(start) ? cells.comparatorLevel(cx, cy, cz) : MAX_RUN;
 
                     for (int k = 0; k < 6; ++k)
                     {
                         if (aimed && k != stepOf(diodeOut(start))) continue;
                         if (watcher && k != observerBack(start)) continue;
-                        const int nx = cx + DX[k], ny = cy + DY[k], nz = cz + DZ[k];
-                        const int ox = nx - x, oy = ny - y, oz = nz - z;
-                        if (std::abs(ox) > REACH || std::abs(oy) > REACH ||
-                            std::abs(oz) > REACH)
-                            continue;
-                        if (!isWire(cells.at(nx, ny, nz))) continue;
-                        if (reached[indexOf(ox, oy, oz)]) continue;
-
-                        reached[indexOf(ox, oy, oz)] = 1;
-                        open.push(glm::ivec4(nx, ny, nz, 1));
+                        offer(cx + DX[k], cy + DY[k], cz + DZ[k], power);
                     }
                 }
 
-        while (!open.empty())
+        for (int power = MAX_RUN; power >= 2; --power)
         {
-            const glm::ivec4 here = open.front();
-            open.pop();
-            if (here.w >= MAX_RUN) continue;
-
-            for (int k = 0; k < 6; ++k)
+            std::vector<glm::ivec3> batch;
+            batch.swap(buckets[static_cast<size_t>(power)]);
+            for (const glm::ivec3& here : batch)
             {
-                const int nx = here.x + DX[k], ny = here.y + DY[k], nz = here.z + DZ[k];
-                const int ox = nx - x, oy = ny - y, oz = nz - z;
-                if (std::abs(ox) > REACH || std::abs(oy) > REACH || std::abs(oz) > REACH)
-                    continue;
-                if (!isWire(cells.at(nx, ny, nz))) continue;
-                if (reached[indexOf(ox, oy, oz)]) continue;
-
-                reached[indexOf(ox, oy, oz)] = 1;
-                open.push(glm::ivec4(nx, ny, nz, here.w + 1));
-            }
-
-            for (int k = 0; k < 6; ++k)
-            {
-                if (DY[k] != 0) continue;
-                const int sx = here.x + DX[k], sz = here.z + DZ[k];
-                for (int dy = -1; dy <= 1; dy += 2)
+                const int ox = here.x - x, oy = here.y - y, oz = here.z - z;
+                if (reached[indexOf(ox, oy, oz)] != power) continue;
+                for (int k = 0; k < 6; ++k)
+                    offer(here.x + DX[k], here.y + DY[k], here.z + DZ[k], power - 1);
+                for (int k = 0; k < 6; ++k)
                 {
-                    if (dy > 0 && isSolid(cells.at(here.x, here.y + 1, here.z))) continue;
-                    if (dy < 0 && isSolid(cells.at(sx, here.y, sz))) continue;
-                    const int ny = here.y + dy;
-                    const int ox = sx - x, oy = ny - y, oz = sz - z;
-                    if (std::abs(ox) > REACH || std::abs(oy) > REACH || std::abs(oz) > REACH)
-                        continue;
-                    if (!isWire(cells.at(sx, ny, sz))) continue;
-                    if (reached[indexOf(ox, oy, oz)]) continue;
-
-                    reached[indexOf(ox, oy, oz)] = 1;
-                    open.push(glm::ivec4(sx, ny, sz, here.w + 1));
+                    if (DY[k] != 0) continue;
+                    const int sx = here.x + DX[k], sz = here.z + DZ[k];
+                    for (int dy = -1; dy <= 1; dy += 2)
+                    {
+                        if (dy > 0 && isSolid(cells.at(here.x, here.y + 1, here.z))) continue;
+                        if (dy < 0 && isSolid(cells.at(sx, here.y, sz))) continue;
+                        offer(sx, here.y + dy, sz, power - 1);
+                    }
                 }
             }
         }
@@ -265,7 +287,7 @@ namespace Redstone
                     const BlockId here = cells.at(cx, cy, cz);
                     if (!isWire(here)) continue;
 
-                    const BlockId want = reached[indexOf(dx, dy, dz)] ? lit(here) : unlit(here);
+                    const BlockId want = dustOfPower(reached[indexOf(dx, dy, dz)]);
                     if (want != here) cells.set(cx, cy, cz, want);
                 }
 

@@ -190,6 +190,21 @@ namespace
         out.push_back(tintFor(tag));
     }
 
+    void pushTinted(std::vector<float>& out, float tint,
+                    float x, float y, float z, float u, float v, float shade, float sky, float block, float tag)
+    {
+        out.push_back(x);
+        out.push_back(y);
+        out.push_back(z);
+        out.push_back(u);
+        out.push_back(v);
+        out.push_back(shade);
+        out.push_back(sky);
+        out.push_back(block);
+        out.push_back(tag);
+        out.push_back(tint);
+    }
+
     int tileForFace(const BlockInfo& info, int faceIndex)
     {
         if (faceIndex == 2) return info.tileTop;
@@ -1997,7 +2012,7 @@ namespace
         }
     }
 
-    bool isDust(BlockId id) { return id == Blocks::RedstoneDust || id == Blocks::RedstoneDustLit; }
+    bool isDust(BlockId id) { return isDustBlock(id); }
 
     bool dustLinks(BlockId id)
     {
@@ -2009,7 +2024,16 @@ namespace
 
     void emitDust(const MeshSnapshot& snap, int lx, int y, int lz, BlockId id, std::vector<float>& out)
     {
-        const bool lit = id == Blocks::RedstoneDustLit;
+        const int power = dustPower(id);
+        const bool lit = power > 0;
+        float dustTint = NEUTRAL_TINT;
+        if (lit)
+        {
+            const float f = static_cast<float>(power) / 15.0f;
+            const uint32_t r = static_cast<uint32_t>(std::clamp(f * 0.6f + 0.4f, 0.0f, 1.0f) * 255.0f);
+            const uint32_t g = static_cast<uint32_t>(std::clamp(f * f * 0.7f - 0.5f, 0.0f, 1.0f) * 255.0f);
+            dustTint = packTint((r << 16) | (std::max<uint32_t>(g, 1u) << 8) | 1u, 0xFC3A22u, false);
+        }
         const float sky = static_cast<float>(snap.skyLight(lx, y, lz)) / 15.0f;
         const float block = static_cast<float>(snap.blockLight(lx, y, lz)) / 15.0f;
         static const int SIDE[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
@@ -2052,7 +2076,7 @@ namespace
             }
             const int order[12] = { 0, 2, 1, 0, 3, 2, 0, 1, 2, 0, 2, 3 };
             for (int k : order)
-                pushVertex(out, x0 + xs[k], y0 + lift, z0 + zs[k], us[k], vs[k], 1.0f, sky, block, tagOf(2, id));
+                pushTinted(out, dustTint, x0 + xs[k], y0 + lift, z0 + zs[k], us[k], vs[k], 1.0f, sky, block, tagOf(2, id));
         };
 
         const int line0 = lit ? Tiles::DustLine0On : Tiles::DustLine0Off;
@@ -2084,7 +2108,7 @@ namespace
             const float vs[4] = { uv.vBottom, uv.vBottom, uv.vTop, uv.vTop };
             const int order[12] = { 0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2 };
             for (int k : order)
-                pushVertex(out, x0 + p[k].x, y0 + p[k].y, z0 + p[k].z, us[k], vs[k], 0.8f, sky, block, tagOf(7, id));
+                pushTinted(out, dustTint, x0 + p[k].x, y0 + p[k].y, z0 + p[k].z, us[k], vs[k], 0.8f, sky, block, tagOf(7, id));
         }
     }
 

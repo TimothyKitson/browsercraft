@@ -10555,8 +10555,8 @@ namespace
             stair.blocks[{ 3, 1, 0 }] = Blocks::RedstoneDust;
             stair.blocks[{ 4, 1, 0 }] = Blocks::RedstoneLamp;
             Redstone::update(stair, 0, 1, 0);
-            check(stair.at(1, 2, 0) == Blocks::RedstoneDustLit, "dust climbs the side of a block");
-            check(stair.at(3, 1, 0) == Blocks::RedstoneDustLit, "and runs back down the far side");
+            check(dustPower(stair.at(1, 2, 0)) > 0, "dust climbs the side of a block");
+            check(dustPower(stair.at(3, 1, 0)) > 0, "and runs back down the far side");
             check(stair.at(4, 1, 0) == Blocks::RedstoneLampLit, "and lights what it reaches");
 
             stair.blocks[{ 0, 2, 0 }] = Blocks::Stone;
@@ -12410,8 +12410,8 @@ namespace
         {
             Bench lit = runOf(4, Blocks::LeverOn);
             for (int x = 0; x < 4; ++x)
-                check(lit.at(x, 0, 0) == Blocks::RedstoneDustLit,
-                      "a thrown lever lights the whole run");
+                check(dustPower(lit.at(x, 0, 0)) == 15 - x,
+                      "a thrown lever lights the whole run, one level weaker a block");
             check(lit.at(4, 0, 0) == Blocks::RedstoneLampLit, "and the lamp at the end of it");
         }
 
@@ -12428,7 +12428,7 @@ namespace
         // had no way of taking it back.
         {
             Bench bench = runOf(6, Blocks::LeverOn);
-            check(bench.at(5, 0, 0) == Blocks::RedstoneDustLit, "the far end lights");
+            check(dustPower(bench.at(5, 0, 0)) == 10, "the far end lights at ten");
 
             bench.set(-1, 0, 0, Blocks::LeverOff);
             Redstone::update(bench, -1, 0, 0);
@@ -12445,8 +12445,9 @@ namespace
             bench.set(-1, 0, 0, Blocks::RedstoneBlock);
             Redstone::update(bench, 0, 0, 0);
 
-            check(bench.at(Redstone::MAX_RUN - 1, 0, 0) == Blocks::RedstoneDustLit,
-                  "dust carries fifteen blocks");
+            check(dustPower(bench.at(0, 0, 0)) == 15, "dust beside a block of redstone carries fifteen");
+            check(dustPower(bench.at(Redstone::MAX_RUN - 1, 0, 0)) == 1,
+                  "dust carries fifteen blocks, the last at one");
             check(bench.at(Redstone::MAX_RUN, 0, 0) == Blocks::RedstoneDust,
                   "and not a sixteenth");
         }
@@ -12459,7 +12460,7 @@ namespace
             bench.set(-1, 0, 0, Blocks::RedstoneTorch);
             Redstone::update(bench, 0, 0, 0);
 
-            check(bench.at(2, 0, 0) == Blocks::RedstoneDustLit, "a torch lights what it reaches");
+            check(dustPower(bench.at(2, 0, 0)) == 13, "a torch lights what it reaches");
             check(bench.at(4, 0, 0) == Blocks::RedstoneDust, "and a gap stops it dead");
         }
 
@@ -12513,7 +12514,7 @@ namespace
 
             check(bench.at(1, 0, 0) == Blocks::RedstoneDustLit,
                   "a lever standing on a block lights the dust beside it");
-            check(bench.at(5, 0, 0) == Blocks::RedstoneDustLit, "all the way along");
+            check(dustPower(bench.at(5, 0, 0)) > 0, "all the way along");
             check(bench.at(6, 0, 0) == Blocks::RedstoneLampLit, "and the lamp at the end");
 
             bench.set(0, 1, 0, Blocks::LeverOff);

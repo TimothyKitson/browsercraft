@@ -1293,6 +1293,11 @@ private:
     void tickWiring(float deltaTime);
     void scheduleDiode(const glm::ivec3& at, BlockId now, bool wantLit);
     bool comparatorWants(const glm::ivec3& at);
+    int comparatorLevel(const glm::ivec3& at);
+    int containerLevel(const glm::ivec3& at);
+    std::map<std::array<int, 3>, int> m_comparatorLevels;
+    bool m_comparatorLevelChanged = false;
+    std::vector<glm::ivec3> m_comparatorResettle;
     bool containerSignal(const glm::ivec3& at);
     void rewireTripwire(const glm::ivec3& at);
     std::set<std::array<int, 3>> m_comparators;

@@ -10923,7 +10923,16 @@ namespace
         World* world = nullptr;
         Net::Session* net = nullptr;
 
+        const std::map<std::array<int, 3>, int>* levels = nullptr;
+
         BlockId at(int x, int y, int z) const override { return world->getBlock(x, y, z); }
+
+        int comparatorLevel(int x, int y, int z) const override
+        {
+            if (!levels) return 15;
+            const auto found = levels->find({ x, y, z });
+            return found == levels->end() ? 15 : found->second;
+        }
 
         void set(int x, int y, int z, BlockId block) override
         {
@@ -13940,6 +13949,7 @@ void Application::settleRedstone(const glm::ivec3& at)
     WorldCells cells;
     cells.world = m_world.get();
     cells.net = &m_net;
+    cells.levels = &m_comparatorLevels;
     Redstone::update(cells, at.x, at.y, at.z);
 
     // Pistons answer to the same power the lamps do, and they answer
@@ -13969,6 +13979,11 @@ void Application::settleRedstone(const glm::ivec3& at)
                 {
                     const bool want = isRepeater(here) ? Redstone::diodeInput(cells, x, y, z) : comparatorWants(glm::ivec3(x, y, z));
                     if (want != diodeLit(here)) scheduleDiode(glm::ivec3(x, y, z), here, want);
+                    else if (isComparator(here) && m_comparatorLevelChanged)
+                    {
+                        m_comparatorLevelChanged = false;
+                        m_comparatorResettle.push_back(glm::ivec3(x, y, z));
+                    }
                     continue;
                 }
 
@@ -14087,53 +14102,96 @@ void Application::scheduleDiode(const glm::ivec3& at, BlockId now, bool wantLit)
     setBlockFor(at, now, flipped, delay);
 }
 
-bool Application::containerSignal(const glm::ivec3& at)
+int Application::containerLevel(const glm::ivec3& at)
 {
     const BlockId here = m_world->getBlock(at.x, at.y, at.z);
-    if (isComposter(here)) return here != Blocks::Composter0;
-    if (isAnyCauldron(here)) return here != Blocks::Cauldron0;
-    if (isCake(here) || lecternHasBook(here) || here == Blocks::EndPortalFrameFilled) return true;
-    if (isHive(here)) return hiveHoney(here) > 0;
-    if (isChiseledBookshelf(here)) return shelfBooks(here) > 0;
-    if (isDecoratedPot(here)) return m_chests.has(at) && !m_chests.at(at)[0].empty();
+    if (isComposter(here)) return here - Blocks::Composter0;
+    if (isCauldron(here)) return cauldronLevel(here);
+    if (isAnyCauldron(here)) return 3;
+    if (isCake(here)) return (7 - cakeEaten(here)) * 2;
+    if (isCandleCake(here)) return 14;
+    if (lecternHasBook(here)) return 1;
+    if (here == Blocks::EndPortalFrameFilled) return 15;
+    if (isHive(here)) return hiveHoney(here);
+    if (isChiseledBookshelf(here)) return shelfBooks(here);
+    if (isRespawnAnchor(here)) return anchorCharge(here) * 15 / 4;
+    auto fullness = [](const ItemStack* slots, int count) {
+        float sum = 0.0f;
+        bool any = false;
+        for (int i = 0; i < count; ++i)
+        {
+            if (slots[i].empty()) continue;
+            any = true;
+            sum += static_cast<float>(slots[i].count) / static_cast<float>(std::max(1, maxStackOf(slots[i].id)));
+        }
+        if (!any) return 0;
+        return static_cast<int>(std::floor(sum / static_cast<float>(count) * 14.0f)) + 1;
+    };
+    if (isDecoratedPot(here))
+        return m_chests.has(at) ? fullness(m_chests.at(at).data(), 1) : 0;
     if (isCrafter(here))
     {
-        if (!m_chests.has(at)) return false;
+        if (!m_chests.has(at)) return 0;
         const Chests::Contents& grid = m_chests.at(at);
-        if (grid[CRAFTER_MASK_SLOT].id == Blocks::Bedrock && grid[CRAFTER_MASK_SLOT].count > 1) return true;
+        const int mask = grid[CRAFTER_MASK_SLOT].id == Blocks::Bedrock && grid[CRAFTER_MASK_SLOT].count > 0 ? grid[CRAFTER_MASK_SLOT].count - 1 : 0;
+        int count = 0;
         for (int c = 0; c < CRAFTER_SLOTS; ++c)
-            if (!grid[static_cast<size_t>(c)].empty()) return true;
-        return false;
+            if (!grid[static_cast<size_t>(c)].empty() || ((mask >> c) & 1)) ++count;
+        return count;
     }
     if (isFurnaceBlock(here))
     {
-        if (!m_furnaces.has(at)) return false;
+        if (!m_furnaces.has(at)) return 0;
         const Furnaces::State& state = m_furnaces.at(at);
-        return !state.input.empty() || !state.fuel.empty() || !state.output.empty();
+        const ItemStack slots[3] = { state.input, state.fuel, state.output };
+        return fullness(slots, 3);
     }
     if (m_chests.has(at))
     {
-        for (const ItemStack& stack : m_chests.at(at))
-            if (!stack.empty()) return true;
+        int slots = Hopper::slotsOf(here);
+        if (slots <= 0) slots = Inventory::CHEST_SLOTS;
+        slots = std::min<int>(slots, static_cast<int>(m_chests.at(at).size()));
+        return fullness(m_chests.at(at).data(), slots);
     }
-    return false;
+    return 0;
 }
 
-bool Application::comparatorWants(const glm::ivec3& at)
+bool Application::containerSignal(const glm::ivec3& at)
+{
+    return containerLevel(at) > 0;
+}
+
+int Application::comparatorLevel(const glm::ivec3& at)
 {
     WorldCells cells;
     cells.world = m_world.get();
+    cells.levels = &m_comparatorLevels;
     const BlockId self = m_world->getBlock(at.x, at.y, at.z);
-    if (!isComparator(self)) return false;
+    if (!isComparator(self)) return 0;
     static const int DX[4] = { 0, 1, 0, -1 };
     static const int DZ[4] = { -1, 0, 1, 0 };
     const int back = (comparatorOut(self) + 2) & 3;
     const glm::ivec3 rear(at.x + DX[back], at.y, at.z + DZ[back]);
-    bool signal = Redstone::diodeInput(cells, at.x, at.y, at.z) || containerSignal(rear);
-    if (!signal && isOpaque(m_world->getBlock(rear.x, rear.y, rear.z)))
-        signal = containerSignal(glm::ivec3(rear.x + DX[back], rear.y, rear.z + DZ[back]));
-    if (comparatorSubtracts(self)) return signal && !Redstone::diodeSide(cells, at.x, at.y, at.z);
-    return signal;
+    int input = std::max(Redstone::diodeInputLevel(cells, at.x, at.y, at.z), containerLevel(rear));
+    if (isOpaque(m_world->getBlock(rear.x, rear.y, rear.z)))
+        input = std::max(input, containerLevel(glm::ivec3(rear.x + DX[back], rear.y, rear.z + DZ[back])));
+    const int side = Redstone::diodeSideLevel(cells, at.x, at.y, at.z);
+    if (comparatorSubtracts(self)) return std::max(0, input - side);
+    return input >= side ? input : 0;
+}
+
+bool Application::comparatorWants(const glm::ivec3& at)
+{
+    const int level = comparatorLevel(at);
+    const std::array<int, 3> key = { at.x, at.y, at.z };
+    const auto found = m_comparatorLevels.find(key);
+    const int before = found == m_comparatorLevels.end() ? -1 : found->second;
+    if (before != level)
+    {
+        m_comparatorLevels[key] = level;
+        if (before > 0 && level > 0) m_comparatorLevelChanged = true;
+    }
+    return level > 0;
 }
 
 void Application::rewireTripwire(const glm::ivec3& at)
@@ -14365,6 +14423,13 @@ void Application::tickWiring(float deltaTime)
         ++it;
         const bool want = comparatorWants(at);
         if (want != comparatorLit(here)) scheduleDiode(at, here, want);
+        else if (m_comparatorLevelChanged && want) m_comparatorResettle.push_back(at);
+        m_comparatorLevelChanged = false;
+    }
+    {
+        std::vector<glm::ivec3> again;
+        again.swap(m_comparatorResettle);
+        for (const glm::ivec3& at : again) settleRedstone(at);
     }
 
     m_daylightClock -= 0.1f;
@@ -28285,6 +28350,18 @@ void Application::renderDebugOverlay()
             {
                 std::snprintf(buffer, sizeof(buffer), "light: %d", lightEmission(target));
                 right(buffer);
+            }
+            if (isDustBlock(target))
+            {
+                std::snprintf(buffer, sizeof(buffer), "power: %d", dustPower(target));
+                right(buffer);
+            }
+            if (isComparator(target))
+            {
+                const auto level = m_comparatorLevels.find({ hit.block.x, hit.block.y, hit.block.z });
+                std::snprintf(buffer, sizeof(buffer), "output: %d", level == m_comparatorLevels.end() ? 0 : level->second);
+                right(buffer);
+                right(comparatorSubtracts(target) ? "mode: subtract" : "mode: compare");
             }
             const glm::ivec3 face = hit.block + hit.normal;
             const BlockId fluid = m_world->getBlock(face.x, face.y, face.z);

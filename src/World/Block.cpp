@@ -5021,6 +5021,20 @@ namespace
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
         { "Chorus Flower", ChorusFlowerDeadTile, ChorusPlantTile, ChorusFlowerDeadTile, true, false, RenderType::Cube, 0, 0.4f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
+        { "", 0, 0, 0, true, true, RenderType::Cube, 0, 1.0f },
     };
 
     static_assert(sizeof(EXT_TABLE) / sizeof(EXT_TABLE[0]) == static_cast<size_t>(Blocks::ExtCount - Blocks::ExtFirst),
@@ -5254,6 +5268,7 @@ BlockId axisBase(BlockId id)
         return id < Blocks::ObserverTurnFirst + 6 ? Blocks::Observer : Blocks::ObserverLit;
     if (id >= Blocks::CrafterTurnFirst && id <= Blocks::CrafterTurnLast)
         return id < Blocks::CrafterTurnFirst + 12 ? Blocks::Crafter : Blocks::CrafterLit;
+    if (id >= Blocks::DustLevelFirst && id <= Blocks::DustLevelLast) return Blocks::RedstoneDustLit;
     if (id >= Blocks::PistonVertFirst && id <= Blocks::PistonVertLast)
     {
         const int part = (id - Blocks::PistonVertFirst) % 6 / 2;
@@ -5335,7 +5350,8 @@ const BlockInfo& blockInfo(BlockId id)
         (id >= Blocks::HopperSideFirst && id <= Blocks::HopperSideLast) || (id >= Blocks::ThrowerTurnFirst && id <= Blocks::VineMaskLast) ||
         (id >= Blocks::LichenMaskFirst && id <= Blocks::VeinMaskLast) ||
         (id >= Blocks::FrameFloor && id <= Blocks::GlowFrameCeiling) ||
-        (id >= Blocks::CrafterTurnFirst && id <= Blocks::CrafterTurnLast))
+        (id >= Blocks::CrafterTurnFirst && id <= Blocks::CrafterTurnLast) ||
+        (id >= Blocks::DustLevelFirst && id <= Blocks::DustLevelLast))
         return blockInfo(axisBase(id));
     if (id >= Blocks::ExtFirst && id < Blocks::ExtCount) return EXT_TABLE[id - Blocks::ExtFirst];
     return TABLE[Blocks::Air];
@@ -5535,7 +5551,7 @@ int supportDirection(BlockId id)
     if (isFamilyButton(id)) return buttonFace(id) == 0 ? 0 : buttonFace(id) == 2 ? 1 : supportFromFacing(buttonFacing(id));
     if (isFamilyLever(id)) return leverFace(id) == 0 ? 0 : leverFace(id) == 2 ? 1 : supportFromFacing(leverFacing(id));
     if (isWallTorch(id)) return supportFromFacing(wallTorchFacing(id));
-    if (isPlate(id) || isCarpet(id) || isSnowLayer(id)) return 0;
+    if (isPlate(id) || isCarpet(id) || isSnowLayer(id) || isDustBlock(id)) return 0;
     switch (id)
     {
         case Blocks::Torch: case Blocks::SoulTorch: case Blocks::RedstoneTorch: case Blocks::RedstoneTorchOff:
