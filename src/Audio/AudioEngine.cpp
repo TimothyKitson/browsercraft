@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 #include <algorithm>
+#include <cctype>
 
 namespace
 {
@@ -208,6 +209,7 @@ int AudioEngine::loadVariants(Sound id, const char* stem, int maxVariants)
         clips.push_back(std::move(clip));
     }
     m_loadedFromFiles += static_cast<int>(clips.size());
+    if (!clips.empty() && m_stemOf.find(static_cast<int>(id)) == m_stemOf.end()) m_stemOf[static_cast<int>(id)] = stem;
     return static_cast<int>(clips.size());
 }
 
@@ -217,7 +219,154 @@ bool AudioEngine::loadSingle(Sound id, const char* file)
     if (!loadOgg(std::string("assets/sounds/") + file, clip)) return false;
     m_buffers[static_cast<size_t>(id)].push_back(std::move(clip));
     ++m_loadedFromFiles;
+    if (m_stemOf.find(static_cast<int>(id)) == m_stemOf.end())
+    {
+        std::string stem = file;
+        if (stem.size() > 4 && stem.compare(stem.size() - 4, 4, ".ogg") == 0) stem.resize(stem.size() - 4);
+        m_stemOf[static_cast<int>(id)] = stem;
+    }
     return true;
+}
+
+std::string AudioEngine::captionFor(const std::string& raw)
+{
+    std::string stem = raw;
+    while (!stem.empty() && std::isdigit(static_cast<unsigned char>(stem.back()))) stem.pop_back();
+    static const std::map<std::string, std::string> FIXED = {
+        { "random/click", "Click" }, { "random/wood_click", "Click" }, { "random/pop", "Item picked up" },
+        { "random/explode", "Explosion" }, { "random/fizz", "Fizz" }, { "random/splash", "Splashing" }, { "liquid/splash", "Splashing" },
+        { "random/bow", "Arrow fired" }, { "random/bowhit", "Arrow hits" }, { "random/break", "Item breaks" },
+        { "random/burp", "Burp" }, { "random/eat", "Eating" }, { "random/drink", "Drinking" }, { "random/levelup", "Player levels up" },
+        { "random/orb", "Experience gained" }, { "random/fuse", "TNT fizzes" }, { "random/glass", "Glass breaks" },
+        { "random/chestopen", "Barrel opens" }, { "random/chestclosed", "Barrel closes" }, { "random/anvil_use", "Anvil used" },
+        { "random/anvil_land", "Anvil landed" }, { "random/anvil_break", "Anvil destroyed" }, { "random/door_open", "Door opens" },
+        { "random/door_close", "Door closes" }, { "random/successful_hit", "Arrow hit player" }, { "fire/fire", "Fire crackles" },
+        { "fire/ignite", "Fire ignited" }, { "liquid/water", "Water flows" }, { "liquid/lava", "Lava pops" },
+        { "liquid/lavapop", "Lava pops" }, { "liquid/swim", "Swimming" }, { "portal/portal", "Portal whooshes" },
+        { "portal/trigger", "Portal noise intensifies" }, { "portal/travel", "Portal noise fades" },
+        { "ambient/weather/rain", "Rain falls" }, { "ambient/weather/thunder", "Thunder roars" }, { "weather/rain", "Rain falls" },
+        { "weather/thunder", "Thunder roars" }, { "ambient/cave/cave", "Eerie noise" }, { "damage/hit", "Player hurts" },
+        { "damage/fallsmall", "Player falls" }, { "damage/fallbig", "Player falls" }, { "tile/piston/out", "Piston moves" },
+        { "tile/piston/in", "Piston moves" }, { "minecart/base", "Minecart rolls" }, { "minecart/inside", "Minecart rolls" },
+        { "item/elytra/elytra_loop", "Elytra rustle" }, { "fireworks/launch", "Firework launches" }, { "fireworks/blast", "Firework blasts" },
+        { "fireworks/blast_far", "Firework blasts" }, { "fireworks/largeblast", "Firework blasts" },
+        { "fireworks/largeblast_far", "Firework blasts" }, { "fireworks/twinkle", "Firework twinkles" },
+        { "fireworks/twinkle_far", "Firework twinkles" }, { "block/furnace/fire_crackle", "Furnace crackles" },
+        { "block/brewing_stand/brew", "Brewing Stand bubbles" }, { "block/enchantment_table/enchant", "Enchanting Table used" },
+        { "block/end_portal/endportal", "End Portal opens" }, { "block/end_portal/eyeplace", "Eye of Ender attaches" },
+        { "entity/endereye/endereye_launch", "Eye of Ender shoots" }, { "entity/endereye/dead", "Eye of Ender falls" },
+        { "item/hoe/till", "Hoe tills" }, { "item/shovel/flatten", "Shovel flattens" }, { "entity/cow/milk", "Cow gets milked" },
+        { "mob/sheep/shear", "Shears click" }, { "mob/chicken/plop", "Chicken plops" }, { "mob/zombie/infect", "Zombie infects" },
+        { "mob/zombie/remedy", "Zombie Villager snuffles" }, { "mob/zombie/unfect", "Zombie Villager vociferates" },
+        { "mob/zombie/woodbreak", "Door breaks" }, { "mob/zombie/wood", "Door shakes" }, { "mob/zombie/metal", "Door shakes" },
+        { "entity/player/attack/crit", "Critical attack" }, { "entity/player/attack/strong", "Strong attack" },
+        { "entity/player/attack/weak", "Weak attack" }, { "entity/player/attack/sweep", "Sweeping attack" },
+        { "entity/player/attack/knockback", "Knockback attack" }, { "item/totem/use_totem", "Totem activates" },
+        { "item/shield/block", "Shield blocks" }, { "ui/toast/challenge_complete", "" }, { "ui/toast/in", "" }, { "ui/toast/out", "" },
+    };
+    const auto fixed = FIXED.find(stem);
+    if (fixed != FIXED.end()) return fixed->second;
+    if (stem.rfind("music/", 0) == 0 || stem.rfind("records/", 0) == 0 || stem.rfind("ui/", 0) == 0) return std::string();
+    if (stem.rfind("dig/", 0) == 0) return "Block broken";
+    if (stem.rfind("step/", 0) == 0) return "Footsteps";
+    if (stem.rfind("note/", 0) == 0) return "Note Block plays";
+    if (stem.rfind("item/armor/equip", 0) == 0) return "Gear equips";
+    if (stem.rfind("item/bucket/fill", 0) == 0) return "Bucket fills";
+    if (stem.rfind("item/bucket/empty", 0) == 0) return "Bucket empties";
+    if (stem.rfind("item/bottle/fill", 0) == 0) return "Bottle fills";
+    if (stem.rfind("item/bottle/empty", 0) == 0) return "Bottle empties";
+
+    const size_t first = stem.find('/');
+    const size_t last = stem.rfind('/');
+    if (first == std::string::npos || last == first) return std::string();
+    std::string thing = stem.substr(first + 1, last - first - 1);
+    std::string action = stem.substr(last + 1);
+    static const std::map<std::string, std::string> NAMES = {
+        { "zombiepig", "Zombified Piglin" }, { "endermen", "Enderman" }, { "irongolem", "Iron Golem" }, { "magmacube", "Magma Cube" },
+        { "enderdragon", "Ender Dragon" }, { "polarbear", "Polar Bear" }, { "polarbear_baby", "Polar Bear" },
+        { "snowman", "Snow Golem" }, { "evocation_illager", "Evoker" }, { "vindication_illager", "Vindicator" },
+        { "illusion_illager", "Illusioner" }, { "wither_skeleton", "Wither Skeleton" }, { "zombie_villager", "Zombie Villager" },
+        { "horse/donkey", "Donkey" }, { "horse/skeleton", "Skeleton Horse" }, { "horse/zombie", "Zombie Horse" },
+        { "armorstand", "Armor Stand" }, { "itemframe", "Item Frame" }, { "leashknot", "Leash knot" }, { "wooden_door", "Door" },
+        { "iron_door", "Iron Door" }, { "wooden_trapdoor", "Trapdoor" }, { "iron_trapdoor", "Iron Trapdoor" },
+        { "fence_gate", "Fence Gate" }, { "enderchest", "Ender Chest" }, { "shulker_box", "Shulker Box" },
+        { "chorus_flower", "Chorus Flower" }, { "waterlily", "Lily Pad" }, { "sculk_sensor", "Sculk Sensor" },
+        { "sculk_shrieker", "Sculk Shrieker" }, { "player/hurt", "Player" },
+    };
+    const auto named = NAMES.find(thing);
+    std::string who = named != NAMES.end() ? named->second : thing;
+    if (named == NAMES.end())
+    {
+        const size_t slash = who.rfind('/');
+        if (slash != std::string::npos) who = who.substr(slash + 1);
+        bool start = true;
+        for (char& c : who)
+        {
+            if (c == '_') { c = ' '; start = true; continue; }
+            if (start) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+            start = false;
+        }
+    }
+    static const std::map<std::string, std::string> VERBS = {
+        { "say", "says" }, { "idle", "says" }, { "ambient", "says" }, { "hurt", "hurts" }, { "hit", "hurts" }, { "hitt", "hurts" },
+        { "death", "dies" }, { "kill", "dies" }, { "end", "dies" }, { "bunnymurder", "dies" }, { "step", "steps" }, { "walk", "steps" },
+        { "open", "opens" }, { "close", "closes" }, { "place", "placed" }, { "break", "broken" }, { "panting", "pants" },
+        { "attack", "attacks" }, { "attack_loop", "shoots" }, { "shoot", "shoots" }, { "throw", "throws" }, { "drink", "drinks" },
+        { "eat", "eats" }, { "fly", "flutters" }, { "wings", "flaps" }, { "charge", "charges" }, { "fireball", "shoots" },
+        { "growl", "growls" }, { "howl", "howls" }, { "whine", "whines" }, { "shake", "shakes" }, { "bark", "barks" },
+        { "purr", "purrs" }, { "purreow", "purreows" }, { "meow", "meows" }, { "hiss", "hisses" }, { "zpig", "grunts" },
+        { "zpigangry", "grunts angrily" }, { "zpighurt", "hurts" }, { "zpigdeath", "dies" }, { "scream", "screams" },
+        { "stare", "cries out" }, { "moan", "cries" }, { "affectionate_scream", "coos" }, { "breathe", "breathes" },
+        { "angry", "neighs angrily" }, { "gallop", "gallops" }, { "jump", "jumps" }, { "land", "lands" }, { "leather", "saddled" },
+        { "armor", "armored" }, { "swag", "decorated" }, { "warning", "roars" }, { "takeoff", "takes off" }, { "loop", "squeaks" },
+        { "yes", "agrees" }, { "no", "disagrees" }, { "haggle", "trades" }, { "flop", "flops" }, { "land_idle", "says" },
+        { "land_hit", "hurts" }, { "land_death", "dies" }, { "guardian_hit", "hurts" }, { "guardian_death", "dies" },
+        { "elder_idle", "moans" }, { "elder_hit", "hurts" }, { "elder_death", "dies" }, { "hurt_closed", "hurts" },
+        { "cast", "casts spell" }, { "prepare_summon", "prepares summoning" }, { "prepare_wololo", "prepares charming" },
+        { "prepare_attack", "prepares attack" }, { "prepare_blind", "prepares blindness" }, { "prepare_mirror", "prepares mirror image" },
+        { "spawn", "released" }, { "big", "squishes" }, { "small", "squishes" }, { "add_item", "fills" }, { "remove_item", "empties" },
+        { "rotate_item", "clicks" }, { "eyeplace", "attaches" }, { "endportal", "opens" }, { "grow", "grows" },
+        { "paddle_water", "paddles" }, { "paddle_land", "paddles" }, { "spit", "spits" }, { "hop", "hops" }, { "plop", "plops" },
+    };
+    std::string verb;
+    const auto known = VERBS.find(action);
+    if (known != VERBS.end()) verb = known->second;
+    else
+    {
+        verb = action;
+        for (char& c : verb) if (c == '_') c = ' ';
+        if (!verb.empty() && verb.back() != 's') verb += "s";
+    }
+    return who + " " + verb;
+}
+
+void AudioEngine::addCaption(const std::string& stem)
+{
+    const bool aimed = m_aimed;
+    m_aimed = false;
+    std::string text = m_captionAs;
+    m_captionAs.clear();
+    if (!m_captionsOn || (stem.empty() && text.empty())) return;
+    if (text.empty()) text = captionFor(stem);
+    if (text.empty()) return;
+    const uint32_t now = SDL_GetTicks();
+    for (Caption& caption : m_captions)
+        if (caption.text == text)
+        {
+            caption.time = now;
+            caption.placed = aimed;
+            caption.at = m_aim;
+            return;
+        }
+    if (m_captions.size() >= 12) m_captions.erase(m_captions.begin());
+    m_captions.push_back(Caption{ text, m_aim, aimed, now });
+}
+
+void AudioEngine::pruneCaptions(uint32_t now, uint32_t lifeMs)
+{
+    m_captions.erase(std::remove_if(m_captions.begin(), m_captions.end(),
+                                    [&](const Caption& c) { return now - c.time > lifeMs; }),
+                     m_captions.end());
 }
 
 // Minecraft's own layout: mob/<name>/say1.ogg and so on. Death is often
@@ -344,6 +493,7 @@ bool AudioEngine::playNamed(const std::string& stem, Sound fallback, float volum
     if (m_muted || m_device == 0) return true;
     volume *= m_category[static_cast<size_t>(categoryOf(fallback))];
     if (volume <= 0.0f) return true;
+    addCaption(stem);
     static uint32_t rolling = 54321u;
     rolling = rolling * 1664525u + 1013904223u;
     const Clip& clip = clips[(rolling >> 16) % clips.size()];
@@ -2207,6 +2357,11 @@ void AudioEngine::play(Sound sound, float volume, float pitch)
     if (m_lastPlayed[index] != 0 && now - m_lastPlayed[index] < gap) return;
     m_lastPlayed[index] = now;
 
+    {
+        const auto stem = m_stemOf.find(static_cast<int>(index));
+        addCaption(stem == m_stemOf.end() ? std::string() : stem->second);
+    }
+
     // Pick one of the takes at random, the way Minecraft does.
     static uint32_t rolling = 12345u;
     rolling = rolling * 1664525u + 1013904223u;
@@ -2285,7 +2440,9 @@ void AudioEngine::playPlace(BlockId block)
         playNamed("entity/itemframe/place", Sound::DigWood, 1.0f);
         return;
     }
+    captionAs("Block placed");
     playDig(block, 0.8f);
+    m_captionAs.clear();
 }
 
 void AudioEngine::closeMusicStream()

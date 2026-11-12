@@ -758,6 +758,17 @@ namespace
                   std::string(AudioEngine::categoryKey(SoundCategory::Neutral)) == "neutral",
               "categories save under their options.txt names");
         check(!AudioEngine::soundFileExists("no/such/sound.ogg"), "a missing music file is noticed before it is streamed");
+
+        section("subtitles");
+        check(AudioEngine::captionFor("mob/zombie/say2") == "Zombie says", "a zombie's groan reads as Zombie says");
+        check(AudioEngine::captionFor("mob/cow/hurt1") == "Cow hurts", "a cow being hit reads as Cow hurts");
+        check(AudioEngine::captionFor("mob/endermen/stare") == "Enderman cries out", "an enderman's stare has its own line");
+        check(AudioEngine::captionFor("mob/zombiepig/zpigangry3") == "Zombified Piglin grunts angrily", "an angry piglin is named for 1.21");
+        check(AudioEngine::captionFor("dig/stone4") == "Block broken" && AudioEngine::captionFor("step/grass6") == "Footsteps",
+              "blocks and footsteps read the way Minecraft's do");
+        check(AudioEngine::captionFor("random/explode2") == "Explosion", "an explosion is captioned");
+        check(AudioEngine::captionFor("music/game/calm1").empty() && AudioEngine::captionFor("records/cat").empty(),
+              "music and discs have no subtitle");
     }
 
     void testChestLids()

@@ -334,6 +334,22 @@ public:
 
     void play(Sound sound, float volume = 1.0f, float pitch = 1.0f);
 
+    struct Caption
+    {
+        std::string text;
+        std::array<float, 3> at{};
+        bool placed = false;
+        uint32_t time = 0;
+    };
+    void setCaptions(bool on) { m_captionsOn = on; if (!on) m_captions.clear(); }
+    bool captionsOn() const { return m_captionsOn; }
+    void aimNext(float x, float y, float z) { m_aim = { x, y, z }; m_aimed = true; }
+    void clearAim() { m_aimed = false; }
+    void captionAs(const char* text) { m_captionAs = text ? text : ""; }
+    const std::vector<Caption>& captions() const { return m_captions; }
+    void pruneCaptions(uint32_t now, uint32_t lifeMs);
+    static std::string captionFor(const std::string& stem);
+
     // Convenience wrappers that pick the right sound for a block.
     void playDig(BlockId block, float volume = 1.0f);
     void playStep(BlockId block);
@@ -370,6 +386,13 @@ public:
     bool musicPlaying();
 
 private:
+    void addCaption(const std::string& stem);
+    bool m_captionsOn = false;
+    std::string m_captionAs;
+    bool m_aimed = false;
+    std::array<float, 3> m_aim{};
+    std::vector<Caption> m_captions;
+    std::map<int, std::string> m_stemOf;
     static constexpr int SAMPLE_RATE = 44100;
     static constexpr int MAX_VOICES = 24;
 

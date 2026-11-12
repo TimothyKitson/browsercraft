@@ -100,6 +100,7 @@ enum class Screen
     Credits,
     Sounds,
     ChatSettings,
+    SkinParts,
     Controls,
     Playing,
     Paused,
@@ -169,6 +170,8 @@ enum class MenuAction
     GoCredits,
     GoSounds,
     GoChatSettings,
+    GoSkinParts,
+    ToggleSkinPart,
     CycleClouds,
     CycleParticles,
     ToggleSmoothLighting,
@@ -180,6 +183,7 @@ enum class MenuAction
     BackToOptions,
     LeaveOptions,
     ToggleSound,
+    ToggleSubtitles,
     CycleAttackIndicator,
     CycleDistortion,
     OpenAdvancements,
@@ -531,6 +535,8 @@ private:
     bool m_wasWet = false;
     bool m_mountAirborne = false;
     float m_jumpTapTimer = 0.0f;
+    unsigned m_skinParts = 0x7Fu;
+    int m_pendingSkinPart = 0;
     float m_wildTurn = 0.0f;
     float m_wildYaw = 0.0f;
     float m_buckClock = 2.5f;
@@ -985,6 +991,8 @@ private:
     uint32_t m_titleShownAt = 0;
     uint32_t m_actionbarShownAt = 0;
     void renderTitles();
+    void renderSkinPartsScreen();
+    void renderSubtitles();
     float m_gearPickupClock = 0.0f;
     void mobsPickUpGear();
     void barterWith(Mob& piglin);

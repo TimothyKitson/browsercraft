@@ -525,6 +525,18 @@ void Application::loadOptions()
         else if (std::sscanf(line, "autoSuggestions=%d", &value) == 1) m_autoSuggestions = value != 0;
         else if (std::sscanf(line, "advancedItemTooltips=%d", &value) == 1) m_advancedTooltips = value != 0;
         else if (std::sscanf(line, "reducedDebugInfo=%d", &value) == 1) m_reducedDebug = value != 0;
+        else if (std::strncmp(line, "modelPart_", 10) == 0)
+        {
+            static const char* KEYS[7] = { "cape", "jacket", "left_sleeve", "right_sleeve", "left_pants_leg", "right_pants_leg", "hat" };
+            for (int part = 0; part < 7; ++part)
+            {
+                const std::string key = std::string("modelPart_") + KEYS[part] + ":";
+                if (std::strncmp(line, key.c_str(), key.size()) != 0) continue;
+                if (std::strncmp(line + key.size(), "false", 5) == 0) m_skinParts &= ~(1u << part);
+                else m_skinParts |= 1u << part;
+            }
+        }
+        else if (std::strncmp(line, "showSubtitles=", 14) == 0) m_audio.setCaptions(std::strncmp(line + 14, "true", 4) == 0 || line[14] == '1');
         else if (std::strncmp(line, "soundCategory_", 14) == 0)
         {
             for (int c = 1; c < static_cast<int>(SoundCategory::Count); ++c)
@@ -578,6 +590,12 @@ void Application::saveOptions()
     std::fprintf(file, "damageTiltStrength=%.3f\n", m_damageTilt);
     static const char* CLOUD_NAMES[3] = { "false", "\"fast\"", "true" };
     std::fprintf(file, "autoJump=%s\n", m_autoJump ? "true" : "false");
+    std::fprintf(file, "showSubtitles=%s\n", m_audio.captionsOn() ? "true" : "false");
+    {
+        static const char* KEYS[7] = { "cape", "jacket", "left_sleeve", "right_sleeve", "left_pants_leg", "right_pants_leg", "hat" };
+        for (int part = 0; part < 7; ++part)
+            std::fprintf(file, "modelPart_%s:%s\n", KEYS[part], (m_skinParts >> part) & 1u ? "true" : "false");
+    }
     std::fprintf(file, "advancedItemTooltips=%d\n", m_advancedTooltips ? 1 : 0);
     std::fprintf(file, "renderClouds=%s\nparticles=%d\nao=%d\nglintSpeed=%.3f\nentityShadows=%d\n", CLOUD_NAMES[m_cloudMode], m_particleLevel,
                  m_smoothLightingOn ? 1 : 0, m_glintSpeed, m_entityShadows ? 1 : 0);
@@ -2012,12 +2030,13 @@ void Application::run()
     const bool menuOnly = (m_startupScreen == "title" || m_startupScreen == "modes" ||
                            m_startupScreen == "settings" || m_startupScreen == "multiplayer" ||
                            m_startupScreen == "controls" || m_startupScreen == "name" ||
-                           m_startupScreen == "video" || m_startupScreen == "credits" || m_startupScreen == "sounds" || m_startupScreen == "chatsettings" || worldMenus || serverMenus || packMenus || accessMenus);
+                           m_startupScreen == "video" || m_startupScreen == "credits" || m_startupScreen == "sounds" || m_startupScreen == "skinparts" || m_startupScreen == "chatsettings" || worldMenus || serverMenus || packMenus || accessMenus);
     migrateLegacySave();
     if (m_startupScreen == "title") m_screen = Screen::Title;
     if (m_startupScreen == "video") m_screen = Screen::VideoSettings;
     if (m_startupScreen == "credits") m_screen = Screen::Credits;
     if (m_startupScreen == "sounds") m_screen = Screen::Sounds;
+    if (m_startupScreen == "skinparts") m_screen = Screen::SkinParts;
     if (m_startupScreen == "chatsettings") m_screen = Screen::ChatSettings;
     if (m_startupScreen == "modes") openWorldList();
     if (m_startupScreen == "accessibility") m_screen = Screen::Accessibility;
@@ -8874,6 +8893,8 @@ void Application::applyMenuAction()
         case MenuAction::GoCredits:       m_screen = Screen::Credits; break;
         case MenuAction::GoSounds:        m_screen = Screen::Sounds; break;
         case MenuAction::GoChatSettings:  m_chatSettingsList = GuiList{}; m_screen = Screen::ChatSettings; break;
+        case MenuAction::GoSkinParts:     m_screen = Screen::SkinParts; break;
+        case MenuAction::ToggleSkinPart:  m_skinParts ^= 1u << m_pendingSkinPart; saveOptions(); break;
         case MenuAction::CycleClouds: m_cloudMode = (m_cloudMode + 2) % 3; m_sky.setClouds(m_cloudMode != 0); saveOptions(); break;
         case MenuAction::CycleParticles: m_particleLevel = (m_particleLevel + 1) % 3; Particles::setDensity(m_particleLevel); saveOptions(); break;
         case MenuAction::ToggleSmoothLighting:
@@ -9040,6 +9061,7 @@ void Application::applyMenuAction()
 
         case MenuAction::TogglePbr:     m_pbrEnabled = !m_pbrEnabled; saveOptions(); break;
         case MenuAction::ToggleSound:   m_audio.setMuted(!m_audio.muted()); break;
+        case MenuAction::ToggleSubtitles: m_audio.setCaptions(!m_audio.captionsOn()); saveOptions(); break;
         case MenuAction::CycleAttackIndicator: m_attackIndicator = (m_attackIndicator + 1) % 3; saveOptions(); break;
         case MenuAction::OpenAdvancements:
             m_screen = Screen::Playing;
@@ -9204,7 +9226,7 @@ void Application::handleEvents()
             m_screen = Screen::Settings; // back up one level, not all the way out
         }
         else if (m_screen == Screen::VideoSettings || m_screen == Screen::Credits || m_screen == Screen::Sounds ||
-                 m_screen == Screen::ChatSettings)
+                 m_screen == Screen::ChatSettings || m_screen == Screen::SkinParts)
         {
             m_screen = Screen::Settings;
         }
@@ -10902,7 +10924,9 @@ void Application::updateMining(float deltaTime)
         if (m_digSoundTimer >= 0.22f)
         {
             m_digSoundTimer = 0.0f;
+            m_audio.captionAs("Block breaking");
             m_audio.playDig(id, 0.28f);
+            m_audio.captionAs(nullptr);
             const glm::vec3 contact = glm::vec3(hit.block) + glm::vec3(0.5f) + glm::vec3(hit.normal) * 0.5f;
             m_particles.spawnBlockHit(contact, hit.normal, id);
         }
@@ -20500,6 +20524,7 @@ void Application::render()
                          m_screen == Screen::Dead;
     if (inWorld && !m_hudHidden) renderHud();
     if (inWorld && !m_hudHidden) renderTitles();
+    if (inWorld && !m_hudHidden) renderSubtitles();
     if (inWorld && !m_hudHidden) renderSidebar();
     if (m_screen == Screen::Playing && m_world && m_keys.down(m_input, Action::PlayerList) && !m_chatOpen) renderPlayerList();
     if (m_screen == Screen::Playing) renderSleep();
@@ -20515,6 +20540,7 @@ void Application::render()
         case Screen::VideoSettings: renderVideoScreen(); break;
         case Screen::Credits:      renderCreditsScreen(); break;
         case Screen::Sounds:       renderSoundsScreen(); break;
+        case Screen::SkinParts:    renderSkinPartsScreen(); break;
         case Screen::ChatSettings: renderChatSettings(); break;
         case Screen::Statistics:   renderStatsScreen(); break;
         case Screen::CreateWorld:  renderCreateWorld(); break;
@@ -22294,6 +22320,47 @@ void Application::renderTitles()
     m_ui.setScale(1.0f);
 }
 
+void Application::renderSubtitles()
+{
+    if (!m_audio.captionsOn()) return;
+    const uint32_t now = SDL_GetTicks();
+    m_audio.pruneCaptions(now, 3000);
+    const std::vector<AudioEngine::Caption>& captions = m_audio.captions();
+    if (captions.empty()) return;
+    m_ui.setScale(static_cast<float>(guiScale()));
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    float longest = 0.0f;
+    for (const AudioEngine::Caption& caption : captions) longest = std::max(longest, UIRenderer::textWidth(caption.text, 1.0f));
+    const float arrow = UIRenderer::textWidth("<", 1.0f);
+    const float space = UIRenderer::textWidth(" ", 1.0f);
+    const float width = longest + 2.0f * (arrow + space);
+    const float halfWidth = std::floor(width * 0.5f);
+    const glm::vec3 forward = glm::normalize(m_camera.front);
+    const glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+    for (size_t i = 0; i < captions.size(); ++i)
+    {
+        const AudioEngine::Caption& caption = captions[captions.size() - 1 - i];
+        const float cx = w - halfWidth - 2.0f;
+        const float cy = h - 35.0f - static_cast<float>(i) * 10.0f;
+        const float fade = std::clamp((now - caption.time) / 3000.0f, 0.0f, 1.0f);
+        const float shade = (255.0f - 180.0f * fade) / 255.0f;
+        m_ui.quad(cx - halfWidth - 1.0f, cy - 5.0f, 2.0f * halfWidth + 2.0f, 10.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.8f));
+        const glm::vec4 colour(shade, shade, shade, 1.0f);
+        const float textWidth = UIRenderer::textWidth(caption.text, 1.0f);
+        m_ui.text(caption.text, cx - std::floor(textWidth * 0.5f), cy - 4.0f, 1.0f, colour);
+        if (!caption.placed) continue;
+        glm::vec3 toward(caption.at[0] - m_camera.position.x, caption.at[1] - m_camera.position.y, caption.at[2] - m_camera.position.z);
+        if (glm::length(toward) < 0.001f) continue;
+        toward = glm::normalize(toward);
+        if (glm::dot(forward, toward) > 0.5f) continue;
+        const float side = glm::dot(right, toward);
+        if (side > 0.0f) m_ui.text(">", cx + halfWidth - arrow, cy - 4.0f, 1.0f, colour);
+        else if (side < 0.0f) m_ui.text("<", cx - halfWidth, cy - 4.0f, 1.0f, colour);
+    }
+    m_ui.setScale(1.0f);
+}
+
 namespace
 {
     const glm::ivec3 COMMAND_STEP[6] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 } };
@@ -23250,7 +23317,9 @@ void Application::namedAt(const char* stem, const glm::vec3& at, float volume, f
     const float distance = glm::length(at - m_camera.position);
     if (distance > 32.0f) return;
     const float falloff = 1.0f - std::clamp(distance / 32.0f, 0.0f, 1.0f);
+    m_audio.aimNext(at.x, at.y, at.z);
     m_audio.playNamed(stem, fallback, volume * std::max(falloff * falloff, distance < 4.0f ? 1.0f : 0.0f), pitch);
+    m_audio.clearAim();
 }
 
 void Application::liftLid(const glm::ivec3& at)
@@ -23626,6 +23695,7 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
         pose.inWater = m_world && m_player.isInWater(*m_world);
         const float speed = glm::length(m_player.velocity);
         pose.fall = (speed > 0.001f && m_player.velocity.y < 0.0f) ? -m_player.velocity.y / speed : 0.0f;
+        pose.parts = m_skinParts;
 
         if (!m_player.effects.has(Effects::Kind::Invisibility)) draw(activeSkin(), pose, std::string());
         Shader& armourShader = m_activeShader ? *m_activeShader : m_chunkShader;
@@ -24954,6 +25024,7 @@ void Application::updateMobs(float deltaTime)
         if (distance > 32.0f) continue;
 
         const float falloff = 1.0f - std::clamp(distance / 32.0f, 0.0f, 1.0f);
+        m_audio.aimNext(sound.position.x, sound.position.y, sound.position.z);
         if (sound.named)
         {
             m_audio.playNamed(sound.named, sound.id, sound.volume * falloff * falloff, sound.pitch);
@@ -25000,6 +25071,7 @@ void Application::updateMobs(float deltaTime)
         }
         m_audio.play(sound.id, sound.volume * falloff * falloff, sound.pitch);
     }
+    m_audio.clearAim();
 
     // Blows landed on the player. Several mobs can swing in the same
     // frame; the half second of immunity after the first one is what
@@ -27494,8 +27566,8 @@ void Application::renderSettingsScreen()
 
     {
         const float half = (buttonWidth - 12.0f) * 0.5f;
-        if (menuButton({ buttonX, y, half, buttonHeight }, m_leftHanded ? "Main Hand: Left" : "Main Hand: Right"))
-            m_pendingAction = MenuAction::ToggleMainHand;
+        if (menuButton({ buttonX, y, half, buttonHeight }, "Skin Customization..."))
+            m_pendingAction = MenuAction::GoSkinParts;
         if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, "Chat Settings..."))
             m_pendingAction = MenuAction::GoChatSettings;
     }
@@ -27617,7 +27689,46 @@ void Application::renderSoundsScreen()
     }
     if (menuButton({ buttonX + half + 12.0f, y, half, buttonHeight }, m_audio.muted() ? "Sound: Off" : "Sound: On"))
         m_pendingAction = MenuAction::ToggleSound;
+    y += buttonHeight + gap;
+    if (menuButton({ buttonX, y, half, buttonHeight }, m_audio.captionsOn() ? "Show Subtitles: ON" : "Show Subtitles: OFF"))
+        m_pendingAction = MenuAction::ToggleSubtitles;
     y += buttonHeight + gap + 10.0f;
+    if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
+        m_pendingAction = MenuAction::BackToOptions;
+}
+
+void Application::renderSkinPartsScreen()
+{
+    const ScopedPanelUnits panel(m_ui, guiScale());
+    const float w = m_ui.canvasWidth();
+    const float h = m_ui.canvasHeight();
+    menuBackdrop(w, h, 0.45f);
+    centredText("Skin Customization", h * 0.1f, 4.4f, TEXT_COLOR);
+    const float buttonWidth = std::min(840.0f, w * 0.94f);
+    const float buttonX = w * 0.5f - buttonWidth * 0.5f;
+    const float buttonHeight = 46.0f;
+    const float gap = 10.0f;
+    const float half = (buttonWidth - 12.0f) * 0.5f;
+    static const char* PARTS[7] = { "Cape", "Jacket", "Left Sleeve", "Right Sleeve", "Left Pants Leg", "Right Pants Leg", "Hat" };
+    float y = h * 0.2f;
+    for (int part = 0; part < 8; ++part)
+    {
+        const bool right = part % 2 == 1;
+        const float x = right ? buttonX + half + 12.0f : buttonX;
+        if (part < 7)
+        {
+            const std::string label = std::string(PARTS[part]) + ((m_skinParts >> part) & 1u ? ": ON" : ": OFF");
+            if (menuButton({ x, y, half, buttonHeight }, label))
+            {
+                m_pendingSkinPart = part;
+                m_pendingAction = MenuAction::ToggleSkinPart;
+            }
+        }
+        else if (menuButton({ x, y, half, buttonHeight }, m_leftHanded ? "Main Hand: Left" : "Main Hand: Right"))
+            m_pendingAction = MenuAction::ToggleMainHand;
+        if (right) y += buttonHeight + gap;
+    }
+    y += 10.0f;
     if (menuButton({ buttonX, y, buttonWidth, 46.0f }, "Done"))
         m_pendingAction = MenuAction::BackToOptions;
 }

@@ -828,6 +828,7 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
     const float leanSin = std::sin(lean);
 
     PlayerPose pose;
+    pose.parts = m_skinParts;
     pose.bodyYaw = 90.0f + across * 20.0f;
     pose.headYaw = 90.0f + across * 40.0f;
     pose.headPitch = upDown * 20.0f;

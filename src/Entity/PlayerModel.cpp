@@ -99,29 +99,29 @@ namespace
         // on screen.
         Box hat = head;
         hat.u = 32; hat.v = 0; hat.inflate = 0.5f;
-        boxes.push_back(hat);
+        if (pose.parts & 64u) boxes.push_back(hat);
 
         if (!twoLayer) return;
 
         Box jacket = body;
         jacket.u = 16; jacket.v = 32; jacket.inflate = 0.25f;
-        boxes.push_back(jacket);
+        if (pose.parts & 2u) boxes.push_back(jacket);
 
         Box rightSleeve = rightArm;
         rightSleeve.u = 40; rightSleeve.v = 32; rightSleeve.inflate = 0.25f;
-        boxes.push_back(rightSleeve);
+        if (pose.parts & 8u) boxes.push_back(rightSleeve);
 
         Box leftSleeve = leftArm;
         leftSleeve.u = 48; leftSleeve.v = 48; leftSleeve.inflate = 0.25f;
-        boxes.push_back(leftSleeve);
+        if (pose.parts & 4u) boxes.push_back(leftSleeve);
 
         Box rightTrouser = rightLeg;
         rightTrouser.u = 0; rightTrouser.v = 32; rightTrouser.inflate = 0.25f;
-        boxes.push_back(rightTrouser);
+        if (pose.parts & 32u) boxes.push_back(rightTrouser);
 
         Box leftTrouser = leftLeg;
         leftTrouser.u = 0; leftTrouser.v = 48; leftTrouser.inflate = 0.25f;
-        boxes.push_back(leftTrouser);
+        if (pose.parts & 16u) boxes.push_back(leftTrouser);
     }
 }
 
