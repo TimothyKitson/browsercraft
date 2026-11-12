@@ -42,7 +42,7 @@ namespace
         { Action::Inventory, "INVENTORY",        "inventory", key(SDL_SCANCODE_E) },
         { Action::Chat,      "OPEN CHAT",        "chat",      key(SDL_SCANCODE_T) },
         { Action::SlashCommand, "OPEN COMMAND",  "command",   key(SDL_SCANCODE_SLASH) },
-        { Action::Fly,       "TOGGLE FLY",       "fly",       key(SDL_SCANCODE_F) },
+        { Action::Fly,       "TOGGLE FLY",       "fly",       Binding{} },
         { Action::Perspective, "TOGGLE PERSPECTIVE", "perspective", key(SDL_SCANCODE_F5) },
         { Action::Screenshot,"SCREENSHOT",       "screenshot",key(SDL_SCANCODE_F2) },
         { Action::Debug,     "DEBUG INFO",       "debug",     key(SDL_SCANCODE_F3) },
@@ -52,7 +52,7 @@ namespace
         { Action::Mute,      "MUTE SOUND",       "mute",      key(SDL_SCANCODE_M) },
         { Action::RenderDistanceDown, "RENDER DISTANCE -", "distdown", key(SDL_SCANCODE_LEFTBRACKET) },
         { Action::RenderDistanceUp,   "RENDER DISTANCE +", "distup",   key(SDL_SCANCODE_RIGHTBRACKET) },
-        { Action::SwapHands, "SWAP ITEM WITH OFFHAND", "swaphands", key(SDL_SCANCODE_X) },
+        { Action::SwapHands, "SWAP ITEM WITH OFFHAND", "swaphands", key(SDL_SCANCODE_F) },
         { Action::Advancements, "ADVANCEMENTS", "advancements", key(SDL_SCANCODE_L) },
         { Action::PlayerList, "LIST PLAYERS", "playerlist", key(SDL_SCANCODE_TAB) },
         { Action::Hotbar1, "HOTBAR SLOT 1", "hotbar.1", key(SDL_SCANCODE_1) },
@@ -65,6 +65,8 @@ namespace
         { Action::Hotbar8, "HOTBAR SLOT 8", "hotbar.8", key(SDL_SCANCODE_8) },
         { Action::Hotbar9, "HOTBAR SLOT 9", "hotbar.9", key(SDL_SCANCODE_9) },
         { Action::SmoothCamera, "CINEMATIC CAMERA", "smoothcamera", Binding{} },
+        { Action::SaveToolbar, "SAVE HOTBAR ACTIVATOR", "saveToolbarActivator", key(SDL_SCANCODE_C) },
+        { Action::LoadToolbar, "LOAD HOTBAR ACTIVATOR", "loadToolbarActivator", key(SDL_SCANCODE_X) },
     };
 
     static_assert(sizeof(ENTRIES) / sizeof(ENTRIES[0]) == static_cast<size_t>(Action::Count),

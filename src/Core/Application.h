@@ -530,6 +530,7 @@ private:
     float m_distanceWalked = 0.0f;
     bool m_wasWet = false;
     bool m_mountAirborne = false;
+    float m_jumpTapTimer = 0.0f;
     float m_wildTurn = 0.0f;
     float m_wildYaw = 0.0f;
     float m_buckClock = 2.5f;
@@ -1139,6 +1140,7 @@ private:
     // Which creative tab is the player's own things, which only the
     // inventory screen's own file knows the order of.
     static int creativeInventoryTab();
+    static int creativeSearchTab();
 
     // Minecraft's tooltip: a near-black box with a purple edge, white
     // text, twelve pixels right of the cursor and twelve up, pulled
@@ -1298,6 +1300,9 @@ private:
     std::map<std::array<int, 3>, int> m_comparatorLevels;
     bool m_comparatorLevelChanged = false;
     std::vector<glm::ivec3> m_comparatorResettle;
+    std::array<std::array<ItemStack, 9>, 9> m_savedHotbars{};
+    void loadSavedHotbars();
+    void writeSavedHotbars();
     bool containerSignal(const glm::ivec3& at);
     void rewireTripwire(const glm::ivec3& at);
     std::set<std::array<int, 3>> m_comparators;

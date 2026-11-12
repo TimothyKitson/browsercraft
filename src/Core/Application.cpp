@@ -445,6 +445,40 @@ void Application::loadProfile()
     }
 }
 
+void Application::loadSavedHotbars()
+{
+    std::FILE* file = std::fopen((m_configPath + "/hotbar.txt").c_str(), "rb");
+    if (!file) return;
+    for (auto& row : m_savedHotbars)
+        for (ItemStack& stack : row)
+        {
+            int id = 0, count = 0, damage = 0;
+            unsigned int enchantments = 0;
+            if (std::fscanf(file, "%d %d %d %u", &id, &count, &damage, &enchantments) != 4) break;
+            stack = ItemStack{};
+            if (id <= 0 || count <= 0) continue;
+            stack.id = static_cast<StackId>(id);
+            stack.count = count;
+            stack.damage = damage;
+            stack.enchantments = enchantments;
+        }
+    std::fclose(file);
+}
+
+void Application::writeSavedHotbars()
+{
+    std::FILE* file = std::fopen((m_configPath + "/hotbar.txt").c_str(), "wb");
+    if (!file) return;
+    for (const auto& row : m_savedHotbars)
+    {
+        for (const ItemStack& stack : row)
+            std::fprintf(file, "%d %d %d %u ", stack.empty() ? 0 : static_cast<int>(stack.id), stack.empty() ? 0 : stack.count,
+                         stack.damage, stack.enchantments);
+        std::fprintf(file, "\n");
+    }
+    std::fclose(file);
+}
+
 void Application::loadOptions()
 {
     std::FILE* file = std::fopen((m_configPath + "/options.txt").c_str(), "rb");
@@ -2145,6 +2179,7 @@ void Application::run()
     // before anything else, the way the game asks on first launch.
     loadProfile();
     loadOptions();
+    loadSavedHotbars();
     m_audio.setMasterVolume(m_masterVolume);
     setSmoothLighting(m_smoothLightingOn);
     Particles::setDensity(m_particleLevel);
@@ -3586,10 +3621,10 @@ bool Application::frame()
             m_inventory.add(Blocks::Sand, 22);
             m_inventory.add(Blocks::CraftingTable, 1);
 
-            if (m_startupScreen == "creative") m_creativeTab = 5;   // TOOLS
+            if (m_startupScreen == "creative") m_creativeTab = 7;
             if (m_startupScreen == "armour" || m_startupScreen == "armourhud")
             {
-                m_creativeTab = 6;   // ARMOUR
+                m_creativeTab = 8;
                 m_inventory.slot(Inventory::ARMOR_FIRST + 0).id = Items::DiamondHelmet;
                 m_inventory.slot(Inventory::ARMOR_FIRST + 0).count = 1;
                 m_inventory.slot(Inventory::ARMOR_FIRST + 1).id = Items::IronChestplate;
@@ -8264,7 +8299,7 @@ bool Application::frame()
 
             if (m_startupScreen == "bucket")
             {
-                m_creativeTab = 4;   // ITEMS
+                m_creativeTab = 7;
                 m_inventory.clear();
                 m_inventory.add(Items::Bucket, 3);
                 m_inventory.add(Items::WaterBucket, 1);
@@ -8546,12 +8581,12 @@ bool Application::frame()
                 m_player.mode = GameMode::Creative;
                 if (m_startupScreen == "potions")
                 {
-                    m_creativeTab = creativeInventoryTab() - 1;
+                    m_creativeTab = creativeSearchTab();
                     m_creativeSearch = "potion of";
                 }
                 if (m_startupScreen == "eggs")
                 {
-                    m_creativeTab = creativeInventoryTab() - 1;
+                    m_creativeTab = creativeSearchTab();
                     m_creativeSearch = "spawn egg";
                     const MobId SHOWN[9] = { MobId::Pig, MobId::Creeper, MobId::Axolotl, MobId::Sniffer, MobId::Warden,
                                              MobId::Allay, MobId::Frog, MobId::Bee, MobId::Camel };
@@ -8560,7 +8595,7 @@ bool Application::frame()
                 if (m_startupScreen == "creativeinv") m_creativeTab = creativeInventoryTab();
                 if (m_startupScreen == "creativesearch")
                 {
-                    m_creativeTab = creativeInventoryTab() - 1;
+                    m_creativeTab = creativeSearchTab();
                     m_creativeSearch = "stone";
                     m_player.effects = Effects::Set{};
                     Effects::give(m_player.effects, Effects::Kind::Speed, 1, 95.0f);
@@ -9612,6 +9647,17 @@ void Application::updateGameplay(float deltaTime)
     // Flight is a creative-mode privilege.
     if (m_keys.pressed(m_input, Action::Fly) && m_player.creative() && !m_player.spectator())
         m_player.flying = !m_player.flying;
+    m_jumpTapTimer = std::max(0.0f, m_jumpTapTimer - deltaTime);
+    if (m_keys.pressed(m_input, Action::Jump) && !m_inventoryOpen && !m_chatOpen)
+    {
+        if (m_jumpTapTimer > 0.0f && m_player.creative() && !m_player.spectator() && !riddenMob())
+        {
+            m_player.flying = !m_player.flying;
+            m_jumpTapTimer = 0.0f;
+        }
+        else
+            m_jumpTapTimer = 0.35f;
+    }
 
     if (m_keys.pressed(m_input, Action::SwapHands) && !m_inventoryOpen)
     {
@@ -9625,9 +9671,26 @@ void Application::updateGameplay(float deltaTime)
     {
         m_spectatorMenu = false;
         m_spectatingMob = 0;
+        const bool saving = m_player.creative() && m_keys.down(m_input, Action::SaveToolbar);
+        const bool loading = m_player.creative() && m_keys.down(m_input, Action::LoadToolbar);
         for (int i = 0; i < Inventory::HOTBAR_SLOTS; ++i)
             if (m_keys.pressed(m_input, static_cast<Action>(static_cast<int>(Action::Hotbar1) + i)) && !m_inventoryOpen)
-                m_inventory.setSelectedSlot(i);
+            {
+                if (saving)
+                {
+                    for (int k = 0; k < 9; ++k) m_savedHotbars[static_cast<size_t>(i)][static_cast<size_t>(k)] = m_inventory.slot(k);
+                    writeSavedHotbars();
+                    m_actionbarText = "Saved hotbar (restore with " + std::string("X+") + std::to_string(i + 1) + ")";
+                    m_actionbarShownAt = SDL_GetTicks();
+                }
+                else if (loading)
+                {
+                    for (int k = 0; k < 9; ++k) m_inventory.slot(k) = m_savedHotbars[static_cast<size_t>(i)][static_cast<size_t>(k)];
+                    m_actionbarText = "Loaded hotbar " + std::to_string(i + 1);
+                    m_actionbarShownAt = SDL_GetTicks();
+                }
+                else m_inventory.setSelectedSlot(i);
+            }
         if (!m_inventoryOpen) m_inventory.scrollSelection(m_input.wheelDelta());
     }
 

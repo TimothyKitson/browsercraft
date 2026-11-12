@@ -4,258 +4,42 @@
 
 namespace
 {
-    // Creative tabs, in the order they appear. Blocks may show up in more
-    // than one tab -- grass belongs with both the building materials and
-    // the scenery, and hunting for it in the wrong place is worse than
-    // listing it twice.
-    const StackId TAB_BUILDING[] = {
-        Blocks::Stone, Blocks::Cobblestone, Blocks::MossyCobblestone, Blocks::Bricks,
-        Blocks::Planks, Blocks::SprucePlanks, Blocks::DarkOakPlanks,
-        Blocks::SpruceLog, Blocks::DarkOakLog, Blocks::SpruceLeaves, Blocks::DarkOakLeaves,
-        Blocks::Granite, Blocks::Diorite, Blocks::Andesite, Blocks::Deepslate,
-        Blocks::Tuff, Blocks::Calcite, Blocks::Log, Blocks::BirchLog, Blocks::Sandstone,
-        Blocks::Sand, Blocks::Gravel, Blocks::Dirt, Blocks::Grass,
-        Blocks::SnowGrass, Blocks::Clay, Blocks::Obsidian, Blocks::Glass,
-        Blocks::Wool, Blocks::Snow, Blocks::Ice,
-        Blocks::StoneSlab, Blocks::CobblestoneSlab, Blocks::PlankSlab, Blocks::SandstoneSlab,
-        Blocks::Tnt, Blocks::LadderNorth, Blocks::OakFence, Blocks::DoorLowShutNorth,
-        Blocks::StoneStairsNorth, Blocks::CobbleStairsNorth,
-        Blocks::PlankStairsNorth, Blocks::SandstoneStairsNorth,
-        Blocks::BirchPlanks, Blocks::JunglePlanks, Blocks::AcaciaPlanks,
-        Blocks::StrippedOakLog, Blocks::StrippedSpruceLog, Blocks::StrippedBirchLog,
-        Blocks::StrippedJungleLog, Blocks::StrippedAcaciaLog, Blocks::StrippedDarkOakLog,
-        Blocks::SpruceDoor, Blocks::BirchDoor, Blocks::JungleDoor, Blocks::AcaciaDoor, Blocks::DarkOakDoor,
-        Blocks::OakTrapdoor, Blocks::SpruceTrapdoor, Blocks::BirchTrapdoor,
-        Blocks::JungleTrapdoor, Blocks::AcaciaTrapdoor, Blocks::DarkOakTrapdoor,
-        Blocks::CherryLog, Blocks::StrippedCherryLog, Blocks::CherryPlanks, Blocks::CherryDoor,
-        Blocks::CherryTrapdoor,
-        Blocks::MangroveLog, Blocks::StrippedMangroveLog, Blocks::MangrovePlanks, Blocks::MangroveDoor,
-        Blocks::MangroveTrapdoor, Blocks::MangroveRoots, Blocks::MuddyMangroveRoots, Blocks::Mud,
-        Blocks::PackedMud, Blocks::MudBricks,
-        Blocks::BambooBlock, Blocks::StrippedBambooBlock, Blocks::BambooPlanks, Blocks::BambooMosaic,
-        Blocks::BambooSlab, Blocks::BambooDoor, Blocks::BambooTrapdoor,
-        Blocks::CrimsonStem, Blocks::StrippedCrimsonStem, Blocks::CrimsonPlanks, Blocks::CrimsonDoor,
-        Blocks::CrimsonTrapdoor, Blocks::WarpedStem, Blocks::StrippedWarpedStem, Blocks::WarpedPlanks,
-        Blocks::WarpedDoor, Blocks::WarpedTrapdoor, Blocks::CrimsonNylium, Blocks::WarpedNylium,
-        Blocks::NetherWartBlock, Blocks::WarpedWartBlock, Blocks::Shroomlight,
-        Blocks::StoneBricks, Blocks::MossyStoneBricks, Blocks::CrackedStoneBricks, Blocks::ChiseledStoneBricks, Blocks::SmoothStone, Blocks::SmoothStoneSlab, Blocks::StoneBrickSlab, Blocks::PolishedGranite, Blocks::PolishedDiorite, Blocks::PolishedAndesite, Blocks::CobbledDeepslate, Blocks::PolishedDeepslate, Blocks::ChiseledDeepslate, Blocks::CrackedDeepslateBricks, Blocks::CrackedDeepslateTiles, Blocks::CobbledDeepslateSlab, Blocks::PolishedTuff, Blocks::ChiseledTuff, Blocks::ChiseledTuffBricks, Blocks::TuffSlab, Blocks::TuffBrickSlab, Blocks::PolishedBlackstone, Blocks::ChiseledPolishedBlackstone, Blocks::CrackedPolishedBlackstoneBricks, Blocks::PolishedBlackstoneSlab, Blocks::RedNetherBricks, Blocks::CrackedNetherBricks, Blocks::ChiseledNetherBricks, Blocks::NetherBrickSlab,
-        Blocks::QuartzBlock, Blocks::QuartzBricks, Blocks::QuartzPillar, Blocks::ChiseledQuartzBlock, Blocks::QuartzSlab,
-        Blocks::RedSand, Blocks::RedSandstone, Blocks::CutRedSandstone, Blocks::ChiseledRedSandstone, Blocks::SmoothRedSandstone, Blocks::RedSandstoneSlab, Blocks::CutSandstone, Blocks::ChiseledSandstone, Blocks::SmoothSandstone,
-        Blocks::Terracotta, Blocks::GlassPane, Blocks::TintedGlass,
-        Blocks::ConcreteFirst + 0, Blocks::ConcreteFirst + 1, Blocks::ConcreteFirst + 2, Blocks::ConcreteFirst + 3,
-        Blocks::ConcreteFirst + 4, Blocks::ConcreteFirst + 5, Blocks::ConcreteFirst + 6, Blocks::ConcreteFirst + 7,
-        Blocks::ConcreteFirst + 8, Blocks::ConcreteFirst + 9, Blocks::ConcreteFirst + 10, Blocks::ConcreteFirst + 11,
-        Blocks::ConcreteFirst + 12, Blocks::ConcreteFirst + 13, Blocks::ConcreteFirst + 14, Blocks::ConcreteFirst + 15,
-        Blocks::ConcretePowderFirst + 0, Blocks::ConcretePowderFirst + 1, Blocks::ConcretePowderFirst + 2, Blocks::ConcretePowderFirst + 3,
-        Blocks::ConcretePowderFirst + 4, Blocks::ConcretePowderFirst + 5, Blocks::ConcretePowderFirst + 6, Blocks::ConcretePowderFirst + 7,
-        Blocks::ConcretePowderFirst + 8, Blocks::ConcretePowderFirst + 9, Blocks::ConcretePowderFirst + 10, Blocks::ConcretePowderFirst + 11,
-        Blocks::ConcretePowderFirst + 12, Blocks::ConcretePowderFirst + 13, Blocks::ConcretePowderFirst + 14, Blocks::ConcretePowderFirst + 15,
-        Blocks::TerracottaFirst + 0, Blocks::TerracottaFirst + 1, Blocks::TerracottaFirst + 2, Blocks::TerracottaFirst + 3,
-        Blocks::TerracottaFirst + 4, Blocks::TerracottaFirst + 5, Blocks::TerracottaFirst + 6, Blocks::TerracottaFirst + 7,
-        Blocks::TerracottaFirst + 8, Blocks::TerracottaFirst + 9, Blocks::TerracottaFirst + 10, Blocks::TerracottaFirst + 11,
-        Blocks::TerracottaFirst + 12, Blocks::TerracottaFirst + 13, Blocks::TerracottaFirst + 14, Blocks::TerracottaFirst + 15,
-        Blocks::GlazedTerracottaFirst + 0, Blocks::GlazedTerracottaFirst + 1, Blocks::GlazedTerracottaFirst + 2, Blocks::GlazedTerracottaFirst + 3,
-        Blocks::GlazedTerracottaFirst + 4, Blocks::GlazedTerracottaFirst + 5, Blocks::GlazedTerracottaFirst + 6, Blocks::GlazedTerracottaFirst + 7,
-        Blocks::GlazedTerracottaFirst + 8, Blocks::GlazedTerracottaFirst + 9, Blocks::GlazedTerracottaFirst + 10, Blocks::GlazedTerracottaFirst + 11,
-        Blocks::GlazedTerracottaFirst + 12, Blocks::GlazedTerracottaFirst + 13, Blocks::GlazedTerracottaFirst + 14, Blocks::GlazedTerracottaFirst + 15,
-        Blocks::StainedGlassFirst + 0, Blocks::StainedGlassFirst + 1, Blocks::StainedGlassFirst + 2, Blocks::StainedGlassFirst + 3,
-        Blocks::StainedGlassFirst + 4, Blocks::StainedGlassFirst + 5, Blocks::StainedGlassFirst + 6, Blocks::StainedGlassFirst + 7,
-        Blocks::StainedGlassFirst + 8, Blocks::StainedGlassFirst + 9, Blocks::StainedGlassFirst + 10, Blocks::StainedGlassFirst + 11,
-        Blocks::StainedGlassFirst + 12, Blocks::StainedGlassFirst + 13, Blocks::StainedGlassFirst + 14, Blocks::StainedGlassFirst + 15,
-        Blocks::StainedGlassPaneFirst + 0, Blocks::StainedGlassPaneFirst + 1, Blocks::StainedGlassPaneFirst + 2, Blocks::StainedGlassPaneFirst + 3,
-        Blocks::StainedGlassPaneFirst + 4, Blocks::StainedGlassPaneFirst + 5, Blocks::StainedGlassPaneFirst + 6, Blocks::StainedGlassPaneFirst + 7,
-        Blocks::StainedGlassPaneFirst + 8, Blocks::StainedGlassPaneFirst + 9, Blocks::StainedGlassPaneFirst + 10, Blocks::StainedGlassPaneFirst + 11,
-        Blocks::StainedGlassPaneFirst + 12, Blocks::StainedGlassPaneFirst + 13, Blocks::StainedGlassPaneFirst + 14, Blocks::StainedGlassPaneFirst + 15,
-    };
-
-    const StackId TAB_NATURE[] = {
-        Blocks::Grass, Blocks::SnowGrass, Blocks::Dirt, Blocks::TallGrass,
-        Blocks::FlowerRed, Blocks::FlowerYellow, Blocks::Leaves, Blocks::BirchLeaves,
-        Blocks::Log, Blocks::BirchLog, Blocks::Cactus, Blocks::Pumpkin,
-        Blocks::Sand, Blocks::Snow, static_cast<StackId>(Blocks::SnowLayerFirst), Blocks::Ice, Blocks::Clay,
-        static_cast<StackId>(Blocks::HeadRunFirst), Blocks::WitherSkull, static_cast<StackId>(Blocks::HeadRunFirst + 40),
-        static_cast<StackId>(Blocks::HeadRunFirst + 60), static_cast<StackId>(Blocks::HeadRunFirst + 80),
-        static_cast<StackId>(Blocks::HeadRunFirst + 100), static_cast<StackId>(Blocks::HeadRunFirst + 120),
-        Blocks::SugarCane,
-        Blocks::OakSapling, Blocks::SpruceSapling, Blocks::BirchSapling,
-        Blocks::JungleSapling, Blocks::AcaciaSapling, Blocks::DarkOakSapling,
-        Blocks::CherryLeaves, Blocks::CherrySapling, Blocks::PinkPetals1,
-        Blocks::MangroveLeaves, Blocks::MangrovePropagule,
-        Blocks::CrimsonFungus, Blocks::WarpedFungus, Blocks::CrimsonRoots, Blocks::WarpedRoots,
-        Blocks::NetherSprouts, Blocks::WeepingVines, Blocks::TwistingVines,
-        Blocks::Allium, Blocks::AzureBluet, Blocks::BlueOrchid, Blocks::Cornflower, Blocks::LilyOfTheValley,
-        Blocks::OxeyeDaisy, Blocks::RedTulip, Blocks::OrangeTulip, Blocks::WhiteTulip, Blocks::PinkTulip,
-        Blocks::WitherRose, Blocks::Torchflower, Blocks::Fern, Blocks::DeadBush,
-        Blocks::DoublePlantFirst + 0, Blocks::DoublePlantFirst + 2, Blocks::DoublePlantFirst + 4, Blocks::DoublePlantFirst + 6,
-        Blocks::DoublePlantFirst + 8, Blocks::DoublePlantFirst + 10, Blocks::DoublePlantFirst + 12,
-        Blocks::FlowerPot,
-        Blocks::BrownMushroom, Blocks::RedMushroom, Blocks::BrownMushroomBlock, Blocks::RedMushroomBlock, Blocks::MushroomStem,
-        Blocks::Mycelium, Blocks::Podzol, Blocks::CoarseDirt, Blocks::RootedDirt, Blocks::HangingRoots,
-        Blocks::Moss, Blocks::MossCarpet, Blocks::Azalea, Blocks::FloweringAzalea, Blocks::AzaleaLeaves,
-        Blocks::FloweringAzaleaLeaves, Blocks::SporeBlossom, Blocks::BigDripleafFirst, Blocks::SmallDripleafFirst,
-        Blocks::GlowLichenFirst,
-        Blocks::CarvedPumpkinFirst + 2, Blocks::HayBale, Blocks::BoneBlock, Blocks::DriedKelpBlock,
-        Blocks::BeeNestFirst + 12, Blocks::BeehiveFirst + 12, Blocks::HoneyBlock, Blocks::HoneycombBlock,
-        Blocks::Seagrass, Blocks::SeaPickle, Blocks::Kelp,
-        Blocks::TubeCoralBlock, Blocks::BrainCoralBlock, Blocks::BubbleCoralBlock, Blocks::FireCoralBlock, Blocks::HornCoralBlock,
-        Blocks::TubeCoral, Blocks::BrainCoral, Blocks::BubbleCoral, Blocks::FireCoral, Blocks::HornCoral,
-        Blocks::CoralFanFirst + 0, Blocks::CoralFanFirst + 1, Blocks::CoralFanFirst + 2, Blocks::CoralFanFirst + 3, Blocks::CoralFanFirst + 4,
-        Blocks::DeadCoralBlockFirst + 0, Blocks::DeadCoralBlockFirst + 1, Blocks::DeadCoralBlockFirst + 2,
-        Blocks::DeadCoralBlockFirst + 3, Blocks::DeadCoralBlockFirst + 4,
-        Blocks::DeadCoralFirst + 0, Blocks::DeadCoralFirst + 1, Blocks::DeadCoralFirst + 2, Blocks::DeadCoralFirst + 3, Blocks::DeadCoralFirst + 4,
-        Blocks::DeadCoralFanFirst + 0, Blocks::DeadCoralFanFirst + 1, Blocks::DeadCoralFanFirst + 2,
-        Blocks::DeadCoralFanFirst + 3, Blocks::DeadCoralFanFirst + 4,
-        Blocks::TurtleEggFirst, Blocks::PackedIce, Blocks::BlueIce,
-    };
-
-    const StackId TAB_ORES[] = {
-        Blocks::CoalOre, Blocks::IronOre, Blocks::GoldOre, Blocks::DiamondOre,
-        Blocks::EmeraldOre, Blocks::NetherQuartzOre, Blocks::NetherGoldOre,
-        Blocks::DeepslateCoalOre, Blocks::DeepslateIronOre, Blocks::DeepslateCopperOre, Blocks::DeepslateGoldOre,
-        Blocks::DeepslateRedstoneOre, Blocks::DeepslateEmeraldOre, Blocks::DeepslateLapisOre,
-        Blocks::DeepslateDiamondOre, Blocks::RawIronBlock, Blocks::RawGoldBlock, Blocks::RawCopperBlock,
-        Blocks::Stone, Blocks::Cobblestone, Blocks::Gravel, Blocks::Obsidian,
-        Blocks::Bedrock,
-    };
-
-    const StackId TAB_MISC[] = {
-        Blocks::Torch, Blocks::Glowstone, Blocks::Water, Blocks::Lava,
-        Blocks::Ice, Blocks::Glass, Blocks::Wool, Blocks::Pumpkin,
-        Blocks::JackOLanternFirst + 2, Blocks::Conduit, Blocks::SeaLantern,
-        Blocks::Bedrock,
-        Blocks::CutCopperFirst + 0, Blocks::CutCopperFirst + 1, Blocks::CutCopperFirst + 2, Blocks::CutCopperFirst + 3, Blocks::CutCopperFirst + 4, Blocks::CutCopperFirst + 5, Blocks::CutCopperFirst + 6, Blocks::CutCopperFirst + 7,
-        Blocks::ChiseledCopperFirst + 0, Blocks::ChiseledCopperFirst + 1, Blocks::ChiseledCopperFirst + 2, Blocks::ChiseledCopperFirst + 3, Blocks::ChiseledCopperFirst + 4, Blocks::ChiseledCopperFirst + 5, Blocks::ChiseledCopperFirst + 6, Blocks::ChiseledCopperFirst + 7,
-        Blocks::CopperGrateFirst + 0, Blocks::CopperGrateFirst + 1, Blocks::CopperGrateFirst + 2, Blocks::CopperGrateFirst + 3, Blocks::CopperGrateFirst + 4, Blocks::CopperGrateFirst + 5, Blocks::CopperGrateFirst + 6, Blocks::CopperGrateFirst + 7,
-        Blocks::CutCopperSlabFirst + 0, Blocks::CutCopperSlabFirst + 1, Blocks::CutCopperSlabFirst + 2, Blocks::CutCopperSlabFirst + 3, Blocks::CutCopperSlabFirst + 4, Blocks::CutCopperSlabFirst + 5, Blocks::CutCopperSlabFirst + 6, Blocks::CutCopperSlabFirst + 7,
-        Blocks::WaxedCopperFirst + 0, Blocks::WaxedCopperFirst + 1, Blocks::WaxedCopperFirst + 2, Blocks::WaxedCopperFirst + 3,
-        Blocks::CopperDoorFirst + 0, Blocks::CopperDoorFirst + 16, Blocks::CopperDoorFirst + 32, Blocks::CopperDoorFirst + 48, Blocks::CopperDoorFirst + 64, Blocks::CopperDoorFirst + 80, Blocks::CopperDoorFirst + 96, Blocks::CopperDoorFirst + 112,
-        Blocks::CopperTrapdoorFirst + 0, Blocks::CopperTrapdoorFirst + 16, Blocks::CopperTrapdoorFirst + 32, Blocks::CopperTrapdoorFirst + 48, Blocks::CopperTrapdoorFirst + 64, Blocks::CopperTrapdoorFirst + 80, Blocks::CopperTrapdoorFirst + 96, Blocks::CopperTrapdoorFirst + 112,
-        Blocks::CopperBulb, Blocks::CopperBulbRunFirst + 0, Blocks::CopperBulbRunFirst + 4, Blocks::CopperBulbRunFirst + 8, Blocks::CopperBulbRunFirst + 12, Blocks::CopperBulbRunFirst + 16, Blocks::CopperBulbRunFirst + 20, Blocks::CopperBulbRunFirst + 24,
-        Blocks::LightningRodFirst,
-        Blocks::ShulkerBox,
-        Blocks::ShulkerBoxFirst + 0, Blocks::ShulkerBoxFirst + 1, Blocks::ShulkerBoxFirst + 2, Blocks::ShulkerBoxFirst + 3,
-        Blocks::ShulkerBoxFirst + 4, Blocks::ShulkerBoxFirst + 5, Blocks::ShulkerBoxFirst + 6, Blocks::ShulkerBoxFirst + 7,
-        Blocks::ShulkerBoxFirst + 8, Blocks::ShulkerBoxFirst + 9, Blocks::ShulkerBoxFirst + 10, Blocks::ShulkerBoxFirst + 11,
-        Blocks::ShulkerBoxFirst + 12, Blocks::ShulkerBoxFirst + 13, Blocks::ShulkerBoxFirst + 14, Blocks::ShulkerBoxFirst + 15,
-        Blocks::Candle,
-        Blocks::DyedCandleFirst + 0, Blocks::DyedCandleFirst + 8, Blocks::DyedCandleFirst + 16, Blocks::DyedCandleFirst + 24,
-        Blocks::DyedCandleFirst + 32, Blocks::DyedCandleFirst + 40, Blocks::DyedCandleFirst + 48, Blocks::DyedCandleFirst + 56,
-        Blocks::DyedCandleFirst + 64, Blocks::DyedCandleFirst + 72, Blocks::DyedCandleFirst + 80, Blocks::DyedCandleFirst + 88,
-        Blocks::DyedCandleFirst + 96, Blocks::DyedCandleFirst + 104, Blocks::DyedCandleFirst + 112, Blocks::DyedCandleFirst + 120,
-    };
-
     struct CreativeTab
     {
         const char* name;
         StackId icon;
-        const StackId* items;   // null means "every obtainable block"
-        int count;
+        int iconDamage;
+        bool top;
+        int column;
     };
 
-    const StackId TAB_ITEMS[] = {
-        Items::Wheat, Items::WheatSeeds, Items::Leather, Items::RawBeef,
-        Items::RawPorkchop, Items::RawChicken, Items::RawMutton,
-        Items::Feather, Items::Bone, Items::StringItem, Items::Gunpowder, Items::Flint,
-        Items::Bread, Items::Steak, Items::CookedPorkchop, Items::CookedChicken,
-        Items::CookedMutton,
-        Items::Paper, Items::Book, Items::Emerald, Items::EnderPearl, Items::EyeOfEnder, Items::NetherQuartz, Items::AmethystShard, Items::TripwireHook,
-        Items::TorchflowerSeeds, Items::PitcherPod, Items::ClayBall, Items::Brick,
-        Items::PumpkinSeeds, Items::SweetBerries, Items::HoneyBottle, Items::DriedKelp, Items::Honeycomb,
-        Items::NautilusShell, Items::HeartOfTheSea, Items::TurtleScute,
-        Items::ChorusFruit, Items::PoppedChorusFruit, Items::Brush, Items::NetheriteUpgradeTemplate,
-        Items::SentryTemplate, Items::VexTemplate, Items::WildTemplate, Items::CoastTemplate, Items::DuneTemplate,
-        Items::WayfinderTemplate, Items::RaiserTemplate, Items::ShaperTemplate, Items::HostTemplate, Items::WardTemplate,
-        Items::SilenceTemplate, Items::TideTemplate, Items::SnoutTemplate, Items::RibTemplate, Items::EyeTemplate,
-        Items::SpireTemplate, Items::FlowTemplate, Items::BoltTemplate,
-        Items::AnglerSherd, Items::ArcherSherd, Items::ArmsUpSherd, Items::BladeSherd, Items::BrewerSherd, Items::BurnSherd,
-        Items::DangerSherd, Items::ExplorerSherd, Items::FlowSherd, Items::FriendSherd, Items::GusterSherd, Items::HeartSherd,
-        Items::HeartbreakSherd, Items::HowlSherd, Items::MinerSherd, Items::MournerSherd, Items::PlentySherd, Items::PrizeSherd,
-        Items::ScrapeSherd, Items::SheafSherd, Items::ShelterSherd, Items::SkullSherd, Items::SnortSherd,
-        Items::Sign, Items::SpruceSign, Items::BirchSign, Items::JungleSign, Items::AcaciaSign, Items::DarkOakSign,
-        Items::CherrySign, Items::MangroveSign, Items::BambooSign, Items::CrimsonSign, Items::WarpedSign,
-        Blocks::BannerFirst + 2, Blocks::BannerFirst + 10, Blocks::BannerFirst + 18, Blocks::BannerFirst + 26, Blocks::BannerFirst + 34, Blocks::BannerFirst + 42, Blocks::BannerFirst + 50, Blocks::BannerFirst + 58, Blocks::BannerFirst + 66, Blocks::BannerFirst + 74, Blocks::BannerFirst + 82, Blocks::BannerFirst + 90, Blocks::BannerFirst + 98, Blocks::BannerFirst + 106, Blocks::BannerFirst + 114, Blocks::BannerFirst + 122,
-        Items::FlowerBannerPattern, Items::SkullBannerPattern, Items::GlobeBannerPattern, Items::PiglinBannerPattern,
-        Items::FlowBannerPattern, Items::GusterBannerPattern, Items::CreeperBannerPattern, Items::MojangBannerPattern, Items::DebugStick,
-    };
-
-    // The twenty-five tools, their materials, and the two benches you
-    // need to make any of it.
-    const StackId TAB_ARMOUR[] = {
-        Items::LeatherHelmet, Items::LeatherChestplate, Items::LeatherLeggings, Items::LeatherBoots,
-        Items::GoldHelmet, Items::GoldChestplate, Items::GoldLeggings, Items::GoldBoots,
-        Items::IronHelmet, Items::IronChestplate, Items::IronLeggings, Items::IronBoots,
-        Items::DiamondHelmet, Items::DiamondChestplate, Items::DiamondLeggings, Items::DiamondBoots,
-        Items::ChainmailHelmet, Items::ChainmailChestplate, Items::ChainmailLeggings, Items::ChainmailBoots,
-        Items::TurtleHelmet,
-        Items::LeatherHorseArmor, Items::IronHorseArmor, Items::GoldHorseArmor, Items::DiamondHorseArmor,
-    };
-
-    const StackId TAB_TOOLS[] = {
-        Blocks::CraftingTable, Blocks::Furnace, Blocks::Chest, Blocks::ChestRunFirst + 17, Blocks::ChestRunFirst + 37,
-        Blocks::BedFirst + 0, Blocks::BedFirst + 8, Blocks::BedFirst + 16, Blocks::BedFirst + 24,
-        Blocks::BedFirst + 32, Blocks::BedFirst + 40, Blocks::BedFirst + 48, Blocks::BedFirst + 56,
-        Blocks::BedFirst + 64, Blocks::BedFirst + 72, Blocks::BedFirst + 80, Blocks::BedFirst + 88,
-        Blocks::BedFirst + 96, Blocks::BedFirst + 104, Blocks::BedFirst + 112, Blocks::BedFirst + 120,
-        Blocks::Bookshelf, Blocks::EnchantingTable, Blocks::Anvil,
-        Blocks::EndPortalFrame,
-        Items::Stick, Items::Coal, Items::Bow, Items::Arrow, Items::Shield, Items::FlintAndSteel, Items::Boat, Items::Minecart,
-        Blocks::RailNorthSouth, Blocks::PoweredRailFirst, Blocks::DetectorRailFirst, Blocks::ActivatorRailFirst,
-        Blocks::RepeaterFirst, Blocks::ComparatorFirst, Blocks::DaylightDetector, Blocks::Target, Items::TripwireHook,
-        Blocks::IronDoorFirst, Blocks::IronTrapdoorFirst,
-        Blocks::IronBars, Blocks::ChainFirst, Blocks::EndRodFirst, Blocks::Cobweb, Items::IronNugget,
-        Blocks::Stonecutter, Blocks::FletchingTable, Blocks::SmithingTable, Blocks::CartographyTable, Blocks::LoomFirst + 2,
-        Blocks::CalibratedSensorFirst + 4, Blocks::SculkVeinFirst,
-        Blocks::Sculk, Blocks::SculkSensor, Blocks::SculkShrieker, Blocks::SculkCatalyst,
-        Blocks::CommandBlockFirst + 4, Blocks::CommandBlockFirst + 16, Blocks::CommandBlockFirst + 28,
-        Blocks::StructureBlockFirst, Blocks::JigsawFirst + 2, Blocks::Barrier, Blocks::LightFirst + 15, Blocks::StructureVoid,
-        Blocks::SoulTorch, Blocks::SoulCampfire, Blocks::SoulSoil,
-        Blocks::MagmaBlock, Blocks::CryingObsidian, Blocks::RespawnAnchor0, Blocks::Lodestone,
-        Blocks::BellFirst + 2, Blocks::Jukebox, Blocks::ChiseledBookshelfFirst + 14, Blocks::DragonEgg, Blocks::HeavyCore,
-        Blocks::DecoratedPotFirst + 2, Blocks::SnifferEgg0,
-        Items::Bucket, Items::WaterBucket, Items::LavaBucket, Items::PowderSnowBucket, Items::Shears, Items::Compass, Items::EmptyMap,
-        Items::FishingRod, Items::CarrotOnAStick, Items::WarpedFungusOnAStick, Items::NameTag, Items::Lead, Items::TropicalFish,
-        Items::Spyglass, Items::Clock, Items::RecoveryCompass, Items::EchoShard, Items::GoatHorn, Items::Bundle,
-        Items::Crossbow, Items::SpectralArrow, Items::TippedArrow,
-        Items::GoldenApple, Items::EnchantedGoldenApple, Items::GoldenCarrot, Items::GlisteringMelon, Items::MushroomStew,
-        Items::RabbitStew, Items::SuspiciousStew, Items::PumpkinPie, Items::RottenFlesh, Items::SpiderEye, Items::FermentedSpiderEye,
-        Items::PoisonousPotato,
-        Items::RabbitHide, Items::RabbitFoot, Items::PhantomMembrane, Items::PrismarineShard, Items::PrismarineCrystals,
-        Items::DiscFragment, Items::DragonsBreath, Items::Charcoal, Items::ExperienceBottle,
-        Items::CodBucket, Items::SalmonBucket, Items::PufferfishBucket, Items::TropicalFishBucket, Items::AxolotlBucket, Items::TadpoleBucket,
-        Items::EnchantedBook, Items::WritableBook, Items::WrittenBook, Items::KnowledgeBook,
-        Items::FireworkRocket, Items::FireworkStar, Items::FireCharge, Items::ArmadilloScute, Items::WolfArmor, Items::GlowInkSac, Items::Painting, Items::ArmorStand, Items::GlowItemFrame,
-        Items::HangingSignFirst + 0, Items::HangingSignFirst + 1, Items::HangingSignFirst + 2, Items::HangingSignFirst + 3,
-        Items::HangingSignFirst + 4, Items::HangingSignFirst + 5, Items::HangingSignFirst + 6, Items::HangingSignFirst + 7,
-        Items::HangingSignFirst + 8, Items::HangingSignFirst + 9, Items::HangingSignFirst + 10,
-        Items::MusicDiscFirst + 0, Items::MusicDiscFirst + 1, Items::MusicDiscFirst + 2, Items::MusicDiscFirst + 3,
-        Items::MusicDiscFirst + 4, Items::MusicDiscFirst + 5, Items::MusicDiscFirst + 6, Items::MusicDiscFirst + 7,
-        Items::MusicDiscFirst + 8, Items::MusicDiscFirst + 9, Items::MusicDiscFirst + 10, Items::MusicDiscFirst + 11,
-        Items::MusicDiscFirst + 12, Items::MusicDiscFirst + 13, Items::MusicDiscFirst + 14, Items::MusicDiscFirst + 15,
-        Items::MusicDiscFirst + 16, Items::MusicDiscFirst + 17, Items::MusicDiscFirst + 18,
-        Items::IronIngot, Items::GoldIngot, Items::Diamond,
-        Items::WoodPickaxe, Items::WoodAxe, Items::WoodShovel, Items::WoodSword, Items::WoodHoe,
-        Items::StonePickaxe, Items::StoneAxe, Items::StoneShovel, Items::StoneSword, Items::StoneHoe,
-        Items::IronPickaxe, Items::IronAxe, Items::IronShovel, Items::IronSword, Items::IronHoe,
-        Items::GoldPickaxe, Items::GoldAxe, Items::GoldShovel, Items::GoldSword, Items::GoldHoe,
-        Items::DiamondPickaxe, Items::DiamondAxe, Items::DiamondShovel, Items::DiamondSword,
-        Items::DiamondHoe,
+    enum TabId
+    {
+        TAB_BUILDING_BLOCKS, TAB_COLORED, TAB_NATURAL, TAB_FUNCTIONAL, TAB_REDSTONE, TAB_HOTBARS, TAB_SEARCH,
+        TAB_TOOLS_UTILITIES, TAB_COMBAT, TAB_FOOD, TAB_INGREDIENTS, TAB_SPAWN_EGGS, TAB_OPERATOR, TAB_SURVIVAL
     };
 
     const CreativeTab CREATIVE_TABS[] = {
-        { "Building Blocks",  Blocks::Bricks,     TAB_BUILDING, static_cast<int>(std::size(TAB_BUILDING)) },
-        { "Nature",           Blocks::Grass,      TAB_NATURE,   static_cast<int>(std::size(TAB_NATURE)) },
-        { "Ores and Stone",   Blocks::DiamondOre, TAB_ORES,     static_cast<int>(std::size(TAB_ORES)) },
-        { "Light and Liquid", Blocks::Glowstone,  TAB_MISC,     static_cast<int>(std::size(TAB_MISC)) },
-        { "Items",            Items::Wheat,       TAB_ITEMS,    static_cast<int>(std::size(TAB_ITEMS)) },
-        { "Tools",            Items::IronPickaxe, TAB_TOOLS,    static_cast<int>(std::size(TAB_TOOLS)) },
-        { "Armour",           Items::DiamondChestplate, TAB_ARMOUR, static_cast<int>(std::size(TAB_ARMOUR)) },
-        { "Search Items",     Items::Book,        nullptr,      0 },
-        { "Your Inventory",   Blocks::Chest,      nullptr,      0 },  // the player's own slots
+        { "Building Blocks", Blocks::Bricks, 0, true, 0 },
+        { "Colored Blocks", woolOfColour(9), 0, true, 1 },
+        { "Natural Blocks", Blocks::Grass, 0, true, 2 },
+        { "Functional Blocks", Items::Sign, 0, true, 3 },
+        { "Redstone Blocks", Items::Redstone, 0, true, 4 },
+        { "Saved Hotbars", Blocks::Bookshelf, 0, true, 5 },
+        { "Search Items", Items::Compass, 0, true, 6 },
+        { "Tools & Utilities", Items::DiamondPickaxe, 0, false, 0 },
+        { "Combat", Items::NetheriteSword, 0, false, 1 },
+        { "Food & Drinks", Items::GoldenApple, 0, false, 2 },
+        { "Ingredients", Items::IronIngot, 0, false, 3 },
+        { "Spawn Eggs", Items::SpawnEgg, static_cast<int>(MobId::Pig), false, 4 },
+        { "Operator Utilities", Blocks::CommandBlockFirst + 4, 0, false, 5 },
+        { "Survival Inventory", Blocks::Chest, 0, false, 6 },
     };
 
     constexpr int TAB_COUNT = static_cast<int>(std::size(CREATIVE_TABS));
-    constexpr int INVENTORY_TAB = TAB_COUNT - 1;
-    constexpr int SEARCH_TAB = TAB_COUNT - 2;
+    constexpr int INVENTORY_TAB = TAB_SURVIVAL;
+    constexpr int SEARCH_TAB = TAB_SEARCH;
+
     constexpr int PALETTE_COLUMNS = 9;
     constexpr int PALETTE_ROWS = 5;
 
@@ -280,39 +64,230 @@ namespace
         return everything;
     }
 
-    void tabContents(int tab, const StackId*& items, int& count)
+    bool startsWith(const std::string& s, const char* p) { return s.rfind(p, 0) == 0; }
+    bool endsWith(const std::string& s, const char* p)
     {
-        if (tab < 0 || tab >= TAB_COUNT || CREATIVE_TABS[tab].items == nullptr)
+        const size_t n = std::strlen(p);
+        return s.size() >= n && s.compare(s.size() - n, n, p) == 0;
+    }
+    bool has(const std::string& s, const char* p) { return s.find(p) != std::string::npos; }
+    bool oneOf(const std::string& s, std::initializer_list<const char*> list)
+    {
+        for (const char* one : list) if (s == one) return true;
+        return false;
+    }
+
+    std::string vanillaName(StackId id)
+    {
+        std::string n = RecipeBook::idOf(id);
+        static const std::map<std::string, std::string> RENAMED = {
+            { "planks", "oak_planks" }, { "sign", "oak_sign" }, { "wool", "white_wool" }, { "mossy_cobble", "mossy_cobblestone" },
+            { "hay_bale", "hay_block" }, { "jack_olantern", "jack_o_lantern" }, { "jigsaw_block", "jigsaw" },
+            { "monster_spawner", "spawner" }, { "vines", "vine" }, { "smooth_quartz_block", "smooth_quartz" },
+            { "redstone_comparator", "comparator" }, { "redstone_repeater", "repeater" }, { "button", "stone_button" },
+            { "book_and_quill", "writable_book" }, { "bottle_o_enchanting", "experience_bottle" }, { "dragons_breath", "dragon_breath" },
+            { "empty_map", "map" }, { "map", "filled_map" }, { "eye_of_ender", "ender_eye" }, { "nether_quartz", "quartz" }, { "rabbits_foot", "rabbit_foot" },
+            { "slimeball", "slime_ball" }, { "steak", "cooked_beef" }, { "turtle_shell", "turtle_helmet" },
+            { "deepslate_lapis_lazuli_ore", "deepslate_lapis_ore" }, { "disc_fragment", "disc_fragment_5" },
+            { "netherite_upgrade", "netherite_upgrade_smithing_template" }, { "thing_banner_pattern", "mojang_banner_pattern" },
+            { "snout_banner_pattern", "piglin_banner_pattern" }, { "creeper_charge_banner_pattern", "creeper_banner_pattern" },
+            { "flower_charge_banner_pattern", "flower_banner_pattern" }, { "skull_charge_banner_pattern", "skull_banner_pattern" },
+            { "minecart_with_chest", "chest_minecart" }, { "minecart_with_furnace", "furnace_minecart" },
+            { "minecart_with_hopper", "hopper_minecart" }, { "minecart_with_tnt", "tnt_minecart" },
+            { "minecart_with_command_block", "command_block_minecart" }, { "waxed_block_of_copper", "waxed_copper_block" },
+            { "bamboo_raft_with_chest", "bamboo_chest_raft" },
+        };
+        const auto renamed = RENAMED.find(n);
+        if (renamed != RENAMED.end()) return renamed->second;
+        if (startsWith(n, "block_of_")) return n.substr(9) + "_block";
+        if (startsWith(n, "bucket_of_")) return n.substr(10) + "_bucket";
+        if (endsWith(n, "_armor_trim")) return n + "_smithing_template";
+        if (endsWith(n, "_boat_with_chest")) return n.substr(0, n.size() - 16) + "_chest_boat";
+        if (startsWith(n, "raw_") && oneOf(n, { "raw_beef", "raw_chicken", "raw_cod", "raw_mutton", "raw_porkchop", "raw_rabbit", "raw_salmon" }))
+            return n.substr(4);
+        return n;
+    }
+
+    unsigned tabsOf(StackId id)
+    {
+        const std::string n = vanillaName(id);
+        const bool block = !isItem(id);
+        unsigned bits = 0;
+        auto add = [&](int tab) { bits |= 1u << tab; };
+        static const char* COLOURS[16] = { "white_", "orange_", "magenta_", "light_blue_", "yellow_", "lime_", "pink_", "gray_",
+                                           "light_gray_", "cyan_", "purple_", "blue_", "brown_", "green_", "red_", "black_" };
+        bool dyed = false;
+        for (const char* c : COLOURS) if (startsWith(n, c)) dyed = true;
+        const bool colourKind = endsWith(n, "wool") || endsWith(n, "carpet") || endsWith(n, "terracotta") || endsWith(n, "concrete") ||
+                                endsWith(n, "concrete_powder") || endsWith(n, "stained_glass") || endsWith(n, "stained_glass_pane") ||
+                                endsWith(n, "shulker_box") || endsWith(n, "_bed") || endsWith(n, "candle") || endsWith(n, "_banner") ||
+                                n == "glass" || n == "glass_pane" || n == "tinted_glass";
+        if ((dyed && colourKind) || oneOf(n, { "terracotta", "glass", "glass_pane", "shulker_box", "candle", "tinted_glass" }))
+            add(TAB_COLORED);
+
+        if (oneOf(n, { "command_block", "chain_command_block", "repeating_command_block", "command_block_minecart", "structure_block",
+                       "structure_void", "jigsaw", "barrier", "light", "debug_stick", "knowledge_book" }))
+            add(TAB_OPERATOR);
+        if (id == Items::SpawnEgg || oneOf(n, { "spawner", "trial_spawner" })) add(TAB_SPAWN_EGGS);
+
+        const bool redstone = oneOf(n, { "redstone", "redstone_torch", "redstone_block", "repeater", "comparator", "target", "lever",
+            "oak_button", "stone_button", "oak_pressure_plate", "stone_pressure_plate", "light_weighted_pressure_plate",
+            "heavy_weighted_pressure_plate", "sculk_sensor", "calibrated_sculk_sensor", "amethyst_block", "white_wool", "tripwire_hook",
+            "string", "lectern", "daylight_detector", "lightning_rod", "piston", "sticky_piston", "slime_block", "honey_block", "dispenser",
+            "dropper", "crafter", "hopper", "chest", "barrel", "chiseled_bookshelf", "furnace", "trapped_chest", "jukebox",
+            "decorated_pot", "observer", "note_block", "composter", "cauldron", "rail", "powered_rail", "detector_rail", "activator_rail",
+            "minecart", "hopper_minecart", "chest_minecart", "furnace_minecart", "tnt_minecart", "oak_chest_boat", "bamboo_chest_raft",
+            "tnt", "redstone_lamp", "bell", "big_dripleaf", "armor_stand", "redstone_ore", "iron_door", "iron_trapdoor", "oak_door",
+            "oak_trapdoor", "oak_fence_gate", "copper_bulb", "waxed_copper_bulb" });
+        if (redstone) add(TAB_REDSTONE);
+
+        const bool functional = oneOf(n, { "torch", "soul_torch", "redstone_torch", "lantern", "soul_lantern", "chain", "end_rod",
+            "sea_lantern", "redstone_lamp", "glowstone", "shroomlight", "ochre_froglight", "verdant_froglight", "pearlescent_froglight",
+            "crying_obsidian", "glow_lichen", "magma_block", "crafting_table", "stonecutter", "cartography_table", "fletching_table",
+            "smithing_table", "grindstone", "loom", "furnace", "smoker", "blast_furnace", "campfire", "soul_campfire", "anvil",
+            "chipped_anvil", "damaged_anvil", "composter", "note_block", "jukebox", "enchanting_table", "end_crystal", "brewing_stand",
+            "cauldron", "bell", "beacon", "conduit", "lodestone", "ladder", "scaffolding", "bee_nest", "beehive", "suspicious_sand",
+            "suspicious_gravel", "lightning_rod", "flower_pot", "decorated_pot", "armor_stand", "item_frame", "glow_item_frame",
+            "painting", "bookshelf", "chiseled_bookshelf", "lectern", "tinted_glass", "chest", "barrel", "ender_chest", "respawn_anchor",
+            "infested_stone", "infested_cobblestone", "infested_stone_bricks", "infested_mossy_stone_bricks",
+            "infested_cracked_stone_bricks", "infested_chiseled_stone_bricks", "infested_deepslate", "end_portal_frame", "vault",
+            "dragon_egg", "heavy_core", "crafter", "trapped_chest", "copper_bulb" }) ||
+            endsWith(n, "_sign") || endsWith(n, "_hanging_sign") || endsWith(n, "_skull") || endsWith(n, "_head") ||
+            endsWith(n, "shulker_box") || endsWith(n, "_bed") || endsWith(n, "candle") || endsWith(n, "_banner") || endsWith(n, "_lantern");
+        if ((functional && n != "jack_o_lantern") || n == "ender_eye") add(TAB_FUNCTIONAL);
+
+        const bool natural = oneOf(n, { "grass_block", "podzol", "mycelium", "dirt_path", "dirt", "coarse_dirt", "rooted_dirt",
+            "farmland", "mud", "clay", "gravel", "sand", "sandstone", "red_sand", "red_sandstone", "ice", "packed_ice", "blue_ice",
+            "snow_block", "snow", "moss_block", "moss_carpet", "stone", "deepslate", "granite", "diorite", "andesite", "calcite", "tuff",
+            "dripstone_block", "pointed_dripstone", "prismarine", "magma_block", "obsidian", "crying_obsidian", "netherrack",
+            "crimson_nylium", "warped_nylium", "soul_sand", "soul_soil", "bone_block", "blackstone", "basalt", "smooth_basalt",
+            "end_stone", "amethyst_block", "budding_amethyst", "small_amethyst_bud", "medium_amethyst_bud", "large_amethyst_bud",
+            "amethyst_cluster", "bedrock", "cobweb", "sponge", "wet_sponge", "melon", "pumpkin", "carved_pumpkin", "jack_o_lantern",
+            "hay_block", "bee_nest", "honeycomb_block", "slime_block", "honey_block", "ochre_froglight", "verdant_froglight",
+            "pearlescent_froglight", "sculk", "sculk_vein", "sculk_catalyst", "sculk_shrieker", "sculk_sensor", "glow_lichen",
+            "hanging_roots", "spore_blossom", "vine", "weeping_vines", "twisting_vines", "lily_pad", "seagrass", "kelp", "dried_kelp_block",
+            "sea_pickle", "cactus", "sugar_cane", "bamboo", "big_dripleaf", "small_dripleaf", "chorus_plant", "chorus_flower",
+            "turtle_egg", "sniffer_egg", "frogspawn", "wheat_seeds", "cocoa_beans", "pumpkin_seeds", "melon_seeds", "beetroot_seeds",
+            "torchflower_seeds", "pitcher_pod", "glow_berries", "sweet_berries", "nether_wart", "azalea", "flowering_azalea",
+            "mangrove_roots", "muddy_mangrove_roots", "mangrove_propagule", "brown_mushroom", "red_mushroom", "brown_mushroom_block",
+            "red_mushroom_block", "mushroom_stem", "crimson_fungus", "warped_fungus", "crimson_roots", "warped_roots", "nether_sprouts",
+            "nether_wart_block", "warped_wart_block", "shroomlight", "short_grass", "fern", "dead_bush", "tall_grass", "large_fern",
+            "dandelion", "poppy", "blue_orchid", "allium", "azure_bluet", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip",
+            "oxeye_daisy", "cornflower", "lily_of_the_valley", "torchflower", "wither_rose", "pink_petals", "sunflower", "lilac",
+            "rose_bush", "peony", "pitcher_plant", "gravel", "powder_snow_bucket", "mud", "glowstone" }) ||
+            endsWith(n, "_ore") || startsWith(n, "raw_") || endsWith(n, "_log") || endsWith(n, "_stem") || endsWith(n, "_leaves") ||
+            endsWith(n, "_sapling") || has(n, "coral") || n == "moss_carpet" || n == "bamboo_block" || n == "ancient_debris";
+        if (natural && (!startsWith(n, "raw_") || endsWith(n, "_block")) && !startsWith(n, "stripped_")) add(TAB_NATURAL);
+
+        if (n == "end_crystal") add(TAB_COMBAT);
+        if (block)
         {
-            items = allStacks().data();
-            count = static_cast<int>(allStacks().size());
-            return;
+            const bool natureOnly = (bits & (1u << TAB_NATURAL)) && !endsWith(n, "_log") &&
+                                    !(endsWith(n, "_stem") && n != "mushroom_stem") &&
+                                    !oneOf(n, { "stone", "deepslate", "granite", "diorite", "andesite", "tuff", "calcite", "sandstone",
+                                                "red_sandstone", "prismarine", "blackstone", "basalt", "smooth_basalt", "end_stone",
+                                                "amethyst_block", "bamboo_block", "netherrack" });
+            const bool elsewhere = (bits & ((1u << TAB_COLORED) | (1u << TAB_OPERATOR) | (1u << TAB_SPAWN_EGGS))) != 0;
+            const bool workBlock = functional && !endsWith(n, "_sign");
+            if (!natureOnly && !elsewhere && !workBlock && !(redstone && !has(n, "door") && !has(n, "trapdoor") && !has(n, "gate") &&
+                                                             !has(n, "button") && !has(n, "pressure_plate")))
+                add(TAB_BUILDING_BLOCKS);
+            if (has(n, "door") || has(n, "trapdoor") || has(n, "fence_gate") || has(n, "button") || has(n, "pressure_plate") ||
+                endsWith(n, "_slab") || endsWith(n, "_stairs") || endsWith(n, "_wall") || endsWith(n, "_fence") ||
+                endsWith(n, "_planks") || endsWith(n, "_wood") || endsWith(n, "_hyphae") || has(n, "stripped_") || endsWith(n, "_log") ||
+                endsWith(n, "_stem") || has(n, "brick") || has(n, "copper") || has(n, "quartz") || has(n, "purpur") || has(n, "polished") ||
+                has(n, "chiseled") || has(n, "cut_") || has(n, "smooth_") || has(n, "iron_bars"))
+                if (!(bits & ((1u << TAB_OPERATOR) | (1u << TAB_COLORED))) && !workBlock && !endsWith(n, "_ore") && n != "mushroom_stem")
+                    add(TAB_BUILDING_BLOCKS);
+            if (oneOf(n, { "chain", "sea_lantern", "amethyst_block", "netherrack", "end_stone", "gilded_blackstone" })) add(TAB_BUILDING_BLOCKS);
+            if (bits == 0) add(TAB_BUILDING_BLOCKS);
+            return bits;
         }
-        if (tab == 0)
+
+        if (has(n, "_shovel") || has(n, "_pickaxe") || has(n, "_axe") || has(n, "_hoe") || endsWith(n, "bucket") ||
+            oneOf(n, { "flint_and_steel", "fire_charge", "bone_meal", "shears", "brush", "name_tag", "lead", "bundle", "compass",
+                       "recovery_compass", "clock", "spyglass", "map", "writable_book", "ender_pearl", "ender_eye",
+                       "elytra", "goat_horn", "fishing_rod", "carrot_on_a_stick", "warped_fungus_on_a_stick", "saddle", "minecart",
+                       "chest_minecart", "furnace_minecart", "tnt_minecart", "hopper_minecart", "firework_rocket",
+                       "trial_key", "ominous_trial_key", "wind_charge" }) ||
+            startsWith(n, "music_disc") || endsWith(n, "_boat") || endsWith(n, "_raft") || endsWith(n, "_chest_boat") || endsWith(n, "_chest_raft"))
+            add(TAB_TOOLS_UTILITIES);
+        if (has(n, "_sword") || has(n, "_axe") || endsWith(n, "_helmet") || endsWith(n, "_chestplate") || endsWith(n, "_leggings") ||
+            endsWith(n, "_boots") || endsWith(n, "horse_armor") || oneOf(n, { "mace", "trident", "shield", "bow", "crossbow", "arrow",
+            "spectral_arrow", "tipped_arrow", "wolf_armor", "totem_of_undying", "end_crystal", "snowball", "egg", "wind_charge" }))
+            add(TAB_COMBAT);
+        const bool food = Food::isEdible(id) || oneOf(n, { "milk_bucket", "potion", "splash_potion", "lingering_potion", "honey_bottle",
+                                                          "ominous_bottle", "suspicious_stew", "cake" });
+        if (food) add(TAB_FOOD);
+        if (id == Items::SpawnEgg) return bits;
+        if (oneOf(n, { "filled_map", "written_book" })) return 0;
+        if (bits == 0 || oneOf(n, { "bone_meal", "egg", "snowball", "experience_bottle", "string", "wheat", "sugar", "rabbit_foot",
+                                    "spider_eye", "glistering_melon_slice" }))
+            add(TAB_INGREDIENTS);
+        return bits;
+    }
+
+    const std::vector<int>& tabEntries(int tab)
+    {
+        static std::vector<std::vector<int>> built;
+        if (built.empty())
         {
-            static const std::vector<StackId> building = []() {
-                std::vector<StackId> list(std::begin(TAB_BUILDING), std::end(TAB_BUILDING));
-                for (int m = STAIRS_OLD; m < STAIRS_MATERIALS; ++m) list.push_back(stairsOf(m, false, 0));
-                for (int m = SLAB_OLD; m < SLAB_MATERIALS; ++m) list.push_back(slabOf(m, 0));
-                for (int w = 1; w < WOOD_COUNT; ++w) list.push_back(fenceOfWood(w));
-                list.push_back(static_cast<StackId>(Blocks::FenceRunLast));
-                for (int w = 0; w < WOOD_COUNT; ++w) list.push_back(gateOf(w, false, 0));
-                for (int m = 0; m < WALL_MATERIALS; ++m) list.push_back(static_cast<StackId>(Blocks::WallRunFirst + m));
-                list.push_back(Blocks::SmoothQuartz);
-                for (int c = 0; c < 16; ++c) list.push_back(static_cast<StackId>(Blocks::CarpetFirst + c));
-                for (int i = 0; i < 20; ++i) list.push_back(static_cast<StackId>(Blocks::WoodBlockFirst + i));
-                for (int i = 0; i < 7; ++i) list.push_back(static_cast<StackId>(Blocks::InfestedFirst + i));
-                list.push_back(Blocks::PolishedBasalt);
-                for (int m = 1; m < BUTTON_MATERIALS; ++m) list.push_back(buttonItem(m));
-                for (int m = 0; m < PLATE_MATERIALS; ++m) list.push_back(plateOf(m, false));
-                return list;
-            }();
-            items = building.data();
-            count = static_cast<int>(building.size());
-            return;
+            built.resize(TAB_COUNT);
+            std::set<std::string> seenBlocks;
+            for (StackId id : allStacks())
+                if (isItem(id)) seenBlocks.insert(vanillaName(id));
+            for (StackId id : allStacks())
+            {
+                if (id == Items::Potion || id == Items::SplashPotion || id == Items::LingeringPotion || id == Items::SpawnEgg) continue;
+                if (!isItem(id))
+                {
+                    const BlockId block = static_cast<BlockId>(id);
+                    if (axisBase(block) != block || isPistonHead(block)) continue;
+                    const std::string name = vanillaName(id);
+                    if (oneOf(name, { "crystal_base", "end_gateway", "tall_seagrass", "snowy_grass", "ominous_vault" })) continue;
+                    if (!seenBlocks.insert(name).second) continue;
+                }
+                const unsigned bits = tabsOf(id);
+                for (int t = 0; t < TAB_COUNT; ++t)
+                    if (bits & (1u << t)) built[static_cast<size_t>(t)].push_back(static_cast<int>(id));
+            }
+            for (int mob = 0; mob < mobTypeCount(); ++mob)
+            {
+                unsigned int shell = 0, spots = 0;
+                if (!spawnEggColours(static_cast<MobId>(mob), shell, spots)) continue;
+                built[TAB_SPAWN_EGGS].push_back(static_cast<int>(Items::SpawnEgg) | (mob << 16));
+            }
+            for (const StackId form : { static_cast<StackId>(Items::Potion), static_cast<StackId>(Items::SplashPotion),
+                                        static_cast<StackId>(Items::LingeringPotion) })
+                for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
+                    for (int variant = 0; variant < 3; ++variant)
+                    {
+                        Brewing::Brew brew{ static_cast<Brewing::Potion>(p), variant == 1, variant == 2 };
+                        if ((variant == 1 && !Brewing::canExtend(brew.potion)) || (variant == 2 && !Brewing::canStrengthen(brew.potion)))
+                            continue;
+                        built[TAB_FOOD].push_back(static_cast<int>(form) | (Brewing::encode(brew) << 16));
+                    }
+            std::vector<int> arrows;
+            for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
+                for (int variant = 0; variant < 2; ++variant)
+                {
+                    const Brewing::Brew brew{ static_cast<Brewing::Potion>(p), false, variant == 1 };
+                    if (variant == 1 && !Brewing::canStrengthen(brew.potion)) continue;
+                    const std::vector<Brewing::Dose> doses = Brewing::dosesOf(brew);
+                    if (doses.empty()) continue;
+                    const int damage = Brewing::tippedDamage(doses.front().kind, doses.front().amplifier);
+                    if (std::find(arrows.begin(), arrows.end(), damage) != arrows.end()) continue;
+                    arrows.push_back(damage);
+                    built[TAB_COMBAT].push_back(static_cast<int>(Items::TippedArrow) | (damage << 16));
+                }
+            for (int variant = 0; variant < Paintings::count(); ++variant)
+                built[TAB_FUNCTIONAL].push_back(static_cast<int>(Items::Painting) | ((variant + 1) << 16));
+            std::vector<int>& search = built[TAB_SEARCH];
+            for (int t = 0; t < TAB_COUNT; ++t)
+                for (int entry : built[static_cast<size_t>(t)])
+                    if (std::find(search.begin(), search.end(), entry) == search.end()) search.push_back(entry);
         }
-        items = CREATIVE_TABS[tab].items;
-        count = CREATIVE_TABS[tab].count;
+        return built[static_cast<size_t>(std::clamp(tab, 0, TAB_COUNT - 1))];
     }
 
     // What a stack is called in a tooltip. A potion is one item id with
@@ -1075,6 +1050,11 @@ bool Application::creativeSearching() const
 int Application::creativeInventoryTab()
 {
     return INVENTORY_TAB;
+}
+
+int Application::creativeSearchTab()
+{
+    return SEARCH_TAB;
 }
 
 void Application::renderInventoryScreen()
@@ -2609,17 +2589,13 @@ void Application::renderCreativeScreen(float w, float h)
     // and the player's own things take the far corner of that, which is
     // where the client keeps its survival-inventory tab.
     struct TabPlace { bool top; int column; };
-    const TabPlace PLACES[TAB_COUNT] = {
-        { true, 0 }, { true, 1 }, { true, 2 }, { true, 3 }, { true, 4 },
-        { false, 0 }, { false, 1 }, { true, 6 }, { false, 6 },
-    };
 
     const glm::vec4 TAB_BACK(0.62f, 0.62f, 0.62f, 1.0f);
     const glm::vec4 TAB_BACK_LIGHT(0.80f, 0.80f, 0.80f, 1.0f);
     const glm::vec4 OUTLINE(0.0f, 0.0f, 0.0f, 0.85f);
 
     auto drawTab = [&](int i) {
-        const TabPlace place = PLACES[i];
+        const TabPlace place{ CREATIVE_TABS[i].top, CREATIVE_TABS[i].column };
         const bool open = i == m_creativeTab;
 
         // 1.21's: tabs 26 wide stepping 27 along, and the last two
@@ -2654,7 +2630,7 @@ void Application::renderCreativeScreen(float w, float h)
             const char* sprite = place.top ? (open ? TOP_OPEN[column] : TOP_SHUT[column])
                                            : (open ? BOTTOM_OPEN[column] : BOTTOM_SHUT[column]);
             guiSprite(sprite, tx, ty, 26.0f, 32.0f);
-            drawItem(tx + 5.0f, ty + (place.top ? 9.0f : 7.0f), SLOT, CREATIVE_TABS[i].icon, 0, glm::vec4(1.0f));
+            drawItem(tx + 5.0f, ty + (place.top ? 9.0f : 7.0f), SLOT, CREATIVE_TABS[i].icon, 0, glm::vec4(1.0f), CREATIVE_TABS[i].iconDamage);
             m_slotBoxes.push_back({ SlotBox::Kind::Tab, i, tx, ty, 32.0f, 26.0f });
             return;
         }
@@ -2682,7 +2658,7 @@ void Application::renderCreativeScreen(float w, float h)
         // The icon sits five in and nine down on the top row, seven down
         // on the bottom, so it is centred on the part of the tab you see.
         drawItem(tx + 5.0f, ty + (place.top ? 9.0f : 7.0f), SLOT,
-                 CREATIVE_TABS[i].icon, 0, glm::vec4(1.0f));
+                 CREATIVE_TABS[i].icon, 0, glm::vec4(1.0f), CREATIVE_TABS[i].iconDamage);
 
         m_slotBoxes.push_back({ SlotBox::Kind::Tab, i, tx, ty, 32.0f, 26.0f });
     };
@@ -2702,11 +2678,9 @@ void Application::renderCreativeScreen(float w, float h)
             m_ui.text(CREATIVE_TABS[m_creativeTab].name, panelX + 8.0f, panelY + 6.0f,
                       1.0f, GUI_TEXT);
 
-        const StackId* items = nullptr;
+        static std::vector<int> entries;
+        entries.clear();
         int count = 0;
-        tabContents(m_creativeTab, items, count);
-
-        static std::vector<StackId> found;
         if (searchTab)
         {
             if (!skin)
@@ -2723,99 +2697,28 @@ void Application::renderCreativeScreen(float w, float h)
             else
                 m_ui.textWithShadow(m_creativeSearch + (caretOn ? "_" : ""), panelX + 83.0f, panelY + 6.0f, 1.0f,
                                     glm::vec4(1.0f));
-            if (!m_creativeSearch.empty())
-            {
-                std::string want = m_creativeSearch;
-                for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                found.clear();
-                for (int i = 0; i < count; ++i)
-                {
-                    std::string name = displayName(items[i]);
-                    for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    if (name.find(want) != std::string::npos) found.push_back(items[i]);
-                }
-                items = found.data();
-                count = static_cast<int>(found.size());
-            }
         }
-
-        static std::vector<int> entries;
-        entries.clear();
-        for (int i = 0; i < count; ++i)
-            if (items[i] != Items::SpawnEgg && items[i] != Items::Potion && items[i] != Items::SplashPotion &&
-                items[i] != Items::LingeringPotion)
-                entries.push_back(items[i]);
-        const bool eggs = m_creativeTab == 4 || searchTab;
-        if (eggs)
-            for (int mob = 0; mob < mobTypeCount(); ++mob)
-            {
-                unsigned int shell = 0, spots = 0;
-                if (!spawnEggColours(static_cast<MobId>(mob), shell, spots)) continue;
-                const ItemStack egg{ Items::SpawnEgg, 1, mob };
-                if (searchTab && !m_creativeSearch.empty())
-                {
-                    std::string want = m_creativeSearch, name = stackName(egg);
-                    for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    if (name.find(want) == std::string::npos) continue;
-                }
-                entries.push_back(Items::SpawnEgg | (mob << 16));
-            }
-        if (eggs)
-            for (const StackId form : { static_cast<StackId>(Items::Potion), static_cast<StackId>(Items::SplashPotion),
-                                        static_cast<StackId>(Items::LingeringPotion) })
-                for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
-                    for (int variant = 0; variant < 3; ++variant)
-                    {
-                        Brewing::Brew brew{ static_cast<Brewing::Potion>(p), variant == 1, variant == 2 };
-                        if ((variant == 1 && !Brewing::canExtend(brew.potion)) || (variant == 2 && !Brewing::canStrengthen(brew.potion)))
-                            continue;
-                        const int damage = Brewing::encode(brew);
-                        if (searchTab && !m_creativeSearch.empty())
-                        {
-                            std::string want = m_creativeSearch, name = stackName(ItemStack{ form, 1, damage });
-                            for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                            for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                            if (name.find(want) == std::string::npos) continue;
-                        }
-                        entries.push_back(form | (damage << 16));
-                    }
-        if (eggs)
+        if (m_creativeTab == TAB_HOTBARS)
         {
-            std::vector<int> arrows;
-            for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
-                for (int variant = 0; variant < 2; ++variant)
+            for (int row = 0; row < 9; ++row)
+                for (int column = 0; column < 9; ++column)
                 {
-                    const Brewing::Brew brew{ static_cast<Brewing::Potion>(p), false, variant == 1 };
-                    if (variant == 1 && !Brewing::canStrengthen(brew.potion)) continue;
-                    const std::vector<Brewing::Dose> doses = Brewing::dosesOf(brew);
-                    if (doses.empty()) continue;
-                    const int damage = Brewing::tippedDamage(doses.front().kind, doses.front().amplifier);
-                    if (std::find(arrows.begin(), arrows.end(), damage) != arrows.end()) continue;
-                    arrows.push_back(damage);
-                    if (searchTab && !m_creativeSearch.empty())
-                    {
-                        std::string want = m_creativeSearch, name = stackName(ItemStack{ Items::TippedArrow, 1, damage });
-                        for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                        for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                        if (name.find(want) == std::string::npos) continue;
-                    }
-                    entries.push_back(static_cast<int>(Items::TippedArrow) | (damage << 16));
+                    const ItemStack& saved = m_savedHotbars[static_cast<size_t>(row)][static_cast<size_t>(column)];
+                    entries.push_back(saved.empty() ? 0 : (static_cast<int>(saved.id) | (saved.damage << 16)));
                 }
         }
-        if (eggs)
-            for (int variant = 0; variant < Paintings::count(); ++variant)
+        else if (searchTab && !m_creativeSearch.empty())
+        {
+            std::string want = m_creativeSearch;
+            for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            for (int entry : tabEntries(SEARCH_TAB))
             {
-                if (searchTab && !m_creativeSearch.empty())
-                {
-                    std::string want = m_creativeSearch;
-                    std::string name = std::string("painting ") + Paintings::variants()[static_cast<size_t>(variant)].title;
-                    for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    if (name.find(want) == std::string::npos) continue;
-                }
-                entries.push_back(Items::Painting | ((variant + 1) << 16));
+                std::string name = stackName(ItemStack{ static_cast<StackId>(entry & 0xFFFF), 1, entry >> 16 });
+                for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                if (name.find(want) != std::string::npos) entries.push_back(entry);
             }
+        }
+        else entries = tabEntries(m_creativeTab);
         count = static_cast<int>(entries.size());
 
         // A tab with more in it than the grid holds scrolls on the wheel.
@@ -2831,7 +2734,7 @@ void Application::renderCreativeScreen(float w, float h)
                 well(x, y);
 
                 const int cell = (row + m_paletteRow) * PALETTE_COLUMNS + column;
-                if (cell >= count) continue;
+                if (cell >= count || (entries[cell] & 0xFFFF) == 0) continue;
                 drawItem(x, y, SLOT, static_cast<StackId>(entries[cell] & 0xFFFF), 0, glm::vec4(1.0f), entries[cell] >> 16);
                 m_slotBoxes.push_back({ SlotBox::Kind::Palette, entries[cell],
                                         x - 1.0f, y - 1.0f, PITCH });
@@ -3321,6 +3224,17 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
             break;
 
         case SlotBox::Kind::Palette:
+            if (m_creativeTab == TAB_HOTBARS)
+            {
+                for (const auto& row : m_savedHotbars)
+                    for (const ItemStack& saved : row)
+                        if (!saved.empty() && (static_cast<int>(saved.id) | (saved.damage << 16)) == box->index)
+                        {
+                            m_inventory.cursor() = saved;
+                            m_audio.play(Sound::Click, 0.4f);
+                            return;
+                        }
+            }
             m_inventory.takeFromPalette(static_cast<BlockId>(box->index & 0xFFFF));
             if (!m_inventory.cursor().empty()) m_inventory.cursor().damage = box->index >> 16;
             m_audio.play(Sound::Click, 0.4f);
