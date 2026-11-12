@@ -49,6 +49,10 @@ public:
     void update(const glm::vec3& playerPosition);
 
     BlockId getBlock(int x, int y, int z) const;
+    bool waterlogged(int x, int y, int z) const;
+    BlockId fluidAt(int x, int y, int z) const;
+    BlockId rawBlock(int x, int y, int z) const;
+    void setWaterlogged(int x, int y, int z, bool on);
     int bubbleColumnAt(int x, int y, int z) const;
     // Player-driven edit: updates light, flags neighbours for remeshing and
     // marks the chunk as needing a save.

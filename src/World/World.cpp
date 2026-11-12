@@ -156,6 +156,50 @@ void World::markNeighboursDirty(ChunkPos pos)
             markDirty(pos.x + dx, pos.z + dz);
 }
 
+bool World::waterlogged(int x, int y, int z) const
+{
+    if (y < 0 || y >= Chunk::SY) return false;
+    Chunk* chunk = chunkAt(floorDiv(x, Chunk::SX), floorDiv(z, Chunk::SZ));
+    if (!chunk || chunk->state.load() < ChunkState::Generated) return false;
+    return chunk->waterlogged(floorMod(x, Chunk::SX), y, floorMod(z, Chunk::SZ));
+}
+
+BlockId World::fluidAt(int x, int y, int z) const
+{
+    return waterlogged(x, y, z) ? Blocks::Water : getBlock(x, y, z);
+}
+
+BlockId World::rawBlock(int x, int y, int z) const
+{
+    const BlockId id = getBlock(x, y, z);
+    return waterlogged(x, y, z) ? static_cast<BlockId>(id | WATERLOGGED) : id;
+}
+
+void World::setWaterlogged(int x, int y, int z, bool on)
+{
+    if (y < 0 || y >= Chunk::SY) return;
+    const int chunkX = floorDiv(x, Chunk::SX);
+    const int chunkZ = floorDiv(z, Chunk::SZ);
+    Chunk* chunk = chunkAt(chunkX, chunkZ);
+    if (!chunk || chunk->state.load() < ChunkState::Generated) return;
+    const int lx = floorMod(x, Chunk::SX);
+    const int lz = floorMod(z, Chunk::SZ);
+    if (on && !canWaterlog(chunk->getBlock(lx, y, lz))) return;
+    if (chunk->waterlogged(lx, y, lz) == on) return;
+    chunk->setWaterlogged(lx, y, lz, on);
+    chunk->modified = true;
+    chunk->meshDirty = true;
+    if (m_recordChanges)
+    {
+        if (m_changes.size() >= 262144) m_changes.clear();
+        m_changes.emplace_back(x, y, z);
+    }
+    if (lx == 0) markDirty(chunkX - 1, chunkZ);
+    if (lx == Chunk::SX - 1) markDirty(chunkX + 1, chunkZ);
+    if (lz == 0) markDirty(chunkX, chunkZ - 1);
+    if (lz == Chunk::SZ - 1) markDirty(chunkX, chunkZ + 1);
+}
+
 void World::setBlock(int x, int y, int z, BlockId id)
 {
     if (y < 0 || y >= Chunk::SY) return;
@@ -168,9 +212,16 @@ void World::setBlock(int x, int y, int z, BlockId id)
     const int lx = floorMod(x, Chunk::SX);
     const int lz = floorMod(z, Chunk::SZ);
     const BlockId previous = chunk->getBlock(lx, y, lz);
-    if (previous == id) return;
+    const bool wasWet = chunk->waterlogged(lx, y, lz);
+    const bool forceWet = (id & WATERLOGGED) != 0;
+    const bool forceDry = (id & DRAINED) != 0;
+    id = static_cast<BlockId>(id & ~(WATERLOGGED | DRAINED));
+    if (wasWet && !forceWet && !forceDry && id == Blocks::Air) id = Blocks::Water;
+    const bool wet = canWaterlog(id) && !forceDry && (forceWet || wasWet);
+    if (previous == id && wet == wasWet) return;
 
-    chunk->setBlockRaw(lx, y, lz, id);
+    chunk->setBlockRaw(lx, y, lz, static_cast<BlockId>(wet ? (id | WATERLOGGED) : id));
+    if (!wet) chunk->setWaterlogged(lx, y, lz, false);
     chunk->modified = true;
     chunk->meshDirty = true;
     if (m_recordChanges)
@@ -491,7 +542,7 @@ void World::buildSnapshot(const Chunk& chunk, MeshSnapshot& snapshot) const
                 const int index = MeshSnapshot::index(x, y, z);
                 if (source)
                 {
-                    snapshot.blocks[index] = source->getBlock(sx, y, sz);
+                    snapshot.blocks[index] = source->rawBlock(sx, y, sz);
                     snapshot.light[index] = static_cast<uint8_t>((source->skyLight(sx, y, sz) << 4)
                                                                  | source->blockLight(sx, y, sz));
                 }

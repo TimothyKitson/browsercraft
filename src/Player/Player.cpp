@@ -15,18 +15,18 @@ namespace
     // stood on dry land by somebody in creative.
     bool besideWater(const World& world, int x, int y, int z)
     {
-        return isWater(world.getBlock(x + 1, y, z)) ||
-               isWater(world.getBlock(x - 1, y, z)) ||
-               isWater(world.getBlock(x, y, z + 1)) ||
-               isWater(world.getBlock(x, y, z - 1)) ||
-               isWater(world.getBlock(x, y + 1, z));
+        return isWater(world.fluidAt(x + 1, y, z)) ||
+               isWater(world.fluidAt(x - 1, y, z)) ||
+               isWater(world.fluidAt(x, y, z + 1)) ||
+               isWater(world.fluidAt(x, y, z - 1)) ||
+               isWater(world.fluidAt(x, y + 1, z));
     }
 
     // Water, lava, or something standing in water: all of them hold
     // the player up and all of them slow them down.
     bool swimmableAt(const World& world, int x, int y, int z)
     {
-        const BlockId block = world.getBlock(x, y, z);
+        const BlockId block = world.fluidAt(x, y, z);
         if (isLiquid(block)) return true;
         return isWaterPlant(block) && besideWater(world, x, y, z);
     }
@@ -406,9 +406,9 @@ bool Player::isHeadUnderwater(const World& world) const
     const int y = static_cast<int>(std::floor(eye.y));
     const int z = static_cast<int>(std::floor(eye.z));
 
-    const BlockId here = world.getBlock(x, y, z);
+    const BlockId here = world.fluidAt(x, y, z);
     if (isWater(here))
-        return isWater(world.getBlock(x, y + 1, z)) || eye.y < static_cast<float>(y) + fluidAmount(here) / 9.0f;
+        return isWater(world.fluidAt(x, y + 1, z)) || eye.y < static_cast<float>(y) + fluidAmount(here) / 9.0f;
 
     // A blade of seagrass stands in the water rather than beside it,
     // so swimming through one is still swimming. Without this, a kelp

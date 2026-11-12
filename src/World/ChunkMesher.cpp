@@ -339,9 +339,9 @@ namespace
 
     float fluidHeightAt(const MeshSnapshot& snap, int x, int y, int z, BlockId base)
     {
-        const BlockId here = snap.block(x, y, z);
+        const BlockId here = snap.fluid(x, y, z);
         if (fluidBase(here) == base)
-            return fluidBase(snap.block(x, y + 1, z)) == base ? 1.0f : fluidAmount(here) / 9.0f;
+            return fluidBase(snap.fluid(x, y + 1, z)) == base ? 1.0f : fluidAmount(here) / 9.0f;
         return blockInfo(here).collides ? -1.0f : 0.0f;
     }
 
@@ -378,14 +378,14 @@ namespace
         glm::vec2 flow(0.0f);
         for (const auto& d : DIRS)
         {
-            const BlockId next = snap.block(x + d[0], y, z + d[1]);
+            const BlockId next = snap.fluid(x + d[0], y, z + d[1]);
             if (isFluid(next) && fluidBase(next) != base) continue;
             const float height = fluidBase(next) == base ? fluidAmount(next) / 9.0f : 0.0f;
             float push = 0.0f;
             if (height == 0.0f)
             {
                 if (blockInfo(next).collides) continue;
-                const BlockId below = snap.block(x + d[0], y - 1, z + d[1]);
+                const BlockId below = snap.fluid(x + d[0], y - 1, z + d[1]);
                 if (!isFluid(below) || fluidBase(below) == base)
                 {
                     const float under = fluidBase(below) == base ? fluidAmount(below) / 9.0f : 0.0f;
@@ -406,7 +406,7 @@ namespace
         const BlockId base = fluidBase(id);
         const BlockInfo& still = blockInfo(base);
         const bool water = base == Blocks::Water;
-        const bool covered = fluidBase(snap.block(lx, y + 1, lz)) == base;
+        const bool covered = fluidBase(snap.fluid(lx, y + 1, lz)) == base;
 
         const float origin = fluidHeightAt(snap, lx, y, lz, base);
         float corner[2][2];
@@ -481,7 +481,7 @@ namespace
             const int nx = lx + face.nx;
             const int ny = y + face.ny;
             const int nz = lz + face.nz;
-            const BlockId next = snap.block(nx, ny, nz);
+            const BlockId next = snap.fluid(nx, ny, nz);
             if (fluidBase(next) == base) continue;
             if (isOpaque(next)) continue;
             if (water && isWaterPlant(next)) continue;
@@ -2941,6 +2941,7 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
                 t_tint.grass = snapshot.grass[column];
                 t_tint.foliage = snapshot.foliage[column];
                 t_tint.water = snapshot.water[column];
+                if (snapshot.wet(lx, y, lz)) emitFluid(snapshot, lx, y, lz, Blocks::Water, out.transparentVertices);
                 if (isSign(id))
                 {
                     out.signs.push_back(glm::ivec3(snapshot.pos.x * Chunk::SX + lx, y, snapshot.pos.z * Chunk::SZ + lz));

@@ -1261,7 +1261,7 @@ namespace
                                     const int sz = z + dz * Chunk::SZ;
                                     if (!MeshSnapshot::inRange(sx, y, sz)) continue;
                                     snapshot.blocks[MeshSnapshot::index(sx, y, sz)] =
-                                        from->getBlock(x, y, z);
+                                        from->rawBlock(x, y, z);
                                 }
                     }
 

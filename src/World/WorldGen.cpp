@@ -1800,7 +1800,9 @@ namespace
     {
         const int lx = worldX - chunk.position().x * Chunk::SX;
         const int lz = worldZ - chunk.position().z * Chunk::SZ;
-        if (Chunk::inBounds(lx, y, lz)) chunk.setBlockRaw(lx, y, lz, block);
+        if (!Chunk::inBounds(lx, y, lz)) return;
+        const bool soaked = isWater(chunk.getBlock(lx, y, lz)) && canWaterlog(block);
+        chunk.setBlockRaw(lx, y, lz, soaked ? static_cast<BlockId>(block | WATERLOGGED) : block);
     }
 
     // Every chest in a landmark goes down through here, off the one

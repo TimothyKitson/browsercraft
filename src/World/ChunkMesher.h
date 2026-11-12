@@ -38,7 +38,17 @@ struct MeshSnapshot
         if (y < 0) return Blocks::Stone;         // below the world: never draw downward faces
         if (y >= PY) return Blocks::Air;         // above the world: open sky
         if (!inRange(x, y, z)) return Blocks::Air;
-        return blocks[index(x, y, z)];
+        return static_cast<BlockId>(blocks[index(x, y, z)] & ~WATERLOGGED);
+    }
+
+    bool wet(int x, int y, int z) const
+    {
+        return y >= 0 && y < PY && inRange(x, y, z) && (blocks[index(x, y, z)] & WATERLOGGED) != 0;
+    }
+
+    BlockId fluid(int x, int y, int z) const
+    {
+        return wet(x, y, z) ? Blocks::Water : block(x, y, z);
     }
 
     uint8_t skyLight(int x, int y, int z) const

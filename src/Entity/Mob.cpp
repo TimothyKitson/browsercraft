@@ -653,7 +653,7 @@ void Mob::burnInSunlight(float deltaTime, const World& world, float daylight)
     const int z = static_cast<int>(std::floor(m_position.z));
     const int head = static_cast<int>(std::floor(m_position.y + height() * 0.9f));
 
-    const bool inLiquid = isLiquid(world.getBlock(x, head, z));
+    const bool inLiquid = isLiquid(world.fluidAt(x, head, z));
 
     if (!burnsNow(type(), daylight, world.skyLight(x, head, z), inLiquid))
     {
@@ -680,7 +680,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (m_type == MobId::Guardian || m_type == MobId::ElderGuardian || m_type == MobId::Wolf)
     {
         const bool wasWet = m_wet;
-        m_wet = isLiquid(world.getBlock(static_cast<int>(std::floor(m_position.x)), static_cast<int>(std::floor(m_position.y + 0.4f)),
+        m_wet = isLiquid(world.fluidAt(static_cast<int>(std::floor(m_position.x)), static_cast<int>(std::floor(m_position.y + 0.4f)),
                                         static_cast<int>(std::floor(m_position.z))));
         if (m_type == MobId::Wolf && wasWet && !m_wet && alive())
             emitNamed("mob/wolf/shake", Sound::MobWolfSay, 0.4f, 0.9f + random01() * 0.2f);
@@ -1530,7 +1530,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         const int bx = static_cast<int>(std::floor(m_position.x));
         const int by = static_cast<int>(std::floor(m_position.y + 0.4f));
         const int bz = static_cast<int>(std::floor(m_position.z));
-        const bool wet = isLiquid(world.getBlock(bx, by, bz));
+        const bool wet = isLiquid(world.fluidAt(bx, by, bz));
         const char* stem = nullptr;
         switch (m_type)
         {

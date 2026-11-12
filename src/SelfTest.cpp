@@ -14979,6 +14979,58 @@ namespace
     }
 
 
+    void testWaterlogging()
+    {
+        section("blocks: waterlogging");
+        check(canWaterlog(Blocks::StoneStairsNorth) && canWaterlog(Blocks::Chest) && canWaterlog(Blocks::LadderNorth) &&
+                  canWaterlog(Blocks::Lantern) && canWaterlog(Blocks::Scaffolding),
+              "stairs, chests, ladders, lanterns and scaffolding hold water");
+        check(!canWaterlog(Blocks::Stone) && !canWaterlog(Blocks::Air) && !canWaterlog(Blocks::Water) && !canWaterlog(Blocks::Kelp),
+              "full blocks, air, water and kelp do not");
+
+        Chunk chunk(ChunkPos{ 0, 0 });
+        chunk.setBlockRaw(3, 40, 3, static_cast<BlockId>(Blocks::StoneStairsNorth | WATERLOGGED));
+        check(chunk.getBlock(3, 40, 3) == Blocks::StoneStairsNorth && chunk.waterlogged(3, 40, 3),
+              "a waterlogged stair still reads as a stair, with water in it");
+        chunk.setBlockRaw(3, 40, 3, Blocks::StoneStairsEast);
+        check(chunk.waterlogged(3, 40, 3), "turning it keeps the water");
+        chunk.setBlockRaw(3, 40, 3, Blocks::Stone);
+        check(!chunk.waterlogged(3, 40, 3) && chunk.getBlock(3, 40, 3) == Blocks::Stone, "a full block put there pushes the water out");
+
+        chunk.setBlockRaw(5, 40, 5, static_cast<BlockId>(Blocks::Chest | WATERLOGGED));
+        chunk.state.store(ChunkState::Generated);
+        std::error_code ec;
+        std::filesystem::create_directories("selftest-wet/chunks", ec);
+        WorldSave::saveChunk("selftest-wet", chunk);
+        Chunk loaded(ChunkPos{ 0, 0 });
+        check(WorldSave::loadChunk("selftest-wet", loaded) && loaded.waterlogged(5, 40, 5) && loaded.getBlock(5, 40, 5) == Blocks::Chest,
+              "a waterlogged chest is saved and loaded with its water");
+        std::filesystem::remove_all("selftest-wet", ec);
+
+        MeshSnapshot snapshot;
+        snapshot.pos = ChunkPos{ 0, 0 };
+        snapshot.blocks[static_cast<size_t>(MeshSnapshot::index(6, 60, 6))] = Blocks::StoneStairsNorth;
+        MeshResult dry;
+        buildChunkMesh(snapshot, dry);
+        snapshot.blocks[static_cast<size_t>(MeshSnapshot::index(6, 60, 6))] = static_cast<BlockId>(Blocks::StoneStairsNorth | WATERLOGGED);
+        MeshResult wet;
+        buildChunkMesh(snapshot, wet);
+        check(snapshot.block(6, 60, 6) == Blocks::StoneStairsNorth && snapshot.fluid(6, 60, 6) == Blocks::Water,
+              "the mesher sees the stair, and water when it asks about fluids");
+        check(wet.transparentVertices.size() > dry.transparentVertices.size() && wet.opaqueVertices.size() == dry.opaqueVertices.size(),
+              "a waterlogged stair is drawn with water in it as well as the stair");
+        snapshot.blocks[static_cast<size_t>(MeshSnapshot::index(7, 60, 6))] = Blocks::Water;
+        MeshResult beside;
+        buildChunkMesh(snapshot, beside);
+        MeshSnapshot lone;
+        lone.pos = ChunkPos{ 0, 0 };
+        lone.blocks[static_cast<size_t>(MeshSnapshot::index(7, 60, 6))] = Blocks::Water;
+        MeshResult alone;
+        buildChunkMesh(lone, alone);
+        check(beside.transparentVertices.size() < wet.transparentVertices.size() + alone.transparentVertices.size(),
+              "water beside it joins it with no wall in between");
+    }
+
     void testSnowLayers()
     {
         section("snow layers: one to eight deep, stacked by hand, laid by snowfall");
@@ -18322,6 +18374,7 @@ int runSelfTest()
     testFallingBlocks();
     testGameRules();
     testSnowLayers();
+    testWaterlogging();
     testHeads();
     testDrowning();
     testQuickMoveKeepsMetadata();

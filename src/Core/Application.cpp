@@ -3417,7 +3417,7 @@ bool Application::frame()
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
-            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
+            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "waterlog" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" || m_startupScreen == "railhill" || m_startupScreen == "turned" || m_startupScreen == "jockeys" || m_startupScreen == "dungeon" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" || m_startupScreen == "zoo" || m_startupScreen == "llamas" ||
@@ -3560,7 +3560,7 @@ bool Application::frame()
                                   m_startupScreen != "mushrooms" &&
                                   m_startupScreen != "lush" &&
                                   m_startupScreen != "farm" &&
-                                  m_startupScreen != "corals" &&
+                                  m_startupScreen != "corals" && m_startupScreen != "waterlog" &&
                                   m_startupScreen != "ice" &&
                                   m_startupScreen != "wiring" &&
                                   m_startupScreen != "utility" &&
@@ -4097,7 +4097,7 @@ bool Application::frame()
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
                 m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
-                m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "ice" ||
+                m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "waterlog" || m_startupScreen == "ice" ||
                 m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
@@ -4418,6 +4418,30 @@ bool Application::frame()
                     m_world->setBlock(px + 14, py, pz - 9, Blocks::Bookshelf);
                     m_world->setBlock(px + 14, py, pz + 9, Blocks::DiamondOre);
                     m_world->setBlock(px + 14, py + 1, pz + 9, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "waterlog")
+                {
+                    m_camera.setOrientation(0.0f, -30.0f);
+                    for (int dx = -2; dx <= 12; ++dx)
+                        for (int dz = -6; dz <= 6; ++dz)
+                        {
+                            for (int dy = -5; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            const bool pool = dx >= 3 && dx <= 11 && dz >= -5 && dz <= 5;
+                            m_world->setBlock(px + dx, py - 5, pz + dz, Blocks::Sand);
+                            for (int dy = -4; dy <= -1; ++dy)
+                                m_world->setBlock(px + dx, py + dy, pz + dz, pool && dy >= -3 ? static_cast<BlockId>(Blocks::Water) : static_cast<BlockId>(Blocks::Sand));
+                        }
+                    const BlockId wet[] = { Blocks::StoneStairsEast, Blocks::Chest, Blocks::Lantern, Blocks::LadderNorth, fenceOfWood(0),
+                                            Blocks::Scaffolding };
+                    for (int k = 0; k < 6; ++k)
+                        m_world->setBlock(px + 5 + (k % 3) * 2, py - 1, pz - 3 + (k / 3) * 3, static_cast<BlockId>(wet[k] | WATERLOGGED));
+                    for (int k = 0; k < 3; ++k)
+                    {
+                        m_world->setBlock(px + 5 + k * 2, py - 3, pz + 3, Blocks::Stone);
+                        m_world->setBlock(px + 5 + k * 2, py - 2, pz + 3, static_cast<BlockId>(Blocks::StoneStairsEast | WATERLOGGED));
+                    }
+                    m_world->setBlock(px + 2, py - 1, pz, Blocks::StoneStairsEast);
+                    m_player.position = glm::vec3(px + 0.5f, static_cast<float>(py), pz + 0.5f);
                 }
                 if (m_startupScreen == "corals")
                 {
@@ -10111,7 +10135,7 @@ void Application::updateMovementAudio(const glm::vec3& positionBefore, bool jump
         {
             m_paddleTimer = m_elapsedSeconds + 0.9f;
             const glm::ivec3 hull(glm::floor(ride->position() + glm::vec3(0.0f, -0.1f, 0.0f)));
-            const bool afloat = isWater(m_world->getBlock(hull.x, hull.y, hull.z)) || isWater(m_world->getBlock(hull.x, hull.y + 1, hull.z));
+            const bool afloat = isWater(m_world->fluidAt(hull.x, hull.y, hull.z)) || isWater(m_world->fluidAt(hull.x, hull.y + 1, hull.z));
             m_audio.playNamed(afloat ? "entity/boat/paddle_water" : "entity/boat/paddle_land", Sound::Click, 0.5f, 0.8f + wiggle * 0.4f);
         }
     }
@@ -18557,6 +18581,17 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Pickup, 0.5f, 1.2f);
                 return;
             }
+            if (m_world->waterlogged(scoop.block.x, scoop.block.y, scoop.block.z))
+            {
+                const BlockId dried = static_cast<BlockId>(looking | DRAINED);
+                m_world->setBlock(scoop.block.x, scoop.block.y, scoop.block.z, dried);
+                m_net.onLocalBlockChange(scoop.block.x, scoop.block.y, scoop.block.z, dried);
+                stack.count -= 1;
+                if (stack.count <= 0) stack.clear();
+                if (m_inventory.add(Items::WaterBucket, 1) > 0) m_drops.spawn(m_player.position, Items::WaterBucket, 1);
+                m_audio.playNamed("item/bucket/fill", Sound::Pickup, 1.0f, 1.0f);
+                return;
+            }
             if (!isFluidSource(looking)) return;
 
             m_world->setBlock(scoop.block.x, scoop.block.y, scoop.block.z, Blocks::Air);
@@ -18571,6 +18606,26 @@ void Application::handlePlacement()
             if (m_inventory.add(filled, 1) > 0) m_drops.spawn(m_player.position, filled, 1);
 
             m_audio.play(Sound::Pickup, 0.5f, 0.8f);
+            return;
+        }
+
+        if (stack.id == Items::WaterBucket && m_dimension == Dimension::Nether)
+        {
+            const glm::vec3 at = glm::vec3(scoop.previous) + glm::vec3(0.5f);
+            namedAt("random/fizz", at, 0.5f, 2.6f, Sound::Click);
+            sprites(SpriteParticles::Kind::Smoke, at, 8, 0.5f, 0.3f, 0.3f, 1.0f);
+            if (!m_player.creative()) { stack.id = Items::Bucket; stack.count = 1; }
+            return;
+        }
+
+        if (stack.id == Items::WaterBucket && canWaterlog(looking) &&
+            !m_world->waterlogged(scoop.block.x, scoop.block.y, scoop.block.z))
+        {
+            const BlockId soaked = static_cast<BlockId>(looking | WATERLOGGED);
+            m_world->setBlock(scoop.block.x, scoop.block.y, scoop.block.z, soaked);
+            m_net.onLocalBlockChange(scoop.block.x, scoop.block.y, scoop.block.z, soaked);
+            if (!m_player.creative()) { stack.id = Items::Bucket; stack.count = 1; }
+            m_audio.playNamed("item/bucket/empty", Sound::Place, 1.0f, 1.0f);
             return;
         }
 
@@ -20392,8 +20447,13 @@ void Application::handlePlacement()
         else if (ground != Blocks::Bamboo) placing = Blocks::BambooShoot;
     }
 
+    {
+        const BlockId replaced = m_world->getBlock(target.x, target.y, target.z);
+        if (replaced == Blocks::Water && canWaterlog(placing)) placing = static_cast<BlockId>(placing | WATERLOGGED);
+    }
     m_world->setBlock(target.x, target.y, target.z, placing);
     m_net.onLocalBlockChange(target.x, target.y, target.z, placing);
+    placing = static_cast<BlockId>(placing & ~WATERLOGGED);
     m_audio.playPlace(placing);
     checkFalling(target);
     if (isLeaves(placing)) m_placedLeaves.insert({ static_cast<int>(m_dimension), target.x, target.y, target.z });
@@ -24169,13 +24229,14 @@ namespace
             if (y < 0) return Blocks::Bedrock;
             const Chunk* chunk = world->chunkAt(World::floorDiv(x, Chunk::SX), World::floorDiv(z, Chunk::SZ));
             if (!chunk || chunk->state.load() < ChunkState::Generated) return Blocks::Bedrock;
-            return world->getBlock(x, y, z);
+            return world->fluidAt(x, y, z);
         }
 
         std::vector<glm::ivec3> fizzes;
 
         void set(int x, int y, int z, BlockId block) override
         {
+            if (world->waterlogged(x, y, z)) return;
             if ((block == Blocks::Obsidian || block == Blocks::Cobblestone || block == Blocks::Stone) && isLava(world->getBlock(x, y, z)))
                 fizzes.emplace_back(x, y, z);
             else if (block == Blocks::Stone && isWater(world->getBlock(x, y, z)))
@@ -24863,10 +24924,12 @@ void Application::soakSponge(const glm::ivec3& at)
             const glm::ivec3 next(open[i].first.x + d[0], open[i].first.y + d[1], open[i].first.z + d[2]);
             if (!seen.insert({ next.x, next.y, next.z }).second) continue;
             const BlockId there = m_world->getBlock(next.x, next.y, next.z);
-            const bool wet = isWater(there) || there == Blocks::Seagrass || isTallSeagrass(there) || there == Blocks::Kelp || there == Blocks::KelpTop;
+            const bool logged = m_world->waterlogged(next.x, next.y, next.z);
+            const bool wet = logged || isWater(there) || there == Blocks::Seagrass || isTallSeagrass(there) || there == Blocks::Kelp || there == Blocks::KelpTop;
             if (!wet) continue;
-            m_world->setBlock(next.x, next.y, next.z, Blocks::Air);
-            m_net.onLocalBlockChange(next.x, next.y, next.z, Blocks::Air);
+            const BlockId left = logged ? static_cast<BlockId>(there | DRAINED) : static_cast<BlockId>(Blocks::Air);
+            m_world->setBlock(next.x, next.y, next.z, left);
+            m_net.onLocalBlockChange(next.x, next.y, next.z, left);
             if (++soaked >= 65) break;
             if (open[i].second + 1 < 7) open.push_back({ next, open[i].second + 1 });
         }
@@ -27781,7 +27844,7 @@ void Application::updateBackgroundMusic(float deltaTime)
         return;
     }
     const bool menu = !inGame() || !m_world || m_menuWorld;
-    const bool underwater = !menu && m_world && isWater(m_world->getBlock(static_cast<int>(std::floor(m_player.eyePosition().x)),
+    const bool underwater = !menu && m_world && isWater(m_world->fluidAt(static_cast<int>(std::floor(m_player.eyePosition().x)),
                                                                           static_cast<int>(std::floor(m_player.eyePosition().y)),
                                                                           static_cast<int>(std::floor(m_player.eyePosition().z))));
     bool dragon = false;
@@ -28520,6 +28583,8 @@ void Application::renderDebugOverlay()
             std::snprintf(buffer, sizeof(buffer), "Targeted Block: %d, %d, %d", hit.block.x, hit.block.y, hit.block.z);
             right(buffer);
             right(("minecraft:" + RecipeBook::idOf(static_cast<StackId>(axisBase(target)))).c_str());
+            if (canWaterlog(target))
+                right(m_world->waterlogged(hit.block.x, hit.block.y, hit.block.z) ? "waterlogged: true" : "waterlogged: false");
             if (lightEmission(target) > 0)
             {
                 std::snprintf(buffer, sizeof(buffer), "light: %d", lightEmission(target));

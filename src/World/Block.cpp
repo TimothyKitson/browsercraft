@@ -6401,3 +6401,31 @@ BlockId pottedOf(BlockId plant)
         if (POTTABLE[i] == plant) return static_cast<BlockId>(Blocks::PottedFirst + i);
     return Blocks::Air;
 }
+
+bool canWaterlog(BlockId id)
+{
+    if (id == Blocks::Air || isFluid(id) || isWaterPlant(id)) return false;
+    if (isStairs(id) || isSlab(id) || isTopSlab(id) || isFence(id) || isWall(id) || isPane(id) || isChain(id) ||
+        isLantern(id) || isLadder(id) || isSign(id) || isHangingSign(id) || isTrapdoor(id) || isIronTrapdoor(id) ||
+        isChestFamily(id) || isRail(id) || isRailSlope(id) || isSpecialRail(id) || isLightningRod(id) || isCandle(id) ||
+        isCampfire(id) || isBigDripleaf(id) || isBigDripleafStem(id) || isSmallDripleaf(id) || isGlowLichen(id) ||
+        isAmethystGrowth(id) || isPointedDripstone(id) || isDecoratedPot(id) || isSculkVein(id) || isAnySculkSensor(id) ||
+        isLightBlock(id) || isWallPanel(id))
+        return true;
+    if (id >= Blocks::CopperGrateFirst && id <= Blocks::CopperGrateLast) return true;
+    switch (id)
+    {
+        case Blocks::Scaffolding:
+        case Blocks::Conduit:
+        case Blocks::HeavyCore:
+        case Blocks::SculkShrieker:
+        case Blocks::Barrier:
+        case Blocks::HangingRoots:
+        case Blocks::MangroveRoots:
+        case Blocks::MangrovePropagule:
+        case Blocks::MangrovePropaguleHanging:
+            return true;
+        default:
+            return false;
+    }
+}

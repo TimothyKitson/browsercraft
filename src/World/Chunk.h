@@ -55,13 +55,33 @@ public:
     BlockId getBlock(int x, int y, int z) const
     {
         if (!inBounds(x, y, z)) return Blocks::Air;
+        return static_cast<BlockId>(m_blocks[index(x, y, z)] & ~WATERLOGGED);
+    }
+
+    BlockId rawBlock(int x, int y, int z) const
+    {
+        if (!inBounds(x, y, z)) return Blocks::Air;
         return m_blocks[index(x, y, z)];
+    }
+
+    bool waterlogged(int x, int y, int z) const
+    {
+        return inBounds(x, y, z) && (m_blocks[index(x, y, z)] & WATERLOGGED) != 0;
+    }
+
+    void setWaterlogged(int x, int y, int z, bool on)
+    {
+        if (!inBounds(x, y, z)) return;
+        BlockId& cell = m_blocks[index(x, y, z)];
+        cell = on ? static_cast<BlockId>(cell | WATERLOGGED) : static_cast<BlockId>(cell & ~WATERLOGGED);
     }
 
     void setBlockRaw(int x, int y, int z, BlockId id)
     {
         if (!inBounds(x, y, z)) return;
-        m_blocks[index(x, y, z)] = id;
+        BlockId& cell = m_blocks[index(x, y, z)];
+        if ((id & WATERLOGGED) == 0 && (cell & WATERLOGGED) != 0 && canWaterlog(id)) id = static_cast<BlockId>(id | WATERLOGGED);
+        cell = id;
     }
 
     uint8_t skyLight(int x, int y, int z) const
