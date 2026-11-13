@@ -1,4 +1,5 @@
 #include "Atlas.h"
+#include <map>
 #include "World/Block.h"
 #include "Game/Banners.h"
 #include "Entity/MobType.h"
@@ -33,6 +34,12 @@ namespace
 }
 
 int Atlas::pixelSize() { return g_atlasPixelSize; }
+
+namespace
+{
+    const Atlas* g_liveAtlas = nullptr;
+    unsigned g_maskGeneration = 0;
+}
 
 TileUV tileUV(int tileIndex)
 {
@@ -12926,13 +12933,139 @@ Atlas::Atlas()
                                                        (static_cast<unsigned int>(g / n) << 8) | static_cast<unsigned int>(b / n);
         }
     }
+    {
+        const int tiles = Atlas::TILES_PER_ROW * Atlas::TILES_PER_ROW;
+        m_maskSize = std::min(m_tilePixels, 32);
+        m_mask.assign(static_cast<size_t>(tiles) * m_maskSize * m_maskSize, 0);
+        for (int tile = 0; tile < tiles; ++tile)
+        {
+            const int originX = (tile % Atlas::TILES_PER_ROW) * m_tilePixels;
+            const int originY = (tile / Atlas::TILES_PER_ROW) * m_tilePixels;
+            for (int y = 0; y < m_maskSize; ++y)
+                for (int x = 0; x < m_maskSize; ++x)
+                {
+                    const int px = originX + (x * m_tilePixels + m_tilePixels / 2) / m_maskSize;
+                    const int py = originY + (y * m_tilePixels + m_tilePixels / 2) / m_maskSize;
+                    m_mask[(static_cast<size_t>(tile) * m_maskSize + y) * m_maskSize + x] =
+                        pixels[static_cast<size_t>(py) * atlasSize + px].a >= 128 ? 1 : 0;
+                }
+        }
+        g_liveAtlas = this;
+        ++g_maskGeneration;
+    }
     createTexture(m_id, pixels, true);
     createTexture(m_normalId, normalPixels, false);
     createTexture(m_specularId, specularPixels, false);
 }
 
+const std::vector<SpriteFace>& Atlas::extrudedSprite(int tile)
+{
+    static std::map<int, std::vector<SpriteFace>> cache;
+    static unsigned built = 0;
+    if (built != g_maskGeneration)
+    {
+        cache.clear();
+        built = g_maskGeneration;
+    }
+    const auto found = cache.find(tile);
+    if (found != cache.end()) return found->second;
+    std::vector<SpriteFace>& faces = cache[tile];
+
+    const TileUV uv = tileUV(tile);
+    const float depth = 1.0f / 16.0f;
+    const float z0 = 0.5f - depth * 0.5f;
+    const float z1 = 0.5f + depth * 0.5f;
+    auto texel = [&](float x, float y, float& u, float& v) {
+        u = uv.u0 + x * (uv.u1 - uv.u0);
+        v = uv.vBottom + y * (uv.vTop - uv.vBottom);
+    };
+    const float fx[4] = { 0.0f, 1.0f, 1.0f, 0.0f };
+    const float fy[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+    for (int side = 0; side < 2; ++side)
+    {
+        SpriteFace face;
+        face.shade = side == 0 ? 1.0f : 0.86f;
+        face.normal = glm::vec3(0.0f, 0.0f, side == 0 ? 1.0f : -1.0f);
+        for (int k = 0; k < 4; ++k)
+        {
+            const int c = side == 0 ? k : 3 - k;
+            face.corner[k] = glm::vec3(fx[c], fy[c], side == 0 ? z1 : z0);
+            texel(fx[c], fy[c], face.u[k], face.v[k]);
+        }
+        faces.push_back(face);
+    }
+
+    const Atlas* atlas = g_liveAtlas;
+    const int n = atlas ? atlas->m_maskSize : 16;
+    const size_t base = static_cast<size_t>(tile) * n * n;
+    auto solid = [&](int x, int y) {
+        if (!atlas || x < 0 || y < 0 || x >= n || y >= n) return false;
+        if (tile < 0 || base + static_cast<size_t>(n) * n > atlas->m_mask.size()) return x >= 0 && y >= 0 && x < n && y < n;
+        return atlas->m_mask[base + static_cast<size_t>(y) * n + x] != 0;
+    };
+    const float cell = 1.0f / static_cast<float>(n);
+    const float nudge = cell * 0.02f;
+    for (int dir = 0; dir < 4; ++dir)
+    {
+        const bool rows = dir < 2;
+        for (int line = 0; line < n; ++line)
+        {
+            int run = -1;
+            for (int at = 0; at <= n; ++at)
+            {
+                const int x = rows ? at : line;
+                const int y = rows ? line : at;
+                const int nx = x + (dir == 2 ? -1 : dir == 3 ? 1 : 0);
+                const int ny = y + (dir == 0 ? -1 : dir == 1 ? 1 : 0);
+                const bool open = at < n && solid(x, y) && !solid(nx, ny);
+                if (open && run < 0) run = at;
+                if (open || run < 0) continue;
+                const int from = run, to = at;
+                run = -1;
+                SpriteFace face;
+                if (rows)
+                {
+                    const float top = 1.0f - static_cast<float>(line) * cell;
+                    const float edgeY = dir == 0 ? top : top - cell;
+                    const float a = static_cast<float>(from) * cell, b = static_cast<float>(to) * cell;
+                    const float rowV = 1.0f - (static_cast<float>(line) + 0.5f) * cell;
+                    face.shade = dir == 0 ? 1.0f : 0.5f;
+                    face.normal = glm::vec3(0.0f, dir == 0 ? 1.0f : -1.0f, 0.0f);
+                    const glm::vec3 p[4] = { { a, edgeY, z0 }, { b, edgeY, z0 }, { b, edgeY, z1 }, { a, edgeY, z1 } };
+                    const float us[4] = { a + nudge, b - nudge, b - nudge, a + nudge };
+                    for (int k = 0; k < 4; ++k)
+                    {
+                        const int c = dir == 0 ? k : 3 - k;
+                        face.corner[k] = p[c];
+                        texel(us[c], rowV, face.u[k], face.v[k]);
+                    }
+                }
+                else
+                {
+                    const float edgeX = dir == 2 ? static_cast<float>(line) * cell : static_cast<float>(line + 1) * cell;
+                    const float a = 1.0f - static_cast<float>(from) * cell, b = 1.0f - static_cast<float>(to) * cell;
+                    const float columnU = (static_cast<float>(line) + 0.5f) * cell;
+                    face.shade = 0.6f;
+                    face.normal = glm::vec3(dir == 2 ? -1.0f : 1.0f, 0.0f, 0.0f);
+                    const glm::vec3 p[4] = { { edgeX, b, z0 }, { edgeX, a, z0 }, { edgeX, a, z1 }, { edgeX, b, z1 } };
+                    const float vs[4] = { b + nudge, a - nudge, a - nudge, b + nudge };
+                    for (int k = 0; k < 4; ++k)
+                    {
+                        const int c = dir == 3 ? k : 3 - k;
+                        face.corner[k] = p[c];
+                        texel(columnU, vs[c], face.u[k], face.v[k]);
+                    }
+                }
+                faces.push_back(face);
+            }
+        }
+    }
+    return faces;
+}
+
 Atlas::~Atlas()
 {
+    if (g_liveAtlas == this) g_liveAtlas = nullptr;
     if (m_id) glDeleteTextures(1, &m_id);
     if (m_normalId) glDeleteTextures(1, &m_normalId);
     if (m_specularId) glDeleteTextures(1, &m_specularId);

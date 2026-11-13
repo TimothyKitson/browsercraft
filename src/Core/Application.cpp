@@ -21223,7 +21223,7 @@ void Application::renderEntityShadows(const glm::mat4& view, const glm::mat4& pr
         }
     };
     for (const Mob& mob : m_entities.mobs())
-        if (mob.alive()) cast(mob.position(), std::clamp(mob.width() * 0.8f, 0.2f, 2.5f), 0.55f);
+        if (mob.alive() && !isTechnicalMob(mob.typeId())) cast(mob.position(), std::clamp(mob.width() * 0.8f, 0.2f, 2.5f), 0.55f);
     for (const auto& [id, peer] : m_net.players())
         if (peer.positioned) cast(peer.smoothed(), 0.5f, 0.55f);
     if (m_perspective != Perspective::FirstPerson && !m_player.spectator()) cast(m_player.position, 0.5f, 0.55f);
@@ -21576,7 +21576,43 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
                 if (tags.find("IsBaby:1") != std::string::npos || tags.find("Age:-") != std::string::npos) made.setBaby(true);
                 if (tags.find("NoAI:1") != std::string::npos) made.keepFromDespawning();
                 if (tags.find("PersistenceRequired:1") != std::string::npos) made.keepFromDespawning();
+                auto quoted = [&](size_t from) {
+                    const size_t open = tags.find_first_of("\"'", from);
+                    if (open == std::string::npos) return std::string();
+                    const size_t close = tags.find(tags[open], open + 1);
+                    return close == std::string::npos ? std::string() : tags.substr(open + 1, close - open - 1);
+                };
+                if ((made.typeId() == MobId::BlockDisplay || made.typeId() == MobId::ItemDisplay) && command.item != Blocks::Air)
+                    made.setGear(Mob::MainHand, static_cast<uint16_t>(command.item), true);
+                if (made.typeId() == MobId::TextDisplay)
+                {
+                    const size_t text = tags.find("text:");
+                    if (text != std::string::npos)
+                    {
+                        std::string said = quoted(text + 5);
+                        const size_t inner = said.find("text");
+                        if (!said.empty() && (said.front() == '{' || inner != std::string::npos))
+                        {
+                            const size_t colon = said.find(':', inner == std::string::npos ? 0 : inner);
+                            const size_t open = said.find('"', colon == std::string::npos ? 0 : colon);
+                            const size_t close = open == std::string::npos ? open : said.find('"', open + 1);
+                            if (open != std::string::npos && close != std::string::npos) said = said.substr(open + 1, close - open - 1);
+                        }
+                        if (said.size() >= 2 && said.front() == '"' && said.back() == '"') said = said.substr(1, said.size() - 2);
+                        made.setCustomName(said);
+                    }
+                }
+                const size_t scale = tags.find("scale:[");
+                if (scale != std::string::npos && isTechnicalMob(made.typeId()))
+                {
+                    const float factor = static_cast<float>(std::atof(tags.c_str() + scale + 7));
+                    if (factor > 0.0f) made.setVariant(static_cast<int>(std::lround(std::min(factor, 64.0f) * 100.0f)));
+                }
+                const size_t rotation = tags.find("Rotation:[");
+                if (rotation != std::string::npos)
+                    made.setYaw(static_cast<float>(std::atof(tags.c_str() + rotation + 10)) + 90.0f);
             }
+            if (isTechnicalMob(m_entities.mobs().back().typeId())) m_entities.mobs().back().keepFromDespawning();
             break;
 
         case Chat::Kind::GameMode:
@@ -21636,7 +21672,8 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             {
                 Mob& mob = m_entities.mobs()[index];
                 named = mob.customName().empty() ? mobType(mob.typeId()).name : mob.customName();
-                mob.damage(1000000, glm::vec3(0.0f));
+                if (isTechnicalMob(mob.typeId())) mob.vanish();
+                else mob.damage(1000000, glm::vec3(0.0f));
             }
             if (targets.player)
             {
@@ -23934,6 +23971,26 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
     for (const Mob& mob : m_entities.mobs())
     {
         if (!mob.alive() || mob.customName().empty()) continue;
+        if (isTechnicalMob(mob.typeId()) && mob.typeId() != MobId::TextDisplay) continue;
+        if (mob.typeId() == MobId::TextDisplay)
+        {
+            const float size = mob.variant() > 0 ? static_cast<float>(mob.variant()) / 100.0f : 1.0f;
+            const glm::vec3 at = mob.position() + glm::vec3(0.0f, 0.12f * size, 0.0f);
+            const float distance = glm::length(at - cameraPosition);
+            if (distance > 64.0f || distance < 0.05f) continue;
+            const glm::vec4 clip = viewProjection * glm::vec4(at, 1.0f);
+            if (clip.w <= 0.05f) continue;
+            const glm::vec3 ndc = glm::vec3(clip) / clip.w;
+            if (ndc.x < -1.3f || ndc.x > 1.3f || ndc.y < -1.3f || ndc.y > 1.3f) continue;
+            Nameplate plate;
+            plate.name = mob.customName();
+            plate.x = (ndc.x * 0.5f + 0.5f) * screenWidth;
+            plate.y = (1.0f - (ndc.y * 0.5f + 0.5f)) * screenHeight;
+            const float pixelsPerBlock = projection[1][1] * screenHeight / (2.0f * clip.w);
+            plate.scale = std::clamp(0.025f * size * pixelsPerBlock, 0.2f, 12.0f);
+            m_nameplates.push_back(plate);
+            continue;
+        }
         const glm::vec3 above = mob.position() + glm::vec3(0.0f, mob.type().height + 0.35f, 0.0f);
         const float distance = glm::length(above - cameraPosition);
         if (distance > 16.0f) continue;
@@ -26152,6 +26209,32 @@ void Application::pinFramedItems()
     m_drops.clearPinned();
     for (const Mob& mob : m_entities.mobs())
     {
+        if (mob.alive() && (mob.typeId() == MobId::BlockDisplay || mob.typeId() == MobId::ItemDisplay) && mob.gear(Mob::MainHand) != 0)
+        {
+            if (glm::length(mob.position() - m_camera.position) > 96.0f) continue;
+            const float size = mob.variant() > 0 ? static_cast<float>(mob.variant()) / 100.0f : 1.0f;
+            const float turn = glm::radians(mob.yaw());
+            if (mob.typeId() == MobId::BlockDisplay && !isItem(static_cast<StackId>(mob.gear(Mob::MainHand))))
+            {
+                DroppedItems::Cargo cargo;
+                cargo.block = static_cast<BlockId>(mob.gear(Mob::MainHand));
+                cargo.centre = mob.position() + glm::vec3(0.5f * size);
+                cargo.yaw = -turn;
+                cargo.size = size;
+                m_drops.carry(cargo);
+            }
+            else
+            {
+                DroppedItems::Held shown;
+                shown.item = static_cast<StackId>(mob.gear(Mob::MainHand));
+                shown.size = size;
+                shown.grip = mob.position();
+                shown.forward = glm::vec3(std::cos(turn), 0.0f, std::sin(turn));
+                m_drops.hold(shown);
+            }
+            continue;
+        }
+        if (isTechnicalMob(mob.typeId())) continue;
         if (mob.alive() && mob.captain() && glm::length(mob.position() - m_camera.position) < 48.0f)
         {
             DroppedItems::Held flag;

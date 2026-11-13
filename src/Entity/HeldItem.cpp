@@ -90,7 +90,6 @@ namespace
     // And a flat item is a slab a sixteenth of a block thick rather
     // than a card with no edge, which is what you see when you turn one
     // side-on.
-    constexpr float SPRITE_DEPTH = 1.0f / 16.0f;
 
     constexpr float PI = 3.14159265f;
 
@@ -743,51 +742,22 @@ void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, 
     const glm::mat4 model = toWorld * displayMatrix(stack == Items::Mace ? MACE_DISPLAY
                                                                          : ITEM_DISPLAY);
 
-    const float z0 = 0.5f - SPRITE_DEPTH * 0.5f;
-    const float z1 = 0.5f + SPRITE_DEPTH * 0.5f;
-    const glm::vec3 centre = place(model, 0.5f, 0.5f, 0.5f);
-
-    auto texel = [&](float x, float y, float& u, float& v) {
-        u = uv.u0 + x * (uv.u1 - uv.u0);
-        v = uv.vBottom + y * (uv.vTop - uv.vBottom);
-    };
-
-    const float fx[4] = { 0.0f, 1.0f, 1.0f, 0.0f };
-    const float fy[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
-    for (int side = 0; side < 2; ++side)
+    const int tile = m_tileOverride >= 0 ? m_tileOverride : atlasTileFor(stack);
+    (void)uv;
+    for (const SpriteFace& face : Atlas::extrudedSprite(tile))
     {
         Quad q;
-        q.shade = side == 0 ? 1.0f : 0.86f;
+        q.shade = face.shade;
         for (int k = 0; k < 4; ++k)
         {
-            q.corner[k] = place(model, fx[k], fy[k], side == 0 ? z1 : z0);
-            texel(fx[k], fy[k], q.u[k], q.v[k]);
+            q.corner[k] = place(model, face.corner[k].x, face.corner[k].y, face.corner[k].z);
+            q.u[k] = face.u[k];
+            q.v[k] = face.v[k];
         }
-        pushFacing(m_vertices, q, centre, sky, blockLight);
-    }
-
-    struct Edge { float x0, y0, x1, y1; float tx0, ty0, tx1, ty1; float shade; };
-    const float inset = 0.5f / 16.0f;
-    const Edge edges[4] = {
-        { 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f - inset, 1.0f, 1.0f - inset, 1.00f },
-        { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, inset, 1.0f, inset, 0.50f },
-        { 0.0f, 0.0f, 0.0f, 1.0f, inset, 0.0f, inset, 1.0f, 0.60f },
-        { 1.0f, 0.0f, 1.0f, 1.0f, 1.0f - inset, 0.0f, 1.0f - inset, 1.0f, 0.60f },
-    };
-
-    for (const Edge& e : edges)
-    {
-        Quad q;
-        q.shade = e.shade;
-        q.corner[0] = place(model, e.x0, e.y0, z0);
-        q.corner[1] = place(model, e.x1, e.y1, z0);
-        q.corner[2] = place(model, e.x1, e.y1, z1);
-        q.corner[3] = place(model, e.x0, e.y0, z1);
-        texel(e.tx0, e.ty0, q.u[0], q.v[0]);
-        texel(e.tx1, e.ty1, q.u[1], q.v[1]);
-        texel(e.tx1, e.ty1, q.u[2], q.v[2]);
-        texel(e.tx0, e.ty0, q.u[3], q.v[3]);
-        pushFacing(m_vertices, q, centre, sky, blockLight);
+        const glm::vec3 middle = (q.corner[0] + q.corner[1] + q.corner[2] + q.corner[3]) * 0.25f;
+        const glm::vec3 local = (face.corner[0] + face.corner[2]) * 0.5f;
+        const glm::vec3 inside = place(model, local.x - face.normal.x, local.y - face.normal.y, local.z - face.normal.z);
+        pushFacing(m_vertices, q, middle + (inside - middle) * 0.01f, sky, blockLight);
     }
 }
 

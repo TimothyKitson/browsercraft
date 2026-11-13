@@ -347,6 +347,32 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
     }
 
 
+    auto emitSprite = [&](int tile, const glm::vec3& origin, const glm::vec3& ax, const glm::vec3& ay, const glm::vec3& az,
+                          float sky, float blockLight) {
+        for (const SpriteFace& face : Atlas::extrudedSprite(tile))
+        {
+            glm::vec3 p[4];
+            for (int k = 0; k < 4; ++k)
+                p[k] = origin + face.corner[k].x * ax + face.corner[k].y * ay + (face.corner[k].z - 0.5f) * az;
+            const glm::vec3 outward = face.normal.x * ax + face.normal.y * ay + face.normal.z * az;
+            const bool forwards = glm::dot(glm::cross(p[1] - p[0], p[2] - p[0]), outward) >= 0.0f;
+            static const int AHEAD[6] = { 0, 1, 2, 0, 2, 3 };
+            static const int BEHIND[6] = { 0, 2, 1, 0, 3, 2 };
+            for (int k : (forwards ? AHEAD : BEHIND))
+            {
+                m_vertices.push_back(p[k].x);
+                m_vertices.push_back(p[k].y);
+                m_vertices.push_back(p[k].z);
+                m_vertices.push_back(face.u[k]);
+                m_vertices.push_back(face.v[k]);
+                m_vertices.push_back(face.shade);
+                m_vertices.push_back(sky);
+                m_vertices.push_back(blockLight);
+                m_vertices.push_back(6.0f);
+            }
+        }
+    };
+
     for (const Held& held : m_held)
     {
         const int lx = static_cast<int>(std::floor(held.grip.x));
@@ -355,26 +381,12 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
         for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step) ++ly;
         const float sky = world.skyLight(lx, ly, lz) / 15.0f;
         const float blockLight = static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f;
-        const TileUV uv = tileUV(atlasTileFor(held.item));
-        const glm::vec3 along = glm::normalize(held.forward) * (held.size * 0.5f);
+        const glm::vec3 forward = glm::normalize(held.forward);
+        const glm::vec3 along = forward * (held.size * 0.5f);
         const glm::vec3 up(0.0f, held.size * 0.5f, 0.0f);
         const glm::vec3 centre = held.grip + along * 0.6f;
-        const glm::vec3 corner[4] = { centre - along - up, centre + along - up, centre + along + up, centre - along + up };
-        const float tu[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };
-        const float tv[4] = { uv.vBottom, uv.vBottom, uv.vTop, uv.vTop };
-        auto put = [&](int k, float shade) {
-            m_vertices.push_back(corner[k].x);
-            m_vertices.push_back(corner[k].y);
-            m_vertices.push_back(corner[k].z);
-            m_vertices.push_back(tu[k]);
-            m_vertices.push_back(tv[k]);
-            m_vertices.push_back(shade);
-            m_vertices.push_back(sky);
-            m_vertices.push_back(blockLight);
-            m_vertices.push_back(6.0f);
-        };
-        for (int k : { 0, 1, 2, 0, 2, 3 }) put(k, 1.0f);
-        for (int k : { 0, 2, 1, 0, 3, 2 }) put(k, 0.86f);
+        const glm::vec3 side = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * held.size;
+        emitSprite(atlasTileFor(held.item), centre - along - up, along * 2.0f, up * 2.0f, side, sky, blockLight);
     }
 
     const float half = SIZE * 0.5f;
@@ -422,23 +434,12 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
             // reads as the thing it is from any angle. Drawn front and
             // back, because a single quad disappears edge-on and again
             // whenever the spin brings its back face round.
-            const TileUV uv = tileUV(atlasTileFor(item.block));
             const float spriteHalf = SPRITE_SIZE * 0.5f;
             const glm::vec3 foot = item.position + glm::vec3(0.0f, HOVER * 0.5f + bob, 0.0f);
             const glm::vec3 across(spriteHalf * c, 0.0f, spriteHalf * s);
             const glm::vec3 up(0.0f, SPRITE_SIZE, 0.0f);
-
-            const glm::vec3 corner[4] = {
-                foot - across, foot + across, foot + across + up, foot - across + up
-            };
-            const float tu[4] = { uv.u0, uv.u1, uv.u1, uv.u0 };
-            const float tv[4] = { uv.vBottom, uv.vBottom, uv.vTop, uv.vTop };
-
-            const int front[6] = { 0, 1, 2, 0, 2, 3 };
-            const int back[6]  = { 0, 2, 1, 0, 3, 2 };
-            for (int k : front) push(corner[k], tu[k], tv[k], 1.0f);
-            for (int k : back)  push(corner[k], tu[k], tv[k], 0.86f);
-
+            const glm::vec3 depth(-s * SPRITE_SIZE, 0.0f, c * SPRITE_SIZE);
+            emitSprite(atlasTileFor(item.block), foot - across, across * 2.0f, up, depth, sky, blockLight);
             continue;
         }
 

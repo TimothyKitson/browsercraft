@@ -1,4 +1,5 @@
 #pragma once
+#include <glm/glm.hpp>
 #include "AtlasTiles.h"
 #include <vector>
 #include <cstdint>
@@ -10,6 +11,15 @@
 struct TileUV
 {
     float u0, u1, vTop, vBottom;
+};
+
+struct SpriteFace
+{
+    glm::vec3 corner[4];
+    float u[4];
+    float v[4];
+    float shade;
+    glm::vec3 normal;
 };
 
 // Pure function -- safe to call from mesher worker threads.
@@ -127,6 +137,12 @@ public:
     // alone: sand really is flat.
     static void stretchHeightRange(std::vector<uint8_t>& rgba);
 
+    // An item sprite as Minecraft draws a held or dropped item: the
+    // picture on a front and a back face one pixel apart, and a side
+    // wall along every edge where an opaque pixel meets a clear one.
+    // In a unit box, x and y across the picture with y up, z its depth.
+    static const std::vector<SpriteFace>& extrudedSprite(int tile);
+
 private:
     // One multi-frame tile (Minecraft stores these as a vertical strip).
     struct Animation
@@ -141,6 +157,8 @@ private:
     };
 
     std::vector<unsigned int> m_average;
+    std::vector<uint8_t> m_mask;
+    int m_maskSize = 16;
     unsigned int m_id = 0;         // albedo
     unsigned int m_normalId = 0;   // LabPBR _n: normal XY, AO, height
     unsigned int m_specularId = 0; // LabPBR _s: smoothness, F0, porosity, emission
