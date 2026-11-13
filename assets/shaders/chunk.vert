@@ -15,6 +15,7 @@ uniform vec3 uChunkOffset;
 out vec2 vUV;
 out vec3 vTint;
 out float vTintSelective;
+out float vHurt;
 out float vShade;
 out float vSkyLight;
 out float vBlockLight;
@@ -58,6 +59,7 @@ void main()
     uint packedTint = uint(max(aTint, 0.0) + 0.5);
     vTint = vec3(float((packedTint >> 14u) & 127u), float((packedTint >> 7u) & 127u), float(packedTint & 127u)) / 64.0;
     vTintSelective = float((packedTint >> 21u) & 1u);
+    vHurt = (int(aFace + 0.5) >> 3) == 28672 ? 1.0 : 0.0;
     vShade = aShade;
     vSkyLight = aSkyLight;
     vBlockLight = aBlockLight;

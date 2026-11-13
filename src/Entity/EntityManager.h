@@ -44,6 +44,7 @@ public:
     static constexpr int PATHS_PER_UPDATE = 4;
 
     void setPlayerHidden(bool hidden) { m_playerHidden = hidden; }
+    void setOtherPlayers(const std::vector<glm::vec3>& others) { m_others = others; }
     void update(float deltaTime, const World& world, const glm::vec3& playerPosition,
                 float daylight);
 
@@ -276,4 +277,5 @@ private:
     void routeChasers(const World& world, const glm::vec3& playerPosition);
     float m_spawnTimer = 2.0f;
     uint32_t m_rng = 0x9E3779B9u;
+    std::vector<glm::vec3> m_others;
 };

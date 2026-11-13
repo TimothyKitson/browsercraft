@@ -123,13 +123,9 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     // scaled rather than rebuilt.
     if (mob.sitting()) frame.feet.y -= SIT_DROP * mob.scale();
 
-    // A dead one keels over sideways rather than vanishing mid-step.
-    const float fade = mob.deathFade();
-    if (fade < 1.0f)
-    {
-        frame.jointAngle = 0.0f;
-        frame.feet.y -= (1.0f - fade) * 0.15f;
-    }
+    const bool spiderLike = mob.typeId() == MobId::Spider || mob.typeId() == MobId::CaveSpider;
+    frame.deathRoll = mob.deathTilt() * glm::radians(spiderLike ? 180.0f : 90.0f);
+    frame.hurt = mob.hurtFlash() > 0.0f || !mob.alive();
 
     const float phase = mob.gait();
     const float amount = mob.roosting() ? 0.0f : mob.gaitAmount();
@@ -240,9 +236,7 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             float sky = static_cast<float>(world.skyLight(lx, ly, lz)) / 15.0f;
             float blockLight = static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f;
 
-            // Flash while it is being hit, and dim as it dies.
-            blockLight = std::min(1.0f, blockLight + mob.hurtFlash() * 1.6f +
-                                            (mob.burning() ? 0.9f : 0.0f));
+            if (mob.burning()) blockLight = 1.0f;
             if (mob.glowing())
             {
                 sky = 1.0f;
@@ -250,9 +244,6 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
             }
             const float selfLit = mob.glowLight();
             if (selfLit > 0.0f) blockLight = selfLit >= 1.0f ? 1.0f : std::max(blockLight, selfLit);
-            const float fade = mob.deathFade();
-            sky *= fade;
-            blockLight *= fade;
 
             build(skin, mob, sky, blockLight, layer);
             if (mob.illusioned())
@@ -372,10 +363,8 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
                         int ly = static_cast<int>(std::floor(centre.y + mob.height() * 0.5f));
                         int lz = static_cast<int>(std::floor(centre.z));
                         for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step) ++ly;
-                        const float fade = mob.deathFade();
-                        build(skin, mob, static_cast<float>(world.skyLight(lx, ly, lz)) / 15.0f * fade,
-                              std::min(1.0f, static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f +
-                                                 mob.hurtFlash() * 1.6f) * fade, 0);
+                        build(skin, mob, static_cast<float>(world.skyLight(lx, ly, lz)) / 15.0f,
+                              mob.burning() ? 1.0f : static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f, 0);
                         batch.insert(batch.end(), m_vertices.begin(), m_vertices.end());
                     }
                     if (batch.empty()) continue;
@@ -432,10 +421,8 @@ void MobModel::renderExtras(MobId id, const MobSkin& skin, const World& world, c
         int ly = static_cast<int>(std::floor(centre.y + mob.height() * 0.5f));
         const int lz = static_cast<int>(std::floor(centre.z));
         for (int step = 0; step < 3 && isOpaque(world.getBlock(lx, ly, lz)); ++step) ++ly;
-        const float fade = mob.deathFade();
-        sky = static_cast<float>(world.skyLight(lx, ly, lz)) / 15.0f * fade;
-        blockLight = std::min(1.0f, static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f +
-                                        mob.hurtFlash() * 1.6f) * fade;
+        sky = static_cast<float>(world.skyLight(lx, ly, lz)) / 15.0f;
+        blockLight = mob.burning() ? 1.0f : static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f;
     };
 
     auto glowFor = [&](const char* path, const Mob& mob) -> float {
@@ -532,7 +519,7 @@ void MobModel::renderExtras(MobId id, const MobSkin& skin, const World& world, c
             if (glow > 0.0f)
             {
                 sky = 0.0f;
-                blockLight = std::max(blockLight, glow * mob.deathFade());
+                blockLight = std::max(blockLight, glow);
             }
             build(skin, mob, sky, blockLight, 0, extra.inflate);
             batch.insert(batch.end(), m_vertices.begin(), m_vertices.end());

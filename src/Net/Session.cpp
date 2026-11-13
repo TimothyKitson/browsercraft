@@ -116,6 +116,11 @@ void Session::leave()
     m_lastSentPitch = 0.0f;
     m_lastSentSneak = false;
     m_forceMove = true;
+    m_mobStates.clear();
+    m_mobStatesFresh = false;
+    m_mobNoises.clear();
+    m_strikesOnMe.clear();
+    m_mobHits.clear();
 }
 
 // ------------------------------------------------------------- update ---
@@ -581,6 +586,18 @@ void Session::handleAsHost(const Packet& packet, World* world)
             break;
         }
 
+        case MessageId::MobHit:
+        {
+            MobHitRequest hit;
+            hit.peer = packet.peer;
+            hit.serial = reader.u32();
+            hit.damage = static_cast<int>(reader.u32());
+            hit.push = reader.vec3();
+            hit.fireSeconds = reader.f32();
+            if (reader.ok() && m_mobHits.size() < 256) m_mobHits.push_back(hit);
+            break;
+        }
+
         case MessageId::StatusQuery:
         {
             Writer reply(MessageId::StatusReply);
@@ -736,9 +753,142 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             m_timeSynced = true;
             break;
 
+        case MessageId::MobStates:
+        {
+            const uint32_t count = reader.u16();
+            std::vector<MobSnap> mobs;
+            mobs.reserve(count);
+            for (uint32_t k = 0; k < count && reader.ok(); ++k)
+            {
+                MobSnap mob;
+                mob.serial = reader.u32();
+                mob.type = reader.u16();
+                mob.position = reader.vec3();
+                mob.yaw = reader.f32();
+                mob.health = static_cast<int>(static_cast<int32_t>(reader.u32()));
+                mob.variant = static_cast<int>(static_cast<int32_t>(reader.u32()));
+                mob.seed = reader.u32();
+                mob.size = static_cast<int8_t>(reader.u8());
+                mob.profession = static_cast<int8_t>(reader.u8());
+                mob.shulkerColour = static_cast<int8_t>(reader.u8());
+                mob.armourDye = static_cast<int8_t>(reader.u8());
+                mob.flags = reader.u16();
+                mob.horseArmour = reader.u16();
+                for (uint16_t& slot : mob.gear) slot = reader.u16();
+                mob.name = reader.str();
+                mobs.push_back(mob);
+            }
+            if (!reader.ok()) break;
+            m_mobStates.swap(mobs);
+            m_mobStatesFresh = true;
+            break;
+        }
+
+        case MessageId::MobNoise:
+        {
+            MobNoise noise;
+            noise.sound = reader.u16();
+            noise.named = reader.str();
+            noise.position = reader.vec3();
+            noise.volume = reader.f32();
+            noise.pitch = reader.f32();
+            noise.mob = reader.u16();
+            if (reader.ok() && m_mobNoises.size() < 256) m_mobNoises.push_back(noise);
+            break;
+        }
+
+        case MessageId::MobStrikeYou:
+        {
+            StrikeOnYou strike;
+            strike.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            strike.from = reader.vec3();
+            strike.blindSeconds = static_cast<int>(reader.u8());
+            strike.effect = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            strike.effectAmplifier = static_cast<int>(reader.u8());
+            strike.effectSeconds = reader.f32();
+            strike.attacker = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            if (reader.ok() && m_strikesOnMe.size() < 64) m_strikesOnMe.push_back(strike);
+            break;
+        }
+
         default:
             break;
     }
+}
+
+void Session::broadcastMobs(const std::vector<MobSnap>& mobs)
+{
+    if (m_role != Role::Host || !m_transport || m_players.empty()) return;
+    Writer out(MessageId::MobStates);
+    const size_t count = std::min<size_t>(mobs.size(), 1024);
+    out.u16(static_cast<uint16_t>(count));
+    for (size_t k = 0; k < count; ++k)
+    {
+        const MobSnap& mob = mobs[k];
+        out.u32(mob.serial);
+        out.u16(mob.type);
+        out.vec3(mob.position);
+        out.f32(mob.yaw);
+        out.i32(mob.health);
+        out.i32(mob.variant);
+        out.u32(mob.seed);
+        out.u8(static_cast<uint8_t>(static_cast<int8_t>(mob.size)));
+        out.u8(static_cast<uint8_t>(static_cast<int8_t>(mob.profession)));
+        out.u8(static_cast<uint8_t>(static_cast<int8_t>(mob.shulkerColour)));
+        out.u8(static_cast<uint8_t>(static_cast<int8_t>(mob.armourDye)));
+        out.u16(mob.flags);
+        out.u16(mob.horseArmour);
+        for (uint16_t slot : mob.gear) out.u16(slot);
+        out.str(mob.name);
+    }
+    m_transport->broadcast(out.bytes());
+}
+
+void Session::broadcastMobNoise(const MobNoise& noise)
+{
+    if (m_role != Role::Host || !m_transport || m_players.empty()) return;
+    Writer out(MessageId::MobNoise);
+    out.u16(noise.sound);
+    out.str(noise.named);
+    out.vec3(noise.position);
+    out.f32(noise.volume);
+    out.f32(noise.pitch);
+    out.u16(noise.mob);
+    m_transport->broadcast(out.bytes());
+}
+
+void Session::strikeGuest(uint32_t peer, const StrikeOnYou& strike)
+{
+    if (m_role != Role::Host || !m_transport || !m_players.count(peer)) return;
+    Writer out(MessageId::MobStrikeYou);
+    out.i32(strike.damage);
+    out.vec3(strike.from);
+    out.u8(static_cast<uint8_t>(std::clamp(strike.blindSeconds, 0, 255)));
+    out.i32(strike.effect);
+    out.u8(static_cast<uint8_t>(std::clamp(strike.effectAmplifier, 0, 255)));
+    out.f32(strike.effectSeconds);
+    out.i32(strike.attacker);
+    m_transport->send(peer, out.bytes());
+}
+
+void Session::sendMobHit(uint32_t serial, int damage, const glm::vec3& push, float fireSeconds)
+{
+    if (m_role != Role::Guest || !m_transport) return;
+    Writer out(MessageId::MobHit);
+    out.u32(serial);
+    out.i32(damage);
+    out.vec3(push);
+    out.f32(fireSeconds);
+    m_transport->send(HOST_PEER, out.bytes());
+}
+
+bool Session::takeMobStates(std::vector<MobSnap>& out)
+{
+    if (!m_mobStatesFresh) return false;
+    m_mobStatesFresh = false;
+    out.swap(m_mobStates);
+    m_mobStates.clear();
+    return true;
 }
 
 } // namespace Net

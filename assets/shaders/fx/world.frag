@@ -4,6 +4,7 @@
 in vec2 vUV;
 in vec3 vTint;
 in float vTintSelective;
+in float vHurt;
 in float vShade;
 in float vSkyLight;
 in float vBlockLight;
@@ -227,6 +228,7 @@ void main()
     if (texel.a < 0.1) discard;
     vec3 biomeTint = vTintSelective > 0.5 ? mix(vec3(1.0), vTint, step(texel.r + 0.02, texel.g)) : vTint;
     texel.rgb *= biomeTint;
+    if (vHurt > 0.5) texel.rgb = mix(vec3(1.0, 0.0, 0.0), texel.rgb, 0.7);
 
     int material = vMaterial;
     bool chunk = vBlock > 0;

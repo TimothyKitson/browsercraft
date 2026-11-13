@@ -1347,6 +1347,132 @@ namespace
         host.leave();
     }
 
+    void testLanMobs()
+    {
+        section("multiplayer: the host's mobs");
+        Net::Session host, guest;
+        const uint16_t port = 25678;
+        if (!host.openToLan("Steve", 7u, 0, 0.25f, glm::vec3(0.0f, 70.0f, 0.0f), port))
+        {
+            check(false, "a world can be opened to LAN for the mob check");
+            return;
+        }
+        guest.join("127.0.0.1", port, "Alex");
+        float hostTime = 0.25f, guestTime = 0.25f;
+        auto pump = [&](int frames) {
+            for (int k = 0; k < frames; ++k)
+            {
+                host.update(0.05f, nullptr, glm::vec3(-1.5f, 70.0f, 0.0f), 0.0f, 0.0f, hostTime);
+                guest.update(0.05f, nullptr, glm::vec3(1.5f, 70.0f, 0.0f), 180.0f, 0.0f, guestTime);
+                std::this_thread::sleep_for(std::chrono::milliseconds(4));
+            }
+        };
+        pump(60);
+        uint32_t guestPeer = 0;
+        for (const auto& entry : host.players()) guestPeer = entry.first;
+        check(guestPeer != 0, "the host knows the guest");
+
+        Net::MobSnap sheep;
+        sheep.serial = 77;
+        sheep.type = static_cast<uint16_t>(MobId::Sheep);
+        sheep.position = glm::vec3(3.0f, 70.0f, 4.0f);
+        sheep.yaw = 90.0f;
+        sheep.health = 6;
+        sheep.variant = 14;
+        sheep.seed = 1234u;
+        sheep.flags = Net::MobBaby | Net::MobHurt;
+        sheep.gear[4] = static_cast<uint16_t>(Items::DiamondSword);
+        sheep.name = "Jeb";
+        host.broadcastMobs({ sheep });
+        pump(3);
+        std::vector<Net::MobSnap> seen;
+        check(guest.takeMobStates(seen) && seen.size() == 1, "the guest is told about the host's mobs");
+        if (seen.size() == 1)
+            check(seen[0].serial == 77 && seen[0].type == sheep.type && glm::length(seen[0].position - sheep.position) < 0.001f &&
+                      seen[0].yaw == 90.0f && seen[0].health == 6 && seen[0].variant == 14 && seen[0].seed == 1234u &&
+                      seen[0].flags == (Net::MobBaby | Net::MobHurt) && seen[0].gear[4] == Items::DiamondSword && seen[0].name == "Jeb",
+                  "with where it is, its colour, its name, what it holds and that it was just hurt");
+        check(!guest.takeMobStates(seen), "and only once per update");
+
+        guest.sendMobHit(77, 5, glm::vec3(0.0f, 1.0f, 2.0f), 4.0f);
+        pump(3);
+        const std::vector<Net::MobHitRequest> hits = host.takeMobHits();
+        check(hits.size() == 1 && hits[0].serial == 77 && hits[0].damage == 5 && hits[0].peer == guestPeer && hits[0].fireSeconds == 4.0f &&
+                  hits[0].push.z == 2.0f,
+              "a guest's blow reaches the host, with its knockback and fire");
+
+        Net::StrikeOnYou bite;
+        bite.damage = 3;
+        bite.from = glm::vec3(1.0f, 70.0f, 1.0f);
+        bite.effect = 4;
+        bite.effectSeconds = 7.0f;
+        bite.attacker = static_cast<int>(MobId::Zombie);
+        host.strikeGuest(guestPeer, bite);
+        pump(3);
+        const std::vector<Net::StrikeOnYou> bitten = guest.takeStrikesOnMe();
+        check(bitten.size() == 1 && bitten[0].damage == 3 && bitten[0].effect == 4 && bitten[0].effectSeconds == 7.0f &&
+                  bitten[0].attacker == static_cast<int>(MobId::Zombie),
+              "and a mob's blow on the guest reaches the guest");
+
+        Net::MobNoise baa;
+        baa.sound = 3;
+        baa.named = "mob/sheep/say";
+        baa.position = glm::vec3(3.0f, 70.0f, 4.0f);
+        baa.mob = static_cast<uint16_t>(MobId::Sheep);
+        host.broadcastMobNoise(baa);
+        pump(3);
+        const std::vector<Net::MobNoise> heard = guest.takeMobNoises();
+        check(heard.size() == 1 && heard[0].named == "mob/sheep/say" && heard[0].sound == 3, "the guest hears the host's mobs");
+        guest.leave();
+        host.leave();
+
+        World world(42, "selftest-lanmobs", 2, Dimension::Overworld);
+        EntityManager crowd;
+        crowd.mobs().emplace_back(MobId::Zombie, glm::vec3(40.0f, 200.0f, 0.0f), 5u);
+        crowd.setOtherPlayers({ glm::vec3(42.0f, 200.0f, 0.0f) });
+        crowd.update(0.05f, world, glm::vec3(0.0f, 200.0f, 0.0f), 0.0f);
+        check(!crowd.mobs().empty() && crowd.mobs()[0].victim() == 0 && glm::length(crowd.mobs()[0].aim() - glm::vec3(42.0f, 200.0f, 0.0f)) < 0.001f,
+              "a mob goes for whichever player is nearest, guest or host");
+        crowd.setOtherPlayers({});
+        crowd.update(0.05f, world, glm::vec3(0.0f, 200.0f, 0.0f), 0.0f);
+        check(!crowd.mobs().empty() && crowd.mobs()[0].victim() == -1, "and for the host when there is no one else");
+        std::error_code gone;
+        std::filesystem::remove_all("selftest-lanmobs", gone);
+
+        Mob puppet(MobId::Pig, glm::vec3(0.0f, 64.0f, 0.0f), 9u);
+        puppet.setYaw(0.0f);
+        for (int k = 0; k < 20; ++k) puppet.follow(glm::vec3(3.0f, 64.0f, 0.0f), 90.0f, 0.05f);
+        check(glm::length(puppet.position() - glm::vec3(3.0f, 64.0f, 0.0f)) < 0.1f && std::fabs(puppet.yaw() - 90.0f) < 2.0f,
+              "a guest's copy of a mob glides to where the host has it");
+        check(puppet.gait() > 0.0f, "and walks there rather than sliding");
+        puppet.puppet(10, false, false, true, false);
+        check(puppet.hurtFlash() > 0.0f, "it flashes when the host's one is hurt");
+        puppet.puppet(0, false, false, false, false);
+        check(!puppet.alive() && puppet.deathTilt() == 0.0f, "and dies when it dies");
+        for (int k = 0; k < 10; ++k) puppet.follow(puppet.position(), 90.0f, 0.05f);
+        check(puppet.deathTilt() > 0.8f && !puppet.finished(), "keeling over across half a second");
+        for (int k = 0; k < 12; ++k) puppet.follow(puppet.position(), 90.0f, 0.05f);
+        check(puppet.finished(), "and is gone after a second, as in Minecraft");
+
+        BoxMesh::Box box;
+        box.min = glm::vec3(-2.0f, 0.0f, -2.0f);
+        box.max = glm::vec3(2.0f, 16.0f, 2.0f);
+        BoxMesh::Frame frame;
+        frame.hurt = true;
+        frame.deathRoll = glm::radians(90.0f);
+        std::vector<float> verts;
+        BoxMesh::append(verts, box, frame);
+        bool tagged = !verts.empty();
+        float highest = -1e9f;
+        for (size_t i = 0; i + 8 < verts.size(); i += 9)
+        {
+            if ((static_cast<int>(verts[i + 8] + 0.5f) >> 3) != 28672) tagged = false;
+            highest = std::max(highest, verts[i + 1]);
+        }
+        check(tagged, "a hurt or dying mob is drawn with Minecraft's red overlay");
+        check(highest < 2.5f / 16.0f, "and a dead one lies on its side");
+    }
+
     // --- mobs -----------------------------------------------------------
 
     // What a mob actually occupies, as against what its model is drawn
@@ -18358,6 +18484,7 @@ int runSelfTest()
     testPlayerGeometry();
     testPlayerHands();
     testLanHands();
+    testLanMobs();
     testBoxWinding();
     testMobTypes();
     testSunlightBurning();

@@ -778,8 +778,23 @@ void EntityManager::update(float deltaTime, const World& world,
     const glm::vec3 target = m_playerHidden ? playerPosition + glm::vec3(0.0f, 100000.0f, 0.0f) : playerPosition;
     for (Mob& mob : m_mobs)
     {
-        const bool unheard = mob.typeId() == MobId::Warden && m_playerQuiet && glm::length(mob.position() - target) > 5.0f;
-        mob.update(deltaTime, world, unheard ? target + glm::vec3(0.0f, 100000.0f, 0.0f) : target, daylight);
+        glm::vec3 aim = target;
+        int victim = -1;
+        float nearest = glm::length(mob.position() - target);
+        for (size_t k = 0; k < m_others.size(); ++k)
+        {
+            const float apart = glm::length(mob.position() - m_others[k]);
+            if (apart < nearest)
+            {
+                nearest = apart;
+                aim = m_others[k];
+                victim = static_cast<int>(k);
+            }
+        }
+        mob.setVictim(victim);
+        mob.setAim(aim);
+        const bool unheard = mob.typeId() == MobId::Warden && m_playerQuiet && victim < 0 && glm::length(mob.position() - aim) > 5.0f;
+        mob.update(deltaTime, world, unheard ? aim + glm::vec3(0.0f, 100000.0f, 0.0f) : aim, daylight);
 
         // Caught here rather than at removal: the corpse lingers, and
         // whatever it drops belongs where it fell, not where it stopped.
@@ -931,7 +946,9 @@ void EntityManager::update(float deltaTime, const World& world,
             if (mob.finished()) return true;
             if (isTechnicalMob(mob.typeId())) return false;
             if (m_peaceful && mob.typeId() != MobId::EnderDragon && mobType(mob.typeId()).spawnClass == SpawnClass::Hostile) return true;
-            const glm::vec3 delta = mob.position() - playerPosition;
+            glm::vec3 delta = mob.position() - playerPosition;
+            for (const glm::vec3& other : m_others)
+                if (glm::length(mob.position() - other) < glm::length(delta)) delta = mob.position() - other;
             const float keep = (mob.customName().empty() && !mob.leashed() && !mob.persistent()) ? DESPAWN_DISTANCE : DESPAWN_DISTANCE * 3.0f;
             return glm::length(glm::vec3(delta.x, 0.0f, delta.z)) > keep;
         }),
@@ -1038,12 +1055,8 @@ void EntityManager::update(float deltaTime, const World& world,
     }
 }
 
-void EntityManager::routeChasers(const World& world, const glm::vec3& playerPosition)
+void EntityManager::routeChasers(const World& world, const glm::vec3& hostPosition)
 {
-    const glm::ivec3 goal(static_cast<int>(std::floor(playerPosition.x)),
-                          static_cast<int>(std::floor(playerPosition.y)),
-                          static_cast<int>(std::floor(playerPosition.z)));
-
     WorldGround ground;
     ground.world = &world;
 
@@ -1052,6 +1065,9 @@ void EntityManager::routeChasers(const World& world, const glm::vec3& playerPosi
     {
         if (searches >= PATHS_PER_UPDATE) break;
         if (!mob.wantsPath()) continue;
+        const glm::vec3 playerPosition = mob.victim() >= 0 ? mob.aim() : hostPosition;
+        const glm::ivec3 goal(static_cast<int>(std::floor(playerPosition.x)), static_cast<int>(std::floor(playerPosition.y)),
+                              static_cast<int>(std::floor(playerPosition.z)));
 
         // Close enough to walk straight at, and a route would only get
         // in the way of actually reaching them.
@@ -1106,7 +1122,11 @@ std::vector<MobStrike> EntityManager::drainStrikes()
     for (Mob& mob : m_mobs)
     {
         if (mob.strikes().empty()) continue;
-        for (MobStrike& strike : mob.strikes()) strike.attacker = static_cast<int>(mob.typeId());
+        for (MobStrike& strike : mob.strikes())
+        {
+            strike.attacker = static_cast<int>(mob.typeId());
+            strike.victim = mob.victim();
+        }
         all.insert(all.end(), mob.strikes().begin(), mob.strikes().end());
         mob.strikes().clear();
     }

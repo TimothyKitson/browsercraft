@@ -37,6 +37,7 @@ struct MobStrike
     int effectAmplifier = 0;
     float effectSeconds = 0.0f;
     int attacker = -1;
+    int victim = -1;
 };
 
 // A mob going off. Collected like the strikes and the shots, so a mob
@@ -273,6 +274,8 @@ public:
     float gait() const { return m_gait; }
     // 1 while alive, falling to 0 as a dead one keels over.
     float deathFade() const;
+    float deathSeconds() const { return m_type == MobId::EnderDragon ? 10.0f : 1.0f; }
+    float deathTilt() const;
 
     // How far the shulker's lid is open, 0 shut and 1 wide. Nothing
     // else in the game has one, so it rests at 0 everywhere else.
@@ -284,6 +287,12 @@ public:
 
     std::vector<MobSound>& sounds() { return m_sounds; }
     std::vector<MobStrike>& strikes() { return m_strikes; }
+    int victim() const { return m_victim; }
+    void setVictim(int victim) { m_victim = victim; }
+    const glm::vec3& aim() const { return m_aim; }
+    void setAim(const glm::vec3& at) { m_aim = at; }
+    void puppet(int health, bool tamed, bool sitting, bool hurt, bool burning);
+    void follow(const glm::vec3& at, float yaw, float deltaTime);
     std::vector<MobShot>& shots() { return m_shots; }
     std::vector<MobBlast>& blasts() { return m_blasts; }
 
@@ -592,6 +601,8 @@ private:
 
     MobId m_type;
     glm::vec3 m_position{ 0.0f };
+    glm::vec3 m_aim{ 0.0f };
+    int m_victim = -1;
     glm::vec3 m_velocity{ 0.0f };
     float m_yaw = 0.0f;
     int m_shulkerColour = 16;
@@ -717,7 +728,7 @@ private:
     float m_panicTimer = 0.0f;
     float m_burnTimer = 0.0f;
     float m_burnTick = 0.0f;
-    float m_removeTimer = 0.6f;
+    float m_removeTimer = 1.0f;
     bool m_deathReported = false;
     float m_eggTimer = EGG_SECONDS;
     bool m_grewUp = false;

@@ -16,6 +16,7 @@ namespace BoxMesh
     // the value that tells the chunk shader to skip tangent-space normal
     // mapping -- which neither a skin nor a hide has maps for.
     constexpr float FACE_NO_NORMAL_MAP = 6.0f;
+    constexpr float FACE_HURT = 8.0f * 28672.0f;
 
     enum Face { Right, Left, Top, Bottom, Front, Back };
 
@@ -67,6 +68,8 @@ namespace BoxMesh
         float bodyPitch = 0.0f;
         glm::vec3 bodyPivot{ 0.0f };
         glm::vec3 bodyShift{ 0.0f };
+        float deathRoll = 0.0f;
+        bool hurt = false;
     };
 
     // Appends one box, in world space, to a vertex buffer.

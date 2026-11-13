@@ -124,6 +124,7 @@ void BoxMesh::append(std::vector<float>& out, const Box& box, const Frame& frame
         if (box.roll != 0.0f) normal = rotateZ(normal, box.roll);
         if (jointed) normal = rotateX(normal, frame.jointAngle);
         if (frame.bodyPitch != 0.0f) normal = rotateX(normal, frame.bodyPitch);
+        if (frame.deathRoll != 0.0f) normal = rotateZ(normal, frame.deathRoll);
         const float shade = shadeFor(right * normal.x + up * normal.y + forward * normal.z);
 
         glm::vec3 corners[4];
@@ -142,6 +143,7 @@ void BoxMesh::append(std::vector<float>& out, const Box& box, const Frame& frame
 
             if (frame.modelYaw != 0.0f) local = rotateY(local, frame.modelYaw);
             if (frame.bodyPitch != 0.0f) local = rotateX(local - frame.bodyPivot, frame.bodyPitch) + frame.bodyPivot + frame.bodyShift;
+            if (frame.deathRoll != 0.0f) local = rotateZ(local, frame.deathRoll);
 
             local *= frame.scale / 16.0f;
             corners[k] = frame.feet + right * local.x + up * local.y + forward * local.z;
@@ -163,7 +165,7 @@ void BoxMesh::append(std::vector<float>& out, const Box& box, const Frame& frame
             out.push_back(shade);
             out.push_back(frame.sky);
             out.push_back(frame.blockLight);
-            out.push_back(FACE_NO_NORMAL_MAP);
+            out.push_back(FACE_NO_NORMAL_MAP + (frame.hurt ? FACE_HURT : 0.0f));
         }
     }
 }

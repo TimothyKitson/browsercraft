@@ -36,6 +36,7 @@
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <unordered_set>
 #include <SDL.h>
 #include <stb_image.h>
 #ifdef __EMSCRIPTEN__
@@ -788,6 +789,9 @@ void Application::startJoinedWorld()
 {
     const Net::Handshake& handshake = m_net.handshake();
     m_joinedWorldBuilt = true;
+    m_puppetLocal.clear();
+    m_puppetHost.clear();
+    m_puppetAim.clear();
 
     m_drops.clear();
     m_orbs.clear();
@@ -10266,11 +10270,14 @@ void Application::updateMining(float deltaTime)
                                       Sound::Hurt, 0.6f, 1.0f);
                     glm::vec3 away = target->position() - m_player.position;
                     away.y = 0.0f;
-                    if (knock > 0 && glm::length(away) > 0.01f)
-                        target->shove(glm::normalize(away) * (2.5f * static_cast<float>(knock)) + glm::vec3(0.0f, 1.0f, 0.0f));
+                    const glm::vec3 knockPush = (knock > 0 && glm::length(away) > 0.01f)
+                                                    ? glm::normalize(away) * (2.5f * static_cast<float>(knock)) + glm::vec3(0.0f, 1.0f, 0.0f)
+                                                    : glm::vec3(0.0f);
+                    if (knock > 0 && glm::length(away) > 0.01f) target->shove(knockPush);
                     if (sprintHit) m_player.sprinting = false;
                     const int aspect = Enchanting::levelOf(edge, Enchanting::Kind::FireAspect);
                     if (aspect > 0) target->ignite(4.0f * static_cast<float>(aspect));
+                    forwardHit(*target, blow, knockPush, 4.0f * static_cast<float>(aspect));
                     if (arthropod && Enchanting::has(edge, Enchanting::Kind::BaneOfArthropods))
                         target->giveEffect(Effects::Kind::Slowness, 3, 1.0f + 0.5f * static_cast<float>(Enchanting::levelOf(edge, Enchanting::Kind::BaneOfArthropods) % 2));
                     if (Tools::kindOf(weapon) == Tools::Kind::Sword && charged && !critical && !sprintHit && m_player.onGround)
@@ -10287,7 +10294,7 @@ void Application::updateMining(float deltaTime)
                             if (glm::length(other.position() - m_player.position) > 3.0f) continue;
                             glm::vec3 push = other.position() - m_player.position;
                             push.y = 0.0f;
-                            other.strike(sweep, push);
+                            if (other.strike(sweep, push)) forwardHit(other, sweep, glm::vec3(0.0f), 0.0f);
                             other.markPlayerHit(0, glm::length(push));
                         }
                     }
@@ -25413,15 +25420,308 @@ void Application::tickColdAndThaw()
     }
 }
 
+void Application::shareMobs(float deltaTime)
+{
+    for (const Net::MobHitRequest& hit : m_net.takeMobHits())
+    {
+        const auto who = m_net.players().find(hit.peer);
+        const glm::vec3 from = who != m_net.players().end() ? who->second.smoothed() : m_player.position;
+        for (Mob& mob : m_entities.mobs())
+        {
+            if (mob.serial() != hit.serial) continue;
+            if (mob.alive() && mob.strike(std::max(0, hit.damage), mob.position() - from))
+            {
+                if (glm::length(hit.push) > 0.001f) mob.shove(hit.push);
+                if (hit.fireSeconds > 0.0f) mob.ignite(hit.fireSeconds);
+                mob.markPlayerHit(0, glm::length(mob.position() - from));
+            }
+            break;
+        }
+    }
+    m_mobSyncClock += deltaTime;
+    if (m_mobSyncClock < 0.1f || m_net.players().empty()) return;
+    m_mobSyncClock = 0.0f;
+    std::vector<Net::MobSnap> snaps;
+    snaps.reserve(m_entities.mobs().size());
+    for (const Mob& mob : m_entities.mobs())
+    {
+        if (mob.finished()) continue;
+        float nearest = 1e9f;
+        for (const auto& entry : m_net.players())
+            if (entry.second.positioned) nearest = std::min(nearest, glm::length(entry.second.smoothed() - mob.position()));
+        if (nearest > 128.0f) continue;
+        Net::MobSnap snap;
+        snap.serial = mob.serial();
+        snap.type = static_cast<uint16_t>(mob.typeId());
+        snap.position = mob.position();
+        snap.yaw = mob.yaw();
+        snap.health = mob.health();
+        snap.variant = mob.variant();
+        snap.seed = mob.birthSeed();
+        snap.size = mob.size();
+        snap.profession = mob.professionSlot();
+        snap.shulkerColour = mob.shulkerColour();
+        snap.armourDye = mob.armourDye();
+        snap.flags = static_cast<uint16_t>((mob.baby() ? Net::MobBaby : 0) | (mob.tamed() ? Net::MobTamed : 0) | (mob.sitting() ? Net::MobSitting : 0) |
+                                           (mob.saddled() ? Net::MobSaddled : 0) | (mob.charged() ? Net::MobCharged : 0) |
+                                           (mob.captain() ? Net::MobCaptain : 0) | (mob.burning() ? Net::MobBurning : 0) |
+                                           (mob.hurtFlash() > 0.2f ? Net::MobHurt : 0) | (mob.leashed() ? Net::MobLeashed : 0));
+        snap.horseArmour = mob.horseArmour();
+        for (int slot = 0; slot < Mob::GearSlots && slot < 6; ++slot) snap.gear[slot] = mob.gear(slot);
+        snap.name = mob.customName();
+        snaps.push_back(snap);
+    }
+    m_net.broadcastMobs(snaps);
+}
+
+void Application::followHostMobs(float deltaTime)
+{
+    std::vector<Net::MobSnap> snaps;
+    if (m_net.takeMobStates(snaps))
+    {
+        std::vector<Mob>& mobs = m_entities.mobs();
+        std::unordered_map<uint32_t, size_t> index;
+        for (size_t k = 0; k < mobs.size(); ++k) index[mobs[k].serial()] = k;
+        std::unordered_set<uint32_t> present;
+        for (const Net::MobSnap& snap : snaps)
+        {
+            if (snap.type >= static_cast<uint16_t>(MobId::Count)) continue;
+            const MobId type = static_cast<MobId>(snap.type);
+            const auto known = m_puppetLocal.find(snap.serial);
+            const bool fits = known != m_puppetLocal.end() && index.count(known->second) && mobs[index[known->second]].typeId() == type;
+            if (!fits)
+            {
+                mobs.emplace_back(type, snap.position, snap.seed, (snap.flags & Net::MobBaby) != 0);
+                m_puppetLocal[snap.serial] = mobs.back().serial();
+                m_puppetHost[mobs.back().serial()] = snap.serial;
+                index[mobs.back().serial()] = mobs.size() - 1;
+                mobs.back().setYaw(snap.yaw);
+            }
+            const uint32_t local = m_puppetLocal[snap.serial];
+            Mob& mob = mobs[index[local]];
+            if (snap.size > 0 && mob.size() != snap.size) mob.setSize(snap.size);
+            mob.setVariant(snap.variant);
+            mob.setBirthSeed(snap.seed);
+            mob.setProfessionSlot(snap.profession);
+            mob.setShulkerColour(snap.shulkerColour);
+            mob.setArmourDye(snap.armourDye);
+            mob.setBaby((snap.flags & Net::MobBaby) != 0);
+            mob.setSaddled((snap.flags & Net::MobSaddled) != 0);
+            mob.setCharged((snap.flags & Net::MobCharged) != 0);
+            mob.setCaptain((snap.flags & Net::MobCaptain) != 0);
+            mob.setLeashed((snap.flags & Net::MobLeashed) != 0);
+            mob.setHorseArmour(snap.horseArmour);
+            mob.setCustomName(snap.name);
+            for (int slot = 0; slot < Mob::GearSlots && slot < 6; ++slot) mob.setGear(slot, snap.gear[slot], true);
+            mob.puppet(snap.health, (snap.flags & Net::MobTamed) != 0, (snap.flags & Net::MobSitting) != 0, (snap.flags & Net::MobHurt) != 0,
+                       (snap.flags & Net::MobBurning) != 0);
+            m_puppetAim[local] = { snap.position, snap.yaw };
+            present.insert(local);
+        }
+        mobs.erase(std::remove_if(mobs.begin(), mobs.end(),
+                                  [&](const Mob& mob) {
+                                      if (present.count(mob.serial())) return false;
+                                      const auto host = m_puppetHost.find(mob.serial());
+                                      if (host != m_puppetHost.end())
+                                      {
+                                          m_puppetLocal.erase(host->second);
+                                          m_puppetHost.erase(host);
+                                      }
+                                      m_puppetAim.erase(mob.serial());
+                                      return true;
+                                  }),
+                   mobs.end());
+    }
+    for (Mob& mob : m_entities.mobs())
+    {
+        const auto aim = m_puppetAim.find(mob.serial());
+        if (aim != m_puppetAim.end()) mob.follow(aim->second.first, aim->second.second, deltaTime);
+    }
+    for (const Net::MobNoise& noise : m_net.takeMobNoises())
+    {
+        if (noise.sound >= static_cast<uint16_t>(Sound::Count)) continue;
+        MobSound sound;
+        sound.id = static_cast<Sound>(noise.sound);
+        sound.named = noise.named.empty() ? nullptr : noise.named.c_str();
+        sound.position = noise.position;
+        sound.volume = noise.volume;
+        sound.pitch = noise.pitch;
+        sound.mob = noise.mob < static_cast<uint16_t>(MobId::Count) ? static_cast<MobId>(noise.mob) : MobId::Count;
+        playMobSound(sound);
+    }
+    m_audio.clearAim();
+    for (const Net::StrikeOnYou& far : m_net.takeStrikesOnMe())
+    {
+        MobStrike strike;
+        strike.damage = far.damage;
+        strike.from = far.from;
+        strike.blindSeconds = far.blindSeconds;
+        strike.effect = far.effect;
+        strike.effectAmplifier = far.effectAmplifier;
+        strike.effectSeconds = far.effectSeconds;
+        strike.attacker = far.attacker;
+        sufferStrike(strike);
+    }
+}
+
+void Application::forwardHit(const Mob& target, int damage, const glm::vec3& push, float fireSeconds)
+{
+    if (m_net.role() != Net::Role::Guest) return;
+    const auto host = m_puppetHost.find(target.serial());
+    if (host != m_puppetHost.end()) m_net.sendMobHit(host->second, damage, push, fireSeconds);
+}
+
+void Application::playMobSound(const MobSound& sound)
+{
+    const float distance = glm::length(sound.position - m_camera.position);
+    if (distance > 32.0f) return;
+
+    const float falloff = 1.0f - std::clamp(distance / 32.0f, 0.0f, 1.0f);
+    m_audio.aimNext(sound.position.x, sound.position.y, sound.position.z);
+    if (sound.named)
+    {
+        m_audio.playNamed(sound.named, sound.id, sound.volume * falloff * falloff, sound.pitch);
+        return;
+    }
+    if (sound.id == Sound::MobStep)
+    {
+        const char* stem = nullptr;
+        switch (sound.mob)
+        {
+            case MobId::Chicken: stem = "mob/chicken/step"; break;
+            case MobId::Cow: case MobId::Mooshroom: stem = "mob/cow/step"; break;
+            case MobId::Pig: stem = "mob/pig/step"; break;
+            case MobId::Sheep: stem = "mob/sheep/step"; break;
+            case MobId::Skeleton: case MobId::Bogged: stem = "mob/skeleton/step"; break;
+            case MobId::Stray: stem = "mob/stray/step"; break;
+            case MobId::WitherSkeleton: stem = "mob/wither_skeleton/step"; break;
+            case MobId::Spider: case MobId::CaveSpider: stem = "mob/spider/step"; break;
+            case MobId::Zombie: case MobId::ZombieVillager: case MobId::Drowned: stem = "mob/zombie/step"; break;
+            case MobId::Husk: stem = "mob/husk/step"; break;
+            case MobId::Wolf: stem = "mob/wolf/step"; break;
+            case MobId::Horse: case MobId::Donkey: case MobId::Mule: case MobId::SkeletonHorse: case MobId::ZombieHorse:
+            {
+                const glm::ivec3 under(glm::floor(sound.position - glm::vec3(0.0f, 0.2f, 0.0f)));
+                const Mob* rider = riddenMob();
+                const bool galloping = rider && glm::length(rider->position() - sound.position) < 0.5f &&
+                                       glm::length(glm::vec2(rider->velocity().x, rider->velocity().z)) > 6.0f;
+                stem = galloping ? "mob/horse/gallop"
+                     : blockMaterial(m_world->getBlock(under.x, under.y, under.z)) == Material::Wood ? "mob/horse/wood" : "mob/horse/soft";
+                break;
+            }
+            case MobId::PolarBear: stem = "mob/polarbear/step"; break;
+            case MobId::Llama: case MobId::TraderLlama: stem = "mob/llama/step"; break;
+            case MobId::Parrot: stem = "mob/parrot/step"; break;
+            case MobId::Silverfish: case MobId::Endermite: stem = "mob/silverfish/step"; break;
+            case MobId::IronGolem: stem = "mob/irongolem/walk"; break;
+            case MobId::Rabbit: stem = "mob/rabbit/hop"; break;
+            case MobId::MagmaCube: stem = "mob/magmacube/jump"; break;
+            default: break;
+        }
+        if (stem) m_audio.playNamed(stem, sound.id, sound.volume * 1.8f * falloff * falloff, sound.pitch);
+        else m_audio.play(sound.id, sound.volume * falloff * falloff, sound.pitch);
+        return;
+    }
+    m_audio.play(sound.id, sound.volume * falloff * falloff, sound.pitch);
+}
+
+void Application::sufferStrike(const MobStrike& strike)
+{
+    if (strike.blindSeconds > 0)
+    {
+        if (!m_player.exempt())
+            Effects::give(m_player.effects, Effects::Kind::Blindness, 0, static_cast<float>(strike.blindSeconds));
+        if (strike.damage <= 0) return;
+    }
+
+    if (m_player.blocking &&
+        Shield::covers(m_camera.front, m_player.position, strike.from))
+    {
+        wearShield(strike.damage >= 3 ? 1 + strike.damage : Shield::WEAR_PER_BLOCK);
+        if (strike.attacker == static_cast<int>(MobId::Vindicator) || strike.attacker == static_cast<int>(MobId::PiglinBrute))
+        {
+            m_shieldCooldown = 5.0f;
+            m_player.blocking = false;
+            m_audio.playNamed("item/shield/break", Sound::DigWood, 0.8f, 1.0f);
+        }
+        m_audio.play(Sound::Click, 0.7f, 0.7f);
+        m_stats.add(Stats::Custom::DamageBlockedByShield, static_cast<long long>(strike.damage) * 10);
+
+        const glm::vec3 off = m_player.position - strike.from;
+        const glm::vec3 level(off.x, 0.0f, off.z);
+        const float span = glm::length(level);
+        if (span > 0.001f) m_player.velocity += (level / span) * 2.5f;
+        return;
+    }
+
+    if (!m_player.damage(Player::scaledByDifficulty(strike.damage, m_player.difficulty))) return;
+    if (strike.attacker >= 0)
+    {
+        int thorns = 0;
+        for (int piece = 0; piece < Inventory::ARMOR_SLOTS; ++piece)
+        {
+            const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + piece);
+            const int level = worn.empty() ? 0 : Enchanting::levelOf(worn.enchantments, Enchanting::Kind::Thorns);
+            if (level <= 0) continue;
+            const uint32_t roll = hashCoords(static_cast<int>(m_elapsedSeconds * 37.0f), piece, strike.attacker, 0x7407u);
+            if (static_cast<int>(roll % 100u) < 15 * level) thorns += 1 + static_cast<int>((roll >> 8) % 4u);
+        }
+        if (thorns > 0)
+        {
+            Mob* thorned = nullptr;
+            float nearest = 3.0f;
+            for (Mob& mob : m_entities.mobs())
+            {
+                if (!mob.alive() || static_cast<int>(mob.typeId()) != strike.attacker) continue;
+                const float gap = glm::length(mob.position() - strike.from);
+                if (gap < nearest) { nearest = gap; thorned = &mob; }
+            }
+            if (thorned)
+            {
+                thorned->strike(thorns, thorned->position() - m_player.position);
+                thorned->markPlayerHit(0, glm::length(thorned->position() - m_player.position));
+                m_audio.playNamed("enchant/thorns/hit", Sound::Hurt, 0.5f, 1.0f);
+            }
+        }
+        m_lastAttacker = strike.attacker;
+        m_lastAttackerAge = 0.0f;
+        m_lastAttackKind = 0;
+    }
+    if (strike.effect >= 0 && strike.effect < Effects::KIND_COUNT)
+        m_player.takeEffect(static_cast<Effects::Kind>(strike.effect), strike.effectAmplifier, strike.effectSeconds);
+
+    wearArmour(strike.damage);
+    m_audio.play(Sound::Hurt, 0.8f);
+
+    const glm::vec3 away = m_player.position - strike.from;
+    const glm::vec3 flat(away.x, 0.0f, away.z);
+    const float length = glm::length(flat);
+    if (length > 0.001f) m_player.velocity += (flat / length) * 6.0f * m_player.knockbackScale();
+    if (m_player.onGround) m_player.velocity.y = std::max(m_player.velocity.y, 4.0f);
+}
+
 void Application::updateMobs(float deltaTime)
 {
     if (!m_world || !m_worldReady) return;
     if (!m_pendingMobs.empty()) placePendingMobs();
 
-    // A guest watches the host's world but does not get to populate it:
-    // mobs are not synced, so two machines spawning their own would see
-    // different animals in the same field.
-    if (m_net.role() == Net::Role::Guest) return;
+    if (m_net.role() == Net::Role::Guest)
+    {
+        followHostMobs(deltaTime);
+        return;
+    }
+    {
+        std::vector<glm::vec3> others;
+        m_otherPeers.clear();
+        if (m_net.role() == Net::Role::Host)
+            for (const auto& entry : m_net.players())
+                if (entry.second.positioned)
+                {
+                    others.push_back(entry.second.smoothed());
+                    m_otherPeers.push_back(entry.first);
+                }
+        m_entities.setOtherPlayers(others);
+    }
 
     // The lineup screen is for looking at hides, and a wolf crosses a
     // twelve-block clearing in two seconds. Frozen, every one of them
@@ -25445,6 +25745,7 @@ void Application::updateMobs(float deltaTime)
     m_entities.setSpawnRules(m_rules.on(GameRules::Rule::DoInsomnia) && m_stats.get(Stats::Custom::TimeSinceRest) >= 72000,
                              m_rules.on(GameRules::Rule::DoTraderSpawning));
     m_entities.update(mobTime, *m_world, m_player.position, daylightFactor());
+    if (m_net.role() == Net::Role::Host) shareMobs(deltaTime);
     tickAllays(mobTime);
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
     tickPiglins();
@@ -25460,56 +25761,18 @@ void Application::updateMobs(float deltaTime)
     // yet, and a wrong pan is more distracting than none.
     for (const MobSound& sound : m_entities.drainSounds())
     {
-        const float distance = glm::length(sound.position - m_camera.position);
-        if (distance > 32.0f) continue;
-
-        const float falloff = 1.0f - std::clamp(distance / 32.0f, 0.0f, 1.0f);
-        m_audio.aimNext(sound.position.x, sound.position.y, sound.position.z);
-        if (sound.named)
+        if (m_net.role() == Net::Role::Host && !m_net.players().empty())
         {
-            m_audio.playNamed(sound.named, sound.id, sound.volume * falloff * falloff, sound.pitch);
-            continue;
+            Net::MobNoise noise;
+            noise.sound = static_cast<uint16_t>(sound.id);
+            if (sound.named) noise.named = sound.named;
+            noise.position = sound.position;
+            noise.volume = sound.volume;
+            noise.pitch = sound.pitch;
+            noise.mob = static_cast<uint16_t>(sound.mob);
+            m_net.broadcastMobNoise(noise);
         }
-        if (sound.id == Sound::MobStep)
-        {
-            const char* stem = nullptr;
-            switch (sound.mob)
-            {
-                case MobId::Chicken: stem = "mob/chicken/step"; break;
-                case MobId::Cow: case MobId::Mooshroom: stem = "mob/cow/step"; break;
-                case MobId::Pig: stem = "mob/pig/step"; break;
-                case MobId::Sheep: stem = "mob/sheep/step"; break;
-                case MobId::Skeleton: case MobId::Bogged: stem = "mob/skeleton/step"; break;
-                case MobId::Stray: stem = "mob/stray/step"; break;
-                case MobId::WitherSkeleton: stem = "mob/wither_skeleton/step"; break;
-                case MobId::Spider: case MobId::CaveSpider: stem = "mob/spider/step"; break;
-                case MobId::Zombie: case MobId::ZombieVillager: case MobId::Drowned: stem = "mob/zombie/step"; break;
-                case MobId::Husk: stem = "mob/husk/step"; break;
-                case MobId::Wolf: stem = "mob/wolf/step"; break;
-                case MobId::Horse: case MobId::Donkey: case MobId::Mule: case MobId::SkeletonHorse: case MobId::ZombieHorse:
-                {
-                    const glm::ivec3 under(glm::floor(sound.position - glm::vec3(0.0f, 0.2f, 0.0f)));
-                    const Mob* rider = riddenMob();
-                    const bool galloping = rider && glm::length(rider->position() - sound.position) < 0.5f &&
-                                           glm::length(glm::vec2(rider->velocity().x, rider->velocity().z)) > 6.0f;
-                    stem = galloping ? "mob/horse/gallop"
-                         : blockMaterial(m_world->getBlock(under.x, under.y, under.z)) == Material::Wood ? "mob/horse/wood" : "mob/horse/soft";
-                    break;
-                }
-                case MobId::PolarBear: stem = "mob/polarbear/step"; break;
-                case MobId::Llama: case MobId::TraderLlama: stem = "mob/llama/step"; break;
-                case MobId::Parrot: stem = "mob/parrot/step"; break;
-                case MobId::Silverfish: case MobId::Endermite: stem = "mob/silverfish/step"; break;
-                case MobId::IronGolem: stem = "mob/irongolem/walk"; break;
-                case MobId::Rabbit: stem = "mob/rabbit/hop"; break;
-                case MobId::MagmaCube: stem = "mob/magmacube/jump"; break;
-                default: break;
-            }
-            if (stem) m_audio.playNamed(stem, sound.id, sound.volume * 1.8f * falloff * falloff, sound.pitch);
-            else m_audio.play(sound.id, sound.volume * falloff * falloff, sound.pitch);
-            continue;
-        }
-        m_audio.play(sound.id, sound.volume * falloff * falloff, sound.pitch);
+        playMobSound(sound);
     }
     m_audio.clearAim();
 
@@ -25518,81 +25781,20 @@ void Application::updateMobs(float deltaTime)
     // decides how many of them actually land.
     for (const MobStrike& strike : m_entities.drainStrikes())
     {
-        if (strike.blindSeconds > 0)
+        if (strike.victim >= 0 && strike.victim < static_cast<int>(m_otherPeers.size()))
         {
-            if (!m_player.exempt())
-                Effects::give(m_player.effects, Effects::Kind::Blindness, 0, static_cast<float>(strike.blindSeconds));
-            if (strike.damage <= 0) continue;
-        }
-
-        // A raised shield stops a blow outright, but only one that
-        // comes at the front of it. Turning to meet what is hitting you
-        // is the whole of using one.
-        if (m_player.blocking &&
-            Shield::covers(m_camera.front, m_player.position, strike.from))
-        {
-            wearShield(strike.damage >= 3 ? 1 + strike.damage : Shield::WEAR_PER_BLOCK);
-            if (strike.attacker == static_cast<int>(MobId::Vindicator) || strike.attacker == static_cast<int>(MobId::PiglinBrute))
-            {
-                m_shieldCooldown = 5.0f;
-                m_player.blocking = false;
-                m_audio.playNamed("item/shield/break", Sound::DigWood, 0.8f, 1.0f);
-            }
-            m_audio.play(Sound::Click, 0.7f, 0.7f);
-            m_stats.add(Stats::Custom::DamageBlockedByShield, static_cast<long long>(strike.damage) * 10);
-
-            // Shoved back, but unhurt.
-            const glm::vec3 off = m_player.position - strike.from;
-            const glm::vec3 level(off.x, 0.0f, off.z);
-            const float span = glm::length(level);
-            if (span > 0.001f) m_player.velocity += (level / span) * 2.5f;
+            Net::StrikeOnYou far;
+            far.damage = strike.damage;
+            far.from = strike.from;
+            far.blindSeconds = strike.blindSeconds;
+            far.effect = strike.effect;
+            far.effectAmplifier = strike.effectAmplifier;
+            far.effectSeconds = strike.effectSeconds;
+            far.attacker = strike.attacker;
+            m_net.strikeGuest(m_otherPeers[static_cast<size_t>(strike.victim)], far);
             continue;
         }
-
-        if (!m_player.damage(Player::scaledByDifficulty(strike.damage, m_player.difficulty))) continue;
-        if (strike.attacker >= 0)
-        {
-            int thorns = 0;
-            for (int piece = 0; piece < Inventory::ARMOR_SLOTS; ++piece)
-            {
-                const ItemStack& worn = m_inventory.slot(Inventory::ARMOR_FIRST + piece);
-                const int level = worn.empty() ? 0 : Enchanting::levelOf(worn.enchantments, Enchanting::Kind::Thorns);
-                if (level <= 0) continue;
-                const uint32_t roll = hashCoords(static_cast<int>(m_elapsedSeconds * 37.0f), piece, strike.attacker, 0x7407u);
-                if (static_cast<int>(roll % 100u) < 15 * level) thorns += 1 + static_cast<int>((roll >> 8) % 4u);
-            }
-            if (thorns > 0)
-            {
-                Mob* thorned = nullptr;
-                float nearest = 3.0f;
-                for (Mob& mob : m_entities.mobs())
-                {
-                    if (!mob.alive() || static_cast<int>(mob.typeId()) != strike.attacker) continue;
-                    const float gap = glm::length(mob.position() - strike.from);
-                    if (gap < nearest) { nearest = gap; thorned = &mob; }
-                }
-                if (thorned)
-                {
-                    thorned->strike(thorns, thorned->position() - m_player.position);
-                    thorned->markPlayerHit(0, glm::length(thorned->position() - m_player.position));
-                    m_audio.playNamed("enchant/thorns/hit", Sound::Hurt, 0.5f, 1.0f);
-                }
-            }
-            m_lastAttacker = strike.attacker;
-            m_lastAttackerAge = 0.0f;
-            m_lastAttackKind = 0;
-        }
-        if (strike.effect >= 0 && strike.effect < Effects::KIND_COUNT)
-            m_player.takeEffect(static_cast<Effects::Kind>(strike.effect), strike.effectAmplifier, strike.effectSeconds);
-
-        wearArmour(strike.damage);
-        m_audio.play(Sound::Hurt, 0.8f);
-
-        const glm::vec3 away = m_player.position - strike.from;
-        const glm::vec3 flat(away.x, 0.0f, away.z);
-        const float length = glm::length(flat);
-        if (length > 0.001f) m_player.velocity += (flat / length) * 6.0f * m_player.knockbackScale();
-        if (m_player.onGround) m_player.velocity.y = std::max(m_player.velocity.y, 4.0f);
+        sufferStrike(strike);
     }
 
     // Anything that went off.
@@ -26195,16 +26397,33 @@ void Application::tickLanTest(float deltaTime)
         mainHand.count = offHand.count = 1;
         m_inventory.selected() = mainHand;
         m_inventory.slot(Inventory::OFFHAND) = offHand;
-        if (host) m_timeOfDay = 0.3f;
+        if (host)
+        {
+            m_timeOfDay = 0.3f;
+            m_freezeMobs = true;
+            if (m_entities.summonAt(MobId::Pig, m_lanBase + glm::vec3(0.0f, 0.0f, 4.0f))) m_entities.mobs().back().setYaw(180.0f);
+            if (m_entities.summonAt(MobId::Sheep, m_lanBase + glm::vec3(-2.0f, 0.0f, 5.0f))) m_entities.mobs().back().setWool(14, false);
+            if (m_entities.summonAt(MobId::Villager, m_lanBase + glm::vec3(2.0f, 0.0f, 5.5f))) m_entities.mobs().back().setYaw(270.0f);
+        }
         m_lanStage = 1;
         std::printf("[lantest] %s ready at %d %d %d\n", host ? "host" : "guest", bx, by, bz);
         std::fflush(stdout);
     }
+    if (m_lanStage == 1)
+    {
+        const float mine = host ? -1.0f : 1.0f;
+        m_player.position = m_lanBase + glm::vec3(1.5f * mine, 0.0f, 0.0f);
+        m_player.velocity = glm::vec3(0.0f);
+        m_camera.setOrientation(host ? 0.0f : 180.0f, -4.0f);
+        const glm::vec3 theirs = m_lanBase + glm::vec3(-1.5f * mine, 0.0f, 0.0f);
+        if (glm::length(glm::vec2(remoteAt.x - theirs.x, remoteAt.z - theirs.z)) > 0.3f) return;
+    }
+    if (m_lanStage == 1) m_lanStart = SDL_GetTicks();
     m_lanStage = 2;
     m_heldItem.update(deltaTime, m_inventory.selected().id);
     m_offhandItem.update(deltaTime, m_inventory.slot(Inventory::OFFHAND).id);
     const float before = m_lanClock;
-    m_lanClock += deltaTime;
+    m_lanClock = static_cast<float>(SDL_GetTicks() - m_lanStart) / 1000.0f;
     const float t = m_lanClock;
     auto at = [&](float when) { return before < when && t >= when; };
     auto shot = [&](const std::string& name) {
@@ -26225,8 +26444,16 @@ void Application::tickLanTest(float deltaTime)
     const bool hostTurned = t >= 8.0f && t < 14.0f;
     const bool guestTurned = t >= 14.0f && t < 20.0f;
     const bool turned = host ? hostTurned : guestTurned;
-    m_camera.setOrientation(turned ? (host ? 90.0f : 270.0f) : (host ? 0.0f : 180.0f), -4.0f);
-    m_perspective = turned ? Perspective::ThirdFront : (t >= 20.0f && t < 23.0f) || t >= 28.0f ? Perspective::ThirdBack : Perspective::FirstPerson;
+    const bool mobStage = t >= 31.0f;
+    m_camera.setOrientation(mobStage ? 90.0f : turned ? (host ? 90.0f : 270.0f) : (host ? 0.0f : 180.0f), mobStage ? -14.0f : -4.0f);
+    if (mobStage)
+    {
+        m_player.sneaking = false;
+        m_player.position = m_lanBase + glm::vec3(1.5f * side, 0.0f, 0.0f);
+    }
+    m_perspective = turned ? Perspective::ThirdFront
+                    : mobStage ? Perspective::FirstPerson
+                    : (t >= 20.0f && t < 23.0f) || t >= 28.0f ? Perspective::ThirdBack : Perspective::FirstPerson;
     const float myTurn = host ? 8.0f : 14.0f;
     const float theirTurn = host ? 14.0f : 8.0f;
     if (t >= 2.5f && t < 3.5f) shot("see-idle");
@@ -26244,7 +26471,35 @@ void Application::tickLanTest(float deltaTime)
     if (t >= 25.0f && t < 26.0f) shot("see-walk");
     if (t >= 27.3f && t < 28.0f) shot("see-sneak-walk");
     if (t >= 29.0f && t < 30.5f) shot("self-back-sneak-walk");
-    if (t >= 30.5f)
+    if (t >= 32.0f && t < 33.0f) shot("mobs-idle");
+    auto nearestTo = [&](MobId kind, const glm::vec3& spot) {
+        Mob* best = nullptr;
+        for (Mob& mob : m_entities.mobs())
+            if (mob.typeId() == kind && mob.alive() && (!best || glm::length(mob.position() - spot) < glm::length(best->position() - spot)))
+                best = &mob;
+        return best;
+    };
+    Mob* pig = nearestTo(MobId::Pig, m_lanBase + glm::vec3(0.0f, 0.0f, 4.0f));
+    if (!host && at(33.0f) && pig)
+    {
+        pig->strike(1, pig->position() - m_player.position);
+        forwardHit(*pig, 1, glm::vec3(0.0f), 0.0f);
+    }
+    if (t >= 33.2f && t < 33.9f) shot("mobs-after-hit");
+    if (host && at(33.9f)) m_freezeMobs = false;
+    Mob* sheep = nearestTo(MobId::Sheep, m_lanBase + glm::vec3(-2.0f, 0.0f, 5.0f));
+    if (!host && at(34.0f) && sheep)
+    {
+        sheep->strike(100, sheep->position() - m_player.position);
+        forwardHit(*sheep, 100, glm::vec3(0.0f), 0.0f);
+    }
+    if (t >= 34.45f && t < 35.5f) shot("mobs-dying");
+    if (at(34.5f))
+    {
+        std::printf("[lantest] mobs: %zu, pig health %d\n", m_entities.mobs().size(), pig ? pig->health() : -1);
+        std::fflush(stdout);
+    }
+    if (t >= 36.0f)
     {
         std::printf("[lantest] done, %zu shots\n", m_lanTaken.size());
         std::fflush(stdout);

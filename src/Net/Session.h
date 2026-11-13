@@ -58,6 +58,68 @@ namespace Net
         glm::vec3 smoothed() const { return glm::mix(previous, position, glm::clamp(blend, 0.0f, 1.0f)); }
     };
 
+    struct MobSnap
+    {
+        uint32_t serial = 0;
+        uint16_t type = 0;
+        glm::vec3 position{ 0.0f };
+        float yaw = 0.0f;
+        int health = 1;
+        int variant = 0;
+        uint32_t seed = 1;
+        int size = 0;
+        int profession = -1;
+        int shulkerColour = 16;
+        int armourDye = -1;
+        uint16_t flags = 0;
+        uint16_t horseArmour = 0;
+        uint16_t gear[6] = { 0, 0, 0, 0, 0, 0 };
+        std::string name;
+    };
+
+    enum MobFlags : uint16_t
+    {
+        MobBaby = 1 << 0,
+        MobTamed = 1 << 1,
+        MobSitting = 1 << 2,
+        MobSaddled = 1 << 3,
+        MobCharged = 1 << 4,
+        MobCaptain = 1 << 5,
+        MobBurning = 1 << 6,
+        MobHurt = 1 << 7,
+        MobLeashed = 1 << 8
+    };
+
+    struct MobNoise
+    {
+        uint16_t sound = 0;
+        std::string named;
+        glm::vec3 position{ 0.0f };
+        float volume = 1.0f;
+        float pitch = 1.0f;
+        uint16_t mob = 0;
+    };
+
+    struct MobHitRequest
+    {
+        uint32_t peer = 0;
+        uint32_t serial = 0;
+        int damage = 0;
+        glm::vec3 push{ 0.0f };
+        float fireSeconds = 0.0f;
+    };
+
+    struct StrikeOnYou
+    {
+        int damage = 0;
+        glm::vec3 from{ 0.0f };
+        int blindSeconds = 0;
+        int effect = -1;
+        int effectAmplifier = 0;
+        float effectSeconds = 0.0f;
+        int attacker = -1;
+    };
+
     // What a guest needs before it can build the world at all.
     struct Handshake
     {
@@ -109,6 +171,15 @@ namespace Net
         }
         static constexpr float SWING_SECONDS = 0.30f;
 
+        void broadcastMobs(const std::vector<MobSnap>& mobs);
+        void broadcastMobNoise(const MobNoise& noise);
+        void strikeGuest(uint32_t peer, const StrikeOnYou& strike);
+        void sendMobHit(uint32_t serial, int damage, const glm::vec3& push, float fireSeconds);
+        bool takeMobStates(std::vector<MobSnap>& out);
+        std::vector<MobNoise> takeMobNoises() { std::vector<MobNoise> all; all.swap(m_mobNoises); return all; }
+        std::vector<StrikeOnYou> takeStrikesOnMe() { std::vector<StrikeOnYou> all; all.swap(m_strikesOnMe); return all; }
+        std::vector<MobHitRequest> takeMobHits() { std::vector<MobHitRequest> all; all.swap(m_mobHits); return all; }
+
         // Pumped once a frame. `world` is null until a guest has built it.
         void update(float deltaTime, World* world, const glm::vec3& localPosition,
                     float yaw, float pitch, float& timeOfDay);
@@ -147,6 +218,11 @@ namespace Net
         uint32_t m_localId = 0;
         Appearance m_localLook;
         bool m_localSneaking = false;
+        std::vector<MobSnap> m_mobStates;
+        bool m_mobStatesFresh = false;
+        std::vector<MobNoise> m_mobNoises;
+        std::vector<StrikeOnYou> m_strikesOnMe;
+        std::vector<MobHitRequest> m_mobHits;
         uint16_t m_localMain = 0;
         uint16_t m_localOff = 0;
         bool m_localLeftHanded = false;

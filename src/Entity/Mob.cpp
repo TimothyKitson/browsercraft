@@ -24,7 +24,6 @@ namespace
     constexpr float STEP_SOUND_DISTANCE = 1.9f;
     constexpr float NOTICE_RANGE = 16.0f;   // hostiles start chasing here
     constexpr float FLEE_RANGE = 5.0f;      // animals back off here
-    constexpr float DEATH_SECONDS = 0.6f;
 }
 
 Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
@@ -36,6 +35,7 @@ Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
     static uint32_t nextSerial = 1;
     m_serial = nextSerial++;
     if (baby) m_babyTimer = BABY_SECONDS;
+    m_removeTimer = deathSeconds();
     const MobType& t = mobType(type);
     m_health = t.maxHealth;
     m_yaw = random01() * 360.0f;
@@ -462,10 +462,48 @@ float Mob::fuse() const
     return std::clamp(1.0f - m_fuseTimer / t.fuseSeconds, 0.0f, 1.0f);
 }
 
+void Mob::puppet(int health, bool tamed, bool sitting, bool hurt, bool burning)
+{
+    if (hurt && m_hurtFlash <= 0.0f && health > 0) m_hurtFlash = 0.5f;
+    m_burnTimer = burning ? 1.0f : 0.0f;
+    if (health <= 0 && m_health > 0) m_removeTimer = deathSeconds();
+    m_health = health;
+    m_tamed = tamed;
+    m_sitting = sitting;
+    m_dressed = true;
+}
+
+void Mob::follow(const glm::vec3& at, float yaw, float deltaTime)
+{
+    const glm::vec3 before = m_position;
+    const float far = glm::length(at - m_position);
+    m_position = far > 8.0f ? at : glm::mix(m_position, at, std::clamp(deltaTime * 12.0f, 0.0f, 1.0f));
+    float turn = std::fmod(yaw - m_yaw + 540.0f, 360.0f) - 180.0f;
+    m_yaw += turn * std::clamp(deltaTime * 12.0f, 0.0f, 1.0f);
+    m_goalYaw = m_yaw;
+    m_age += deltaTime;
+    if (m_hurtFlash > 0.0f) m_hurtFlash = std::max(0.0f, m_hurtFlash - deltaTime);
+    if (m_strikeGuard > 0.0f) m_strikeGuard = std::max(0.0f, m_strikeGuard - deltaTime);
+    if (!alive()) m_removeTimer = std::max(0.0f, m_removeTimer - deltaTime);
+    const glm::vec3 delta = m_position - before;
+    const float travelled = far > 8.0f ? 0.0f : glm::length(glm::vec3(delta.x, 0.0f, delta.z));
+    const float speed = deltaTime > 0.0001f ? travelled / deltaTime : 0.0f;
+    m_velocity = deltaTime > 0.0001f && far <= 8.0f ? delta / deltaTime : glm::vec3(0.0f);
+    m_gait += travelled * PlayerAnimation::PHASE_PER_BLOCK;
+    m_gaitAmount = PlayerAnimation::approach(m_gaitAmount, std::clamp(speed / std::max(0.5f, currentSpeed()), 0.0f, 1.0f), 10.0f, deltaTime);
+}
+
+float Mob::deathTilt() const
+{
+    if (alive()) return 0.0f;
+    const float ticks = (deathSeconds() - m_removeTimer) * 20.0f;
+    return std::min(1.0f, std::sqrt(std::max(0.0f, ticks / 20.0f * 1.6f)));
+}
+
 float Mob::deathFade() const
 {
     if (alive()) return 1.0f;
-    return std::clamp(m_removeTimer / DEATH_SECONDS, 0.0f, 1.0f);
+    return std::clamp(m_removeTimer / deathSeconds(), 0.0f, 1.0f);
 }
 
 void Mob::emit(Sound id, float volume, float pitch)
@@ -1325,7 +1363,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                 // It goes with the blast. Nothing left to drop: the
                 // gunpowder went up with it.
                 m_health = 0;
-                m_removeTimer = DEATH_SECONDS;
+                m_removeTimer = deathSeconds();
                 return;
             }
         }
@@ -1714,7 +1752,7 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     if (m_type == MobId::Wolf && m_horseArmour == Items::WolfArmor)
     {
         m_armourWear += amount;
-        m_hurtFlash = 0.35f;
+        m_hurtFlash = 0.5f;
         if (m_armourWear >= 64)
         {
             m_horseArmour = 0;
@@ -1744,7 +1782,7 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
             amount = std::max(1, static_cast<int>(std::lround(amount * (1.0f - std::min(points, 20.0f) / 25.0f))));
     }
     m_health = std::max(0, m_health - amount);
-    m_hurtFlash = 0.35f;
+    m_hurtFlash = 0.5f;
     if (m_type == MobId::GlowSquid) m_darkTime = 5.0f;
     if (m_effects.has(Effects::Kind::Infested) && random01() <= Effects::INFESTED_CHANCE)
         m_silverfish += random01() < 0.5f ? 1 : 2;
