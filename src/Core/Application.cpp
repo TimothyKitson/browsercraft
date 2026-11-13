@@ -30804,6 +30804,24 @@ void Application::runCheatAudit()
         const auto [bad, badSaid] = run("/fillbiome ~ ~ ~ ~ ~ ~ minecraft:nowhere");
         report(!bad, "/fillbiome names unknown biomes", badSaid);
     }
+    {
+        run("/kill @e[type=cow]");
+        run("/summon cow ~2 ~ ~");
+        const auto [merged, mergeSaid] = run("/data merge entity @e[type=cow,limit=1] {NoAI:1b,Silent:1b,Invulnerable:1b,Health:4f,CustomName:'\"Daisy\"'}");
+        Mob* cow = nullptr;
+        for (Mob& mob : m_entities.mobs())
+            if (mob.alive() && mob.typeId() == MobId::Cow) cow = &mob;
+        report(merged && cow && cow->noAI() && cow->silent() && cow->invulnerable() && cow->health() == 4 && cow->customName() == "Daisy",
+               "/data merge sets NoAI, Silent, Invulnerable, Health and CustomName", mergeSaid);
+        if (cow) cow->damage(3, glm::vec3(0.0f));
+        report(cow && cow->health() == 4, "an invulnerable mob takes no damage", std::string());
+        const auto [got, gotSaid] = run("/data get entity @e[type=cow,limit=1] Health");
+        report(got && gotSaid.find("4.0f") != std::string::npos, "/data get reads a mob's health", gotSaid);
+        const auto [modified, modSaid] = run("/data modify entity @e[type=cow,limit=1] NoAI set value 0b");
+        report(modified && cow && !cow->noAI(), "/data modify sets one value", modSaid);
+        run("/kill @e[type=cow]");
+        report(cow && !cow->alive(), "/kill still kills an invulnerable mob", std::string());
+    }
     std::printf("Cheat audit: %d passed, %d failed\n", passed, failed);
     std::fflush(stdout);
 }

@@ -390,6 +390,13 @@ public:
     bool tameFailed() const { return m_tameFailed; }
     void setSitting(bool on) { m_sitting = on; }
     bool dancing() const { return m_dancing; }
+    bool noAI() const { return m_noAI; }
+    void setNoAI(bool on) { m_noAI = on; }
+    bool silent() const { return m_silent; }
+    void setSilent(bool on) { m_silent = on; }
+    bool invulnerable() const { return m_invulnerable; }
+    void setInvulnerable(bool on) { m_invulnerable = on; }
+    void setHealth(int health) { m_health = std::max(1, std::min(health, type().maxHealth)); }
     void setDancing(bool on) { m_dancing = on; }
     bool tamed() const { return m_tamed; }
 
@@ -676,6 +683,9 @@ private:
     bool m_tameTried = false;
     bool m_tameFailed = false;
     bool m_dancing = false;
+    bool m_noAI = false;
+    bool m_silent = false;
+    bool m_invulnerable = false;
     float m_holdTimer = 0.0f;
     bool m_ridden = false;
     uint32_t m_serial = 0;

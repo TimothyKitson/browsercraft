@@ -518,6 +518,7 @@ float Mob::deathFade() const
 
 void Mob::emit(Sound id, float volume, float pitch)
 {
+    if (m_silent) return;
     MobSound sound;
     sound.id = id;
     sound.position = m_position;
@@ -529,6 +530,7 @@ void Mob::emit(Sound id, float volume, float pitch)
 
 void Mob::emitNamed(const char* stem, Sound fallback, float volume, float pitch)
 {
+    if (m_silent) return;
     emit(fallback, volume, pitch);
     m_sounds.back().named = stem;
 }
@@ -728,6 +730,15 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         return;
     }
     if (!m_dressed) dress(g_gearDifficultyFor());
+    if (m_noAI)
+    {
+        if (m_hurtFlash > 0.0f) m_hurtFlash = std::max(0.0f, m_hurtFlash - deltaTime);
+        if (m_strikeGuard > 0.0f) m_strikeGuard = std::max(0.0f, m_strikeGuard - deltaTime);
+        if (!alive()) m_removeTimer -= deltaTime;
+        m_velocity = glm::vec3(0.0f);
+        m_moving = false;
+        return;
+    }
 
     m_daylight = daylight;
     if (m_type == MobId::Guardian || m_type == MobId::ElderGuardian || m_type == MobId::Wolf)
@@ -1748,6 +1759,7 @@ bool Mob::teleportRandom(const World& world, float range)
 void Mob::damage(int amount, const glm::vec3& fromDirection)
 {
     if (amount <= 0 || !alive() || m_spawnPhase > 0.0f || m_burrow != 0.0f || isTechnicalMob(m_type)) return;
+    if (m_invulnerable && amount < 1000000) return;
     if ((m_type == MobId::Enderman && random01() < 0.6f) ||
         (m_type == MobId::Shulker && m_health * 2 < type().maxHealth && random01() < 0.25f))
         m_wantsTeleport = true;

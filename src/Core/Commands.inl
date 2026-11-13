@@ -670,11 +670,135 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
         return true;
     }
 
+    if (name == "data" && arg(1) == "entity" && arg(2) != "@s" && !arg(2).empty() &&
+        (arg(0) == "merge" || arg(0) == "get" || (arg(0) == "modify" && arg(4) == "set" && arg(5) == "value")))
+    {
+        Targets chosen;
+        std::string error;
+        if (!selectTargets(arg(2), origin, false, chosen, error) || chosen.mobs.empty())
+        {
+            output = error.empty() ? "No entity was found" : error;
+            return false;
+        }
+        Mob& mob = m_entities.mobs()[chosen.mobs.front()];
+        auto describe = [&]() {
+            std::string text = "{Health: " + std::to_string(mob.health()) + ".0f, Rotation: [" + std::to_string(static_cast<int>(mob.yaw() - 90.0f)) +
+                               ".0f, 0.0f], NoAI: " + (mob.noAI() ? "1b" : "0b") + ", Silent: " + (mob.silent() ? "1b" : "0b") +
+                               ", Invulnerable: " + (mob.invulnerable() ? "1b" : "0b") + ", PersistenceRequired: " + (mob.persistent() ? "1b" : "0b") +
+                               ", Age: " + (mob.baby() ? "-24000" : "0");
+            if (!mob.customName().empty()) text += ", CustomName: '\"" + mob.customName() + "\"'";
+            return text + "}";
+        };
+        const std::string who = mob.customName().empty() ? std::string(mob.type().name) : mob.customName();
+        if (arg(0) == "get")
+        {
+            const std::string path = arg(3);
+            const std::string all = describe();
+            if (path.empty())
+            {
+                output = who + " has the following entity data: " + all;
+                return true;
+            }
+            const size_t at = all.find(path + ": ");
+            if (at == std::string::npos)
+            {
+                output = "Found no elements matching " + path;
+                return false;
+            }
+            size_t end = at + path.size() + 2;
+            int depth = 0;
+            while (end < all.size() && (depth > 0 || (all[end] != ',' && all[end] != '}')))
+            {
+                if (all[end] == '[') ++depth;
+                if (all[end] == ']') --depth;
+                ++end;
+            }
+            output = who + " has the following entity data: " + all.substr(at + path.size() + 2, end - at - path.size() - 2);
+            return true;
+        }
+        std::vector<std::pair<std::string, std::string>> tags;
+        if (arg(0) == "modify") tags.push_back({ arg(3), arg(6) });
+        else
+        {
+            std::string body;
+            for (size_t k = 3; k < args.size(); ++k) body += (k > 3 ? " " : "") + args[k];
+            if (body.size() < 2 || body.front() != '{' || body.back() != '}')
+            {
+                output = "Expected a compound tag like {NoAI:1b}";
+                return false;
+            }
+            body = body.substr(1, body.size() - 2);
+            size_t k = 0;
+            while (k < body.size())
+            {
+                while (k < body.size() && (body[k] == ' ' || body[k] == ',')) ++k;
+                const size_t colon = body.find(':', k);
+                if (colon == std::string::npos) break;
+                std::string key = body.substr(k, colon - k);
+                while (!key.empty() && key.back() == ' ') key.pop_back();
+                size_t v = colon + 1;
+                while (v < body.size() && body[v] == ' ') ++v;
+                size_t end = v;
+                int depth = 0;
+                char quote = 0;
+                while (end < body.size())
+                {
+                    const char c = body[end];
+                    if (quote) { if (c == quote) quote = 0; }
+                    else if (c == '\'' || c == '"') quote = c;
+                    else if (c == '[' || c == '{') ++depth;
+                    else if (c == ']' || c == '}') --depth;
+                    else if (c == ',' && depth == 0) break;
+                    ++end;
+                }
+                tags.push_back({ key, body.substr(v, end - v) });
+                k = end + 1;
+            }
+        }
+        auto flag = [](const std::string& value) { return !value.empty() && value[0] != '0' && value != "false"; };
+        auto number = [](std::string value) {
+            while (!value.empty() && std::isalpha(static_cast<unsigned char>(value.back()))) value.pop_back();
+            try { return std::stof(value); } catch (...) { return 0.0f; }
+        };
+        int applied = 0;
+        for (const auto& [key, value] : tags)
+        {
+            if (key == "NoAI") mob.setNoAI(flag(value));
+            else if (key == "Silent") mob.setSilent(flag(value));
+            else if (key == "Invulnerable") mob.setInvulnerable(flag(value));
+            else if (key == "PersistenceRequired") { if (flag(value)) mob.keepFromDespawning(); }
+            else if (key == "Health") mob.setHealth(static_cast<int>(std::lround(number(value))));
+            else if (key == "Age") mob.setBaby(number(value) < 0.0f);
+            else if (key == "Glowing") { if (flag(value)) mob.giveEffect(Effects::Kind::Glowing, 0, 1.0e6f); }
+            else if (key == "Rotation")
+            {
+                const size_t open = value.find('[');
+                if (open != std::string::npos) mob.setYaw(number(value.substr(open + 1)) + 90.0f);
+            }
+            else if (key == "CustomName")
+            {
+                std::string text = value;
+                if (text.size() >= 2 && (text.front() == '\'' || text.front() == '"') && text.back() == text.front()) text = text.substr(1, text.size() - 2);
+                std::string plain;
+                mob.setCustomName(Chat::textComponent(text, plain) ? plain : text);
+            }
+            else continue;
+            ++applied;
+        }
+        if (applied == 0)
+        {
+            output = "Nothing changed. The specified properties already have these values";
+            return false;
+        }
+        output = "Modified entity data of " + who;
+        return true;
+    }
+
     if (name == "data")
     {
         if (arg(0) != "get")
         {
-            output = "Only /data get is supported: entity and block data is not stored as NBT here";
+            output = "Only /data get, and /data merge or modify on mobs, are supported: blocks keep no NBT here";
             return false;
         }
         if (arg(1) == "block" && args.size() >= 5 && m_world)
