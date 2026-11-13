@@ -2485,6 +2485,13 @@ bool Application::frame()
     m_net.update(deltaTime, m_world && !m_menuWorld ? m_world.get() : nullptr,
                  m_player.position, m_camera.yaw, m_camera.pitch, m_timeOfDay);
     notePeers();
+    for (const std::string& heard : m_net.takeChat()) m_chatInbox.push_back({ heard, m_chatDelay });
+    for (auto& waiting : m_chatInbox) waiting.second -= deltaTime;
+    while (!m_chatInbox.empty() && m_chatInbox.front().second <= 0.0f)
+    {
+        m_chatLog.add(m_chatInbox.front().first);
+        m_chatInbox.erase(m_chatInbox.begin());
+    }
     updateBackgroundMusic(deltaTime);
 
     // A guest gets the seed before it has the world; build it now,
@@ -21657,6 +21664,7 @@ void Application::runChatLine(const std::string& line)
     const bool command = !line.empty() && line[0] == '/';
     const bool worked = runCommand(line, m_player.position, false, output);
     if (!command || !worked || m_rules.on(GameRules::Rule::SendCommandFeedback)) m_chatLog.add(output);
+    if (!command && !line.empty() && !output.empty() && m_net.active()) m_net.say(output);
 }
 
 bool Application::runCommand(const std::string& line, const glm::vec3& origin, bool fromBlock, std::string& output)
@@ -27231,6 +27239,13 @@ void Application::tickLanTest(float deltaTime)
                     : (t >= 20.0f && t < 23.0f) || t >= 28.0f ? Perspective::ThirdBack : Perspective::FirstPerson;
     const float myTurn = host ? 8.0f : 14.0f;
     const float theirTurn = host ? 14.0f : 8.0f;
+    if (at(1.0f)) runChatLine(host ? "hi Alex" : "hello Steve");
+    if (at(2.4f))
+    {
+        for (const auto& line : m_chatLog.lines())
+            if (line.text.find('<') == 0) std::printf("[lantest] chat seen: %s\n", line.text.c_str());
+        std::fflush(stdout);
+    }
     if (t >= 2.5f && t < 3.5f) shot("see-idle");
     if (at(host ? 4.0f : 5.5f)) m_heldItem.swing();
     if (t > 3.5f && t < 8.0f && remoteSwing >= 0.15f && remoteSwing < 0.85f) shot("see-swing");

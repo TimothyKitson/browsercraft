@@ -216,6 +216,8 @@ namespace Net
         std::vector<BlastEvent> takeBlasts() { std::vector<BlastEvent> all; all.swap(m_blasts); return all; }
         std::vector<ShotEvent> takeShots() { std::vector<ShotEvent> all; all.swap(m_shots); return all; }
         std::vector<LootEvent> takeLoot() { std::vector<LootEvent> all; all.swap(m_loot); return all; }
+        void say(const std::string& line);
+        std::vector<std::string> takeChat() { std::vector<std::string> all; all.swap(m_chatIn); return all; }
         bool takeMobStates(std::vector<MobSnap>& out);
         std::vector<MobNoise> takeMobNoises() { std::vector<MobNoise> all; all.swap(m_mobNoises); return all; }
         std::vector<StrikeOnYou> takeStrikesOnMe() { std::vector<StrikeOnYou> all; all.swap(m_strikesOnMe); return all; }
@@ -267,6 +269,7 @@ namespace Net
         std::vector<BlastEvent> m_blasts;
         std::vector<ShotEvent> m_shots;
         std::vector<LootEvent> m_loot;
+        std::vector<std::string> m_chatIn;
         uint16_t m_localMain = 0;
         uint16_t m_localOff = 0;
         bool m_localLeftHanded = false;

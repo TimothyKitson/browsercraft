@@ -124,6 +124,7 @@ void Session::leave()
     m_blasts.clear();
     m_shots.clear();
     m_loot.clear();
+    m_chatIn.clear();
 }
 
 // ------------------------------------------------------------- update ---
@@ -601,6 +602,18 @@ void Session::handleAsHost(const Packet& packet, World* world)
             break;
         }
 
+        case MessageId::ChatSay:
+        {
+            std::string line = reader.str();
+            if (!reader.ok() || line.empty()) break;
+            if (line.size() > 300) line.resize(300);
+            if (m_chatIn.size() < 64) m_chatIn.push_back(line);
+            Writer relay(MessageId::Chat);
+            relay.str(line);
+            m_transport->broadcast(relay.bytes(), packet.peer);
+            break;
+        }
+
         case MessageId::StatusQuery:
         {
             Writer reply(MessageId::StatusReply);
@@ -800,6 +813,13 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             break;
         }
 
+        case MessageId::Chat:
+        {
+            const std::string line = reader.str();
+            if (reader.ok() && !line.empty() && m_chatIn.size() < 64) m_chatIn.push_back(line);
+            break;
+        }
+
         case MessageId::BlastNear:
         {
             BlastEvent blast;
@@ -927,6 +947,21 @@ void Session::sendMobHit(uint32_t serial, int damage, const glm::vec3& push, flo
     out.i32(damage);
     out.vec3(push);
     out.f32(fireSeconds);
+    m_transport->send(HOST_PEER, out.bytes());
+}
+
+void Session::say(const std::string& line)
+{
+    if (!m_transport || m_role == Role::Offline || line.empty()) return;
+    if (m_role == Role::Host)
+    {
+        Writer out(MessageId::Chat);
+        out.str(line);
+        m_transport->broadcast(out.bytes());
+        return;
+    }
+    Writer out(MessageId::ChatSay);
+    out.str(line);
     m_transport->send(HOST_PEER, out.bytes());
 }
 

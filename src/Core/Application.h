@@ -1881,6 +1881,7 @@ private:
     int m_menuBlur = 5;
     bool m_backgroundForChatOnly = true;
     float m_chatDelay = 0.0f;
+    std::vector<std::pair<std::string, float>> m_chatInbox;
     float m_notificationTime = 1.0f;
     float m_glintStrength = 0.75f;
     float m_glintBuiltStrength = -1.0f;
