@@ -1073,6 +1073,57 @@ void Application::loadLevel()
         int note = 0;
         while (notes >> key[0] >> key[1] >> key[2] >> key[3] >> note) m_noteTunes[key] = note;
     }
+    m_hiveBees.clear();
+    m_seededNests.clear();
+    m_beeMinds.clear();
+    m_jobClaims.clear();
+    m_catPerches.clear();
+    for (ShoulderParrot& rider : m_shoulders) rider = ShoulderParrot{};
+    {
+        std::ifstream riders(m_savePath + "/shoulders.txt");
+        int slot = 0, variant = 0, health = 6;
+        uint32_t seed = 1u;
+        std::string name;
+        while (riders >> slot >> seed >> variant >> health >> name)
+        {
+            if (slot < 0 || slot > 1) continue;
+            ShoulderParrot& rider = m_shoulders[slot];
+            rider.on = true;
+            rider.seed = seed;
+            rider.variant = variant;
+            rider.health = health;
+            if (name != "-")
+            {
+                for (char& c : name) if (c == '_') c = ' ';
+                rider.name = name;
+            }
+        }
+    }
+    {
+        std::ifstream hives(m_savePath + "/hive_bees.txt");
+        std::string kind;
+        std::array<int, 4> key{};
+        while (hives >> kind >> key[0] >> key[1] >> key[2] >> key[3])
+        {
+            if (kind == "S")
+            {
+                m_seededNests.insert(key);
+                continue;
+            }
+            HiveBee bee;
+            int nectar = 0, baby = 0;
+            std::string name;
+            if (!(hives >> nectar >> bee.inside >> bee.minimum >> bee.seed >> bee.health >> baby >> name)) break;
+            bee.nectar = nectar != 0;
+            bee.baby = baby != 0;
+            if (name != "-")
+            {
+                for (char& c : name) if (c == '_') c = ' ';
+                bee.name = name;
+            }
+            m_hiveBees[key].push_back(bee);
+        }
+    }
     m_campfires.clear();
     {
         std::ifstream fires(m_savePath + "/campfires.txt");
@@ -1541,6 +1592,32 @@ void Application::saveLevel()
         std::ofstream notes(m_savePath + "/notes.txt");
         if (notes)
             for (const auto& [key, note] : m_noteTunes) notes << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3] << ' ' << note << '\n';
+    }
+    {
+        std::ofstream riders(m_savePath + "/shoulders.txt");
+        if (riders)
+            for (int k = 0; k < 2; ++k)
+            {
+                if (!m_shoulders[k].on) continue;
+                std::string name = m_shoulders[k].name.empty() ? "-" : m_shoulders[k].name;
+                for (char& c : name) if (c == ' ' || c == '\n') c = '_';
+                riders << k << ' ' << m_shoulders[k].seed << ' ' << m_shoulders[k].variant << ' ' << m_shoulders[k].health << ' ' << name << '\n';
+            }
+    }
+    {
+        std::ofstream hives(m_savePath + "/hive_bees.txt");
+        if (hives)
+        {
+            for (const std::array<int, 4>& key : m_seededNests) hives << "S " << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3] << '\n';
+            for (const auto& [key, bees] : m_hiveBees)
+                for (const HiveBee& bee : bees)
+                {
+                    std::string name = bee.name.empty() ? "-" : bee.name;
+                    for (char& c : name) if (c == ' ' || c == '\n') c = '_';
+                    hives << "B " << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3] << ' ' << (bee.nectar ? 1 : 0) << ' ' << bee.inside << ' '
+                          << bee.minimum << ' ' << bee.seed << ' ' << bee.health << ' ' << (bee.baby ? 1 : 0) << ' ' << name << '\n';
+                }
+        }
     }
     {
         std::ofstream fires(m_savePath + "/campfires.txt");
@@ -3453,7 +3530,7 @@ bool Application::frame()
             m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
             m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
             m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" || m_startupScreen == "lush" ||
-            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "waterlog" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
+            m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "waterlog" || m_startupScreen == "bees" || m_startupScreen == "pets" || m_startupScreen == "ice" || m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig" ||
             m_startupScreen == "boat" || m_startupScreen == "rails" || m_startupScreen == "railhill" || m_startupScreen == "turned" || m_startupScreen == "jockeys" || m_startupScreen == "dungeon" ||
             m_startupScreen == "mobs" || m_startupScreen == "golem" ||
             m_startupScreen == "glowmobs" || m_startupScreen == "variants" || m_startupScreen == "zoo" || m_startupScreen == "llamas" ||
@@ -3596,7 +3673,7 @@ bool Application::frame()
                                   m_startupScreen != "mushrooms" &&
                                   m_startupScreen != "lush" &&
                                   m_startupScreen != "farm" &&
-                                  m_startupScreen != "corals" && m_startupScreen != "waterlog" &&
+                                  m_startupScreen != "corals" && m_startupScreen != "waterlog" && m_startupScreen != "bees" && m_startupScreen != "pets" &&
                                   m_startupScreen != "ice" &&
                                   m_startupScreen != "wiring" &&
                                   m_startupScreen != "utility" &&
@@ -4133,7 +4210,7 @@ bool Application::frame()
                 m_startupScreen == "stones" || m_startupScreen == "colours" || m_startupScreen == "candles" ||
                 m_startupScreen == "shulkerboxes" || m_startupScreen == "beds" || m_startupScreen == "chests" ||
                 m_startupScreen == "copper" || m_startupScreen == "flowers" || m_startupScreen == "mushrooms" ||
-                m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "waterlog" || m_startupScreen == "ice" ||
+                m_startupScreen == "lush" || m_startupScreen == "farm" || m_startupScreen == "corals" || m_startupScreen == "waterlog" || m_startupScreen == "bees" || m_startupScreen == "pets" || m_startupScreen == "ice" ||
                 m_startupScreen == "wiring" || m_startupScreen == "utility" || m_startupScreen == "dig")
             {
                 m_camera.setOrientation(0.0f, -25.0f);
@@ -4454,6 +4531,66 @@ bool Application::frame()
                     m_world->setBlock(px + 14, py, pz - 9, Blocks::Bookshelf);
                     m_world->setBlock(px + 14, py, pz + 9, Blocks::DiamondOre);
                     m_world->setBlock(px + 14, py + 1, pz + 9, Blocks::EndPortalFrame);
+                }
+                if (m_startupScreen == "pets")
+                {
+                    m_timeOfDay = 0.3f;
+                    m_perspective = Perspective::ThirdBack;
+                    m_camera.setOrientation(0.0f, -20.0f);
+                    for (int dx = -10; dx <= 14; ++dx)
+                        for (int dz = -10; dz <= 10; ++dz)
+                        {
+                            for (int dy = 0; dy <= 6; ++dy) m_world->setBlock(px + dx, py + dy, pz + dz, Blocks::Air);
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Grass);
+                            for (int dy = 2; dy <= 5; ++dy) m_world->setBlock(px + dx, py - dy, pz + dz, Blocks::Dirt);
+                            const bool rim = dx == -10 || dx == 14 || dz == -10 || dz == 10;
+                            if (rim) m_world->setBlock(px + dx, py, pz + dz, fenceOfWood(0));
+                        }
+                    m_world->setBlock(px + 3, py, pz - 3, Blocks::Chest);
+                    m_world->setBlock(px + 3, py, pz + 3, Blocks::Jukebox);
+                    const std::array<int, 4> box{ static_cast<int>(m_dimension), px + 3, py, pz + 3 };
+                    m_jukeboxes[box] = ItemStack{ static_cast<StackId>(Items::MusicDiscFirst), 1 };
+                    m_jukeboxPlaying = box;
+                    auto add = [&](MobId kind, const glm::vec3& at, bool tame) -> Mob& {
+                        m_entities.mobs().emplace_back(kind, at, 4242u + static_cast<uint32_t>(m_entities.mobs().size()));
+                        Mob& mob = m_entities.mobs().back();
+                        if (tame) mob.puppet(mob.health(), true, false, false, false);
+                        mob.keepFromDespawning();
+                        return mob;
+                    };
+                    add(MobId::Cat, glm::vec3(px + 2.5f, static_cast<float>(py), pz - 1.5f), true).setVariant(4);
+                    add(MobId::Parrot, glm::vec3(px + 2.5f, static_cast<float>(py + 1), pz + 2.5f), false).setVariant(1);
+                    add(MobId::Parrot, glm::vec3(px + 0.9f, static_cast<float>(py) + 1.3f, pz + 0.5f), true).setVariant(3);
+                    add(MobId::Creeper, glm::vec3(px + 9.5f, static_cast<float>(py), pz - 4.5f), false);
+                    add(MobId::Cat, glm::vec3(px + 7.5f, static_cast<float>(py), pz - 4.5f), true).setSitting(true);
+                }
+                if (m_startupScreen == "bees")
+                {
+                    m_timeOfDay = 0.3f;
+                    m_camera.setOrientation(0.0f, -20.0f);
+                    m_world->setBlock(px + 6, py, pz, Blocks::Log);
+                    m_world->setBlock(px + 6, py + 1, pz, hiveOf(false, 3, 0));
+                    const std::array<int, 4> key{ static_cast<int>(m_dimension), px + 6, py + 1, pz };
+                    m_seededNests.insert(key);
+                    for (int k = 0; k < 2; ++k)
+                    {
+                        HiveBee bee;
+                        bee.seed = 77u + static_cast<uint32_t>(k);
+                        bee.inside = 30.0f;
+                        m_hiveBees[key].push_back(bee);
+                    }
+                    const BlockId blooms[] = { Blocks::FlowerRed, Blocks::FlowerYellow, Blocks::Allium, Blocks::Cornflower };
+                    for (int k = 0; k < 4; ++k)
+                    {
+                        m_world->setBlock(px + 3 + k, py, pz + 3, blooms[k]);
+                        m_world->setBlock(px + 3 + k, py, pz - 3, blooms[3 - k]);
+                    }
+                    for (int dx = 2; dx <= 9; ++dx)
+                        for (int dz = 5; dz <= 6; ++dz)
+                        {
+                            m_world->setBlock(px + dx, py - 1, pz + dz, Blocks::Farmland);
+                            m_world->setBlock(px + dx, py, pz + dz, Blocks::Wheat0);
+                        }
                 }
                 if (m_startupScreen == "waterlog")
                 {
@@ -4990,7 +5127,7 @@ bool Application::frame()
                     if (m_entities.spawnAt(MobId::Wolf, glm::vec3(static_cast<float>(px) + 5.0f, static_cast<float>(py), static_cast<float>(pz) + 0.0f), *m_world))
                     {
                         Mob& wolf = m_entities.mobs().back();
-                        wolf.tameWith(Items::Bone);
+                        while (!wolf.tamed()) wolf.tameWith(Items::Bone);
                         wolf.setHorseArmour(Items::WolfArmor);
                         wolf.setArmourDye(11);
                         wolf.setArmourWear(30);
@@ -10501,12 +10638,10 @@ void Application::updateMining(float deltaTime)
                 if (silk && isHive(id)) drop = hiveOf(isBeeNest(id), 2, 0);
                 if (silk && isBeeNest(id))
                 {
-                    int bees = 0;
-                    for (const Mob& bee : m_entities.mobs())
-                        if (bee.alive() && bee.typeId() == MobId::Bee && glm::length(bee.position() - (glm::vec3(hit.block) + glm::vec3(0.5f))) < 6.0f)
-                            ++bees;
-                    if (bees >= 3) award("husbandry/silk_touch_nest", "silk_touch_nest");
+                    const auto inside = m_hiveBees.find({ static_cast<int>(m_dimension), hit.block.x, hit.block.y, hit.block.z });
+                    if (inside != m_hiveBees.end() && inside->second.size() >= 3) award("husbandry/silk_touch_nest", "silk_touch_nest");
                 }
+                if (isHive(id)) releaseHiveBees(hit.block, !silk, true);
                 if (silk && (isLiveCoralPlant(id) || isDeadCoralPlant(id) || isAnyCoralFan(id))) drop = id;
                 if (silk && isAnyCoralWallFan(id))
                     drop = static_cast<StackId>((isDeadCoralWallFan(id) ? Blocks::DeadCoralFanFirst : Blocks::CoralFanFirst) + coralKind(id));
@@ -15173,6 +15308,7 @@ void Application::wakeUp(bool slept)
     m_player.clearFall();
     setMouseCaptured(true);
     if (!slept) return;
+    giveCatGifts();
     award("adventure/sleep_in_bed", "slept_in_bed");
     m_stats.add(Stats::Custom::SleepInBed);
     m_stats.set(Stats::Custom::TimeSinceRest, 0);
@@ -17981,10 +18117,9 @@ void Application::handlePlacement()
             if (villager->typeId() == MobId::Villager && villager->alive())
             {
                 m_tradeWandering = false;
-                const Trading::Profession job = villager->professionSlot() >= 0
-                    ? static_cast<Trading::Profession>(villager->professionSlot())
-                    : Trading::professionFor(villager->birthSeed());
-                if (Trading::dealsFor(job).empty() || villager->baby())
+                const int employed = villagerJob(*villager);
+                const Trading::Profession job = employed >= 0 ? static_cast<Trading::Profession>(employed) : Trading::Profession::Nitwit;
+                if (employed < 0 || Trading::dealsFor(job).empty() || villager->baby())
                 {
                     m_audio.playNamed("mob/villager/no", Sound::MobVillagerSay, 0.8f, villager->baby() ? 1.4f : 1.0f);
                     return;
@@ -18013,6 +18148,7 @@ void Application::handlePlacement()
                 m_audio.play(Sound::Click, 0.4f);
                 return;
             }
+            if (isStorageChest(used) && catOnTop(bench.block)) return;
             if (isContainerBlock(used) || isItemHolder(used) || isEnderChest(used))
             {
                 openChest(bench.block);
@@ -18259,9 +18395,20 @@ void Application::handlePlacement()
                 const BlockId emptied = hiveOf(isBeeNest(used), hiveFacing(used), 0);
                 m_world->setBlock(bench.block.x, bench.block.y, bench.block.z, emptied);
                 m_net.onLocalBlockChange(bench.block.x, bench.block.y, bench.block.z, emptied);
+                bool smoked = false;
                 for (int below = 1; below <= 5; ++below)
-                    if (isCampfire(m_world->getBlock(bench.block.x, bench.block.y - below, bench.block.z)))
-                        award("husbandry/safely_harvest_honey", "safely_harvest_honey");
+                    if (isCampfire(m_world->getBlock(bench.block.x, bench.block.y - below, bench.block.z))) smoked = true;
+                if (smoked) award("husbandry/safely_harvest_honey", "safely_harvest_honey");
+                else
+                {
+                    releaseHiveBees(bench.block, true, true);
+                    for (Mob& bee : m_entities.mobs())
+                    {
+                        if (bee.typeId() != MobId::Bee || !bee.alive()) continue;
+                        const auto mind = m_beeMinds.find(bee.serial());
+                        if (mind != m_beeMinds.end() && mind->second.hasHive && mind->second.hive == bench.block) bee.provoke();
+                    }
+                }
                 if (held.id == Items::Shears)
                     m_drops.spawnFromBrokenBlock(bench.block, Items::Honeycomb, 3);
                 else
@@ -19047,8 +19194,24 @@ void Application::handlePlacement()
     // for the same reason feeding comes before placing: what is in
     // front of you takes it.
     Mob* tamingTarget = m_entities.pick(m_camera.position, m_camera.front, ATTACK_REACH);
+    if (tamingTarget && tamingTarget->typeId() == MobId::Parrot && tamingTarget->alive() && stack.id == Items::Cookie)
+    {
+        tamingTarget->giveEffect(Effects::Kind::Poison, 0, 45.0f);
+        tamingTarget->damage(1000, glm::vec3(0.0f));
+        tamingTarget->markPlayerHit(0, glm::length(tamingTarget->position() - m_player.position));
+        if (!m_player.creative() && --stack.count <= 0) stack.clear();
+        return;
+    }
     if (m_entities.tame(m_camera.position, m_camera.front, ATTACK_REACH, stack.id))
     {
+        if (tamingTarget && !tamingTarget->tamed())
+        {
+            sprites(SpriteParticles::Kind::Smoke, tamingTarget->position() + glm::vec3(0.0f, tamingTarget->height() * 0.8f, 0.0f), 7, 0.4f, 0.3f, 0.15f, 1.0f, 0.0f);
+            if (!m_player.creative() && --stack.count <= 0) stack.clear();
+            m_audio.play(Sound::Pickup, 0.6f, 1.5f);
+            return;
+        }
+        if (tamingTarget) sprites(SpriteParticles::Kind::Heart, tamingTarget->position() + glm::vec3(0.0f, tamingTarget->height(), 0.0f), 7, 0.4f, 0.4f, 0.3f, 1.2f, 0.0f);
         award("husbandry/tame_an_animal", "tamed_animal");
         if (tamingTarget && tamingTarget->tamed())
         {
@@ -20343,7 +20506,11 @@ void Application::handlePlacement()
                                : (look.z > 0.0f ? 0 : 2);
         if (isCarvedPumpkin(placing)) placing = static_cast<BlockId>(Blocks::CarvedPumpkinFirst + facing);
         else if (isJackOLantern(placing)) placing = static_cast<BlockId>(Blocks::JackOLanternFirst + facing);
-        else placing = hiveOf(isBeeNest(placing), facing, 0);
+        else
+        {
+            placing = hiveOf(isBeeNest(placing), facing, 0);
+            m_seededNests.insert({ static_cast<int>(m_dimension), target.x, target.y, target.z });
+        }
     }
 
     // Stairs face the way you are looking, so you walk up them rather
@@ -21005,6 +21172,7 @@ void Application::renderWorldShaded()
         prepareMobModel();
         m_mobModel.hiddenSerial = m_spectatingMob;
         m_mobModel.render(world, *m_world, m_entities);
+        if (m_perspective != Perspective::FirstPerson && !m_shoulderMobs.mobs().empty()) m_mobModel.render(world, *m_world, m_shoulderMobs);
         renderMobGear(world);
     }
     m_atlas.bind(0, 1, 2);
@@ -21163,6 +21331,8 @@ void Application::renderWorld()
         prepareMobModel();
         m_mobModel.hiddenSerial = m_spectatingMob;
         m_mobModel.render(m_chunkShader, *m_world, m_entities);
+        if (m_perspective != Perspective::FirstPerson && !m_shoulderMobs.mobs().empty())
+            m_mobModel.render(m_chunkShader, *m_world, m_shoulderMobs);
         renderMobGear(m_chunkShader);
     }
     m_atlas.bind(0, 1, 2);
@@ -24060,11 +24230,7 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
 void Application::prepareMobModel()
 {
     if (m_mobModel.professionOf) return;
-    m_mobModel.professionOf = [](const Mob& villager) {
-        return static_cast<int>(villager.professionSlot() >= 0
-                                    ? static_cast<Trading::Profession>(villager.professionSlot())
-                                    : Trading::professionFor(villager.birthSeed()));
-    };
+    m_mobModel.professionOf = [this](const Mob& villager) { return villagerJob(villager); };
     m_mobModel.rankOf = [this](const Mob& villager) {
         const auto found = m_traders.find(villager.birthSeed());
         return found == m_traders.end() ? 0 : Trading::rankFor(found->second.xp);
@@ -24733,33 +24899,78 @@ void Application::queueBeams()
     }
 }
 
+int Application::villagerJob(const Mob& villager) const
+{
+    if (villager.professionSlot() >= 0) return villager.professionSlot();
+    if (Trading::professionFor(villager.birthSeed()) == Trading::Profession::Nitwit) return static_cast<int>(Trading::Profession::Nitwit);
+    const auto record = m_traders.find(villager.birthSeed());
+    if (record != m_traders.end() && record->second.xp > 0) return static_cast<int>(Trading::professionFor(villager.birthSeed()));
+    return -1;
+}
+
 void Application::claimJobSites()
 {
+    for (auto it = m_jobClaims.begin(); it != m_jobClaims.end();)
+    {
+        Trading::Profession job;
+        const bool standing = it->first[0] == static_cast<int>(m_dimension) &&
+                              Trading::jobSite(m_world->getBlock(it->first[1], it->first[2], it->first[3]), job);
+        const bool loaded = it->first[0] != static_cast<int>(m_dimension) ||
+                            m_world->chunkAt(static_cast<int>(std::floor(it->first[1] / 16.0f)), static_cast<int>(std::floor(it->first[3] / 16.0f)));
+        if (!loaded || (standing && static_cast<int>(job) == it->second.second))
+        {
+            ++it;
+            continue;
+        }
+        for (Mob& villager : m_entities.mobs())
+        {
+            if (villager.typeId() != MobId::Villager || villager.birthSeed() != it->second.first) continue;
+            const auto record = m_traders.find(villager.birthSeed());
+            if (record == m_traders.end() || record->second.xp <= 0)
+            {
+                villager.setProfessionSlot(-1);
+                sprites(SpriteParticles::Kind::Angry, villager.position() + glm::vec3(0.0f, 2.0f, 0.0f), 1, 0.1f, 0.1f, 0.25f, 1.0f, 0.0f);
+            }
+        }
+        it = m_jobClaims.erase(it);
+    }
     for (Mob& villager : m_entities.mobs())
     {
         if (villager.typeId() != MobId::Villager || !villager.alive() || villager.baby()) continue;
-        if (villager.professionSlot() < 0 &&
-            Trading::professionFor(villager.birthSeed()) == Trading::Profession::Nitwit)
-            continue;
-        const auto record = m_traders.find(villager.birthSeed());
-        if (record != m_traders.end() && record->second.xp > 0) continue;
-
+        if (villagerJob(villager) == static_cast<int>(Trading::Profession::Nitwit)) continue;
+        bool claimed = false;
+        for (const auto& [cell, owner] : m_jobClaims)
+            if (owner.first == villager.birthSeed()) claimed = true;
+        if (claimed) continue;
+        const int want = villagerJob(villager);
         const glm::ivec3 at = glm::ivec3(glm::floor(villager.position()));
-        bool found = false;
-        for (int dy = -1; dy <= 2 && !found; ++dy)
-            for (int dx = -JOB_SITE_REACH; dx <= JOB_SITE_REACH && !found; ++dx)
-                for (int dz = -JOB_SITE_REACH; dz <= JOB_SITE_REACH && !found; ++dz)
+        float best = 1e9f;
+        std::array<int, 4> pick{};
+        int pickJob = -1;
+        for (int dy = -3; dy <= 3; ++dy)
+            for (int dx = -JOB_SITE_REACH; dx <= JOB_SITE_REACH; ++dx)
+                for (int dz = -JOB_SITE_REACH; dz <= JOB_SITE_REACH; ++dz)
                 {
                     Trading::Profession job;
                     if (!Trading::jobSite(m_world->getBlock(at.x + dx, at.y + dy, at.z + dz), job)) continue;
-                    if (villager.professionSlot() != static_cast<int>(job))
+                    if (want >= 0 && static_cast<int>(job) != want) continue;
+                    const std::array<int, 4> key{ static_cast<int>(m_dimension), at.x + dx, at.y + dy, at.z + dz };
+                    if (m_jobClaims.count(key)) continue;
+                    const float d = static_cast<float>(dx * dx + dy * dy + dz * dz);
+                    if (d < best)
                     {
-                        villager.setProfessionSlot(static_cast<int>(job));
-                        sprites(SpriteParticles::Kind::Happy, villager.position() + glm::vec3(0.0f, 1.8f, 0.0f),
-                                6, 0.4f, 0.4f, 0.18f, 1.2f);
+                        best = d;
+                        pick = key;
+                        pickJob = static_cast<int>(job);
                     }
-                    found = true;
                 }
+        if (pickJob < 0) continue;
+        m_jobClaims[pick] = { villager.birthSeed(), pickJob };
+        if (villager.professionSlot() != pickJob)
+        {
+            villager.setProfessionSlot(pickJob);
+            sprites(SpriteParticles::Kind::Happy, villager.position() + glm::vec3(0.0f, 1.8f, 0.0f), 6, 0.4f, 0.4f, 0.18f, 1.2f);
+        }
     }
 }
 
@@ -24773,6 +24984,7 @@ void Application::updateWorldAround(float deltaTime)
     tickCampfires(deltaTime);
     tickFluids(deltaTime);
     tickHives(deltaTime);
+    if (m_net.role() != Net::Role::Guest) tickPets(deltaTime);
     tickBreathClouds(deltaTime);
     m_books.update(deltaTime, *m_world, m_player.position);
     updateLids(deltaTime);
@@ -24817,35 +25029,533 @@ void Application::updateWorldAround(float deltaTime)
     updateMobs(deltaTime);
 }
 
+bool Application::beeFlower(BlockId id)
+{
+    if (isSmallFlower(id) || isPinkPetals(id) || id == Blocks::FloweringAzalea || id == Blocks::FloweringAzaleaLeaves ||
+        id == Blocks::CherryLeaves || id == Blocks::MangrovePropagule || id == Blocks::ChorusFlower || id == Blocks::SporeBlossom)
+        return true;
+    if (isDoublePlant(id))
+    {
+        const DoublePlant kind = doublePlantKind(id);
+        if (kind == DoublePlant::Sunflower) return doublePlantUpper(id);
+        return kind == DoublePlant::Lilac || kind == DoublePlant::RoseBush || kind == DoublePlant::Peony || kind == DoublePlant::PitcherPlant;
+    }
+    return false;
+}
+
+void Application::releaseHiveBees(const glm::ivec3& cell, bool angry, bool all)
+{
+    const std::array<int, 4> key{ static_cast<int>(m_dimension), cell.x, cell.y, cell.z };
+    auto found = m_hiveBees.find(key);
+    if (found == m_hiveBees.end()) return;
+    const BlockId hive = m_world->getBlock(cell.x, cell.y, cell.z);
+    static const glm::ivec3 FRONT[4] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
+    const glm::ivec3 front = isHive(hive) ? FRONT[hiveFacing(hive) & 3] : glm::ivec3(0, 1, 0);
+    const glm::ivec3 out = cell + front;
+    if (!all && isSolid(m_world->getBlock(out.x, out.y, out.z))) return;
+    std::vector<HiveBee> staying;
+    for (const HiveBee& bee : found->second)
+    {
+        const bool ready = bee.inside >= bee.minimum;
+        if (!all && !ready)
+        {
+            staying.push_back(bee);
+            continue;
+        }
+        const glm::vec3 at = glm::vec3(cell) + glm::vec3(0.5f, 0.0f, 0.5f) + glm::vec3(front) * 0.85f + glm::vec3(0.0f, 0.2f, 0.0f);
+        m_entities.mobs().emplace_back(MobId::Bee, at, bee.seed, bee.baby);
+        Mob& mob = m_entities.mobs().back();
+        mob.setYaw(glm::degrees(std::atan2(static_cast<float>(front.z), static_cast<float>(front.x))));
+        if (!bee.name.empty()) mob.setCustomName(bee.name);
+        if (angry)
+        {
+            mob.provoke();
+            mob.setVariant(0);
+        }
+        BeeMind& mind = m_beeMinds[mob.serial()];
+        mind.hive = cell;
+        mind.hasHive = isHive(hive);
+        mind.cannotEnter = angry ? 20.0f : 0.0f;
+        mind.cooldown = 0.0f;
+        if (bee.nectar && isHive(hive) && !angry)
+        {
+            const int honey = hiveHoney(hive);
+            if (honey < 5)
+            {
+                int add = (hashCoords(cell.x, cell.y, cell.z, static_cast<uint32_t>(m_elapsedSeconds * 977.0f)) % 100u) == 0u ? 2 : 1;
+                if (honey + add > 5) add = 5 - honey;
+                const BlockId fuller = hiveOf(isBeeNest(hive), hiveFacing(hive), honey + add);
+                m_world->setBlock(cell.x, cell.y, cell.z, fuller);
+                m_net.onLocalBlockChange(cell.x, cell.y, cell.z, fuller);
+            }
+        }
+        namedAt("block/beehive/exit", glm::vec3(cell) + glm::vec3(0.5f), 1.0f, 1.0f, Sound::MobBeeSay);
+    }
+    if (staying.empty()) m_hiveBees.erase(found);
+    else found->second = staying;
+}
+
 void Application::tickHives(float deltaTime)
 {
     if (m_net.role() == Net::Role::Guest) return;
-    m_hiveClock += deltaTime;
-    if (m_hiveClock < 30.0f) return;
-    m_hiveClock = 0.0f;
+    tickBees(deltaTime);
+    m_nestScan -= deltaTime;
+    if (m_nestScan <= 0.0f)
+    {
+        m_nestScan = 5.0f;
+        const glm::ivec3 c(glm::floor(m_player.position));
+        for (int y = std::max(1, c.y - 24); y <= c.y + 24; ++y)
+            for (int z = c.z - 24; z <= c.z + 24; ++z)
+                for (int x = c.x - 24; x <= c.x + 24; ++x)
+                {
+                    if (!isBeeNest(m_world->getBlock(x, y, z))) continue;
+                    const std::array<int, 4> key{ static_cast<int>(m_dimension), x, y, z };
+                    if (!m_seededNests.insert(key).second) continue;
+                    const int count = 2 + static_cast<int>(hashCoords(x, y, z, 0xBEE5u) % 2u);
+                    for (int k = 0; k < count; ++k)
+                    {
+                        HiveBee bee;
+                        bee.seed = hashCoords(x, y + k, z, 0xB0Bu) | 1u;
+                        bee.minimum = 30.0f;
+                        bee.inside = 30.0f;
+                        m_hiveBees[key].push_back(bee);
+                    }
+                }
+    }
+    const bool dark = Sleep::isNight(m_timeOfDay) || m_weather.raining();
+    std::vector<std::array<int, 4>> keys;
+    for (auto& [key, bees] : m_hiveBees)
+    {
+        if (key[0] != static_cast<int>(m_dimension)) continue;
+        for (HiveBee& bee : bees) bee.inside += deltaTime;
+        keys.push_back(key);
+    }
+    for (const std::array<int, 4>& key : keys)
+    {
+        const glm::ivec3 cell(key[1], key[2], key[3]);
+        const int cx = static_cast<int>(std::floor(static_cast<float>(cell.x) / 16.0f));
+        const int cz = static_cast<int>(std::floor(static_cast<float>(cell.z) / 16.0f));
+        if (!m_world->chunkAt(cx, cz)) continue;
+        const BlockId hive = m_world->getBlock(cell.x, cell.y, cell.z);
+        if (!isHive(hive)) releaseHiveBees(cell, true, true);
+        else if (!dark) releaseHiveBees(cell, false, false);
+    }
+}
 
-    std::vector<glm::vec3> bees;
-    for (const Mob& mob : m_entities.mobs())
-        if (mob.alive() && mob.typeId() == MobId::Bee) bees.push_back(mob.position());
-    if (bees.empty()) return;
+bool Application::catOnTop(const glm::ivec3& cell) const
+{
+    for (const auto& [serial, perch] : m_catPerches)
+        if (perch.seated && perch.cell == cell) return true;
+    return false;
+}
 
-    const glm::ivec3 c(static_cast<int>(std::floor(m_player.position.x)), static_cast<int>(std::floor(m_player.position.y)),
-                       static_cast<int>(std::floor(m_player.position.z)));
-    for (int y = std::max(1, c.y - 16); y <= c.y + 16; ++y)
-        for (int z = c.z - 16; z <= c.z + 16; ++z)
-            for (int x = c.x - 16; x <= c.x + 16; ++x)
+void Application::giveCatGifts()
+{
+    static const StackId GIFTS[7] = { Items::RabbitHide, Items::RabbitFoot, Items::RawChicken, Items::Feather, Items::RottenFlesh,
+                                      Items::StringItem, Items::PhantomMembrane };
+    static const int WEIGHTS[7] = { 10, 10, 10, 10, 10, 10, 2 };
+    for (const Mob& cat : m_entities.mobs())
+    {
+        if (cat.typeId() != MobId::Cat || !cat.alive() || !cat.tamed() || cat.sitting()) continue;
+        if (glm::length(cat.position() - m_player.position) > 10.0f) continue;
+        const uint32_t roll = hashCoords(static_cast<int>(cat.serial()), m_dayNumber, 0, 0xCA7u);
+        if (roll % 100u >= 70u) continue;
+        int pick = static_cast<int>((roll >> 8) % 62u);
+        int which = 0;
+        while (which < 6 && pick >= WEIGHTS[which]) pick -= WEIGHTS[which++];
+        m_drops.spawn(m_player.position + glm::vec3(0.0f, 0.5f, 0.0f), GIFTS[which], 1);
+    }
+}
+
+void Application::dropShoulderParrots()
+{
+    static const float SIDE[2] = { -0.4f, 0.4f };
+    const float yaw = glm::radians(m_animation[LOCAL_ANIM].started ? m_animation[LOCAL_ANIM].bodyYaw : m_camera.yaw);
+    const glm::vec3 ahead(std::cos(yaw), 0.0f, std::sin(yaw));
+    const glm::vec3 right(-ahead.z, 0.0f, ahead.x);
+    for (int k = 0; k < 2; ++k)
+    {
+        ShoulderParrot& rider = m_shoulders[k];
+        if (!rider.on) continue;
+        rider.on = false;
+        m_entities.mobs().emplace_back(MobId::Parrot, m_player.position + right * SIDE[k] + glm::vec3(0.0f, 1.5f, 0.0f), rider.seed);
+        Mob& parrot = m_entities.mobs().back();
+        parrot.setVariant(rider.variant);
+        parrot.puppet(std::max(1, rider.health), true, false, false, false);
+        parrot.keepFromDespawning();
+        if (!rider.name.empty()) parrot.setCustomName(rider.name);
+        parrot.setYaw(m_camera.yaw);
+    }
+    m_shoulderCooldown = 5.0f;
+    m_shoulderMobs.mobs().clear();
+}
+
+void Application::buildShoulderParrots()
+{
+    m_shoulderMobs.mobs().clear();
+    static const float SIDE[2] = { -0.4f, 0.4f };
+    const float bodyYaw = m_animation[LOCAL_ANIM].started ? m_animation[LOCAL_ANIM].bodyYaw : m_camera.yaw;
+    const float yaw = glm::radians(bodyYaw);
+    const glm::vec3 ahead(std::cos(yaw), 0.0f, std::sin(yaw));
+    const glm::vec3 right(-ahead.z, 0.0f, ahead.x);
+    const float lift = m_player.sneaking ? 1.3f : 1.5f;
+    for (int k = 0; k < 2; ++k)
+    {
+        const ShoulderParrot& rider = m_shoulders[k];
+        if (!rider.on) continue;
+        m_shoulderMobs.mobs().emplace_back(MobId::Parrot, m_player.position + right * SIDE[k] + glm::vec3(0.0f, lift, 0.0f), rider.seed);
+        Mob& parrot = m_shoulderMobs.mobs().back();
+        parrot.setVariant(rider.variant);
+        parrot.setYaw(bodyYaw);
+        parrot.setSitting(true);
+        if (!rider.name.empty()) parrot.setCustomName(rider.name);
+    }
+}
+
+void Application::tickPets(float deltaTime)
+{
+    m_shoulderCooldown = std::max(0.0f, m_shoulderCooldown - deltaTime);
+    const bool hurt = m_player.health < m_lastPlayerHealth;
+    m_lastPlayerHealth = m_player.health;
+    const bool anyRider = m_shoulders[0].on || m_shoulders[1].on;
+    if (anyRider && (hurt || m_player.fallenSoFar() > 0.5f || m_player.isInWater(*m_world) || m_sleeping || m_player.gliding ||
+                     m_player.flying || m_player.spectator()))
+        dropShoulderParrots();
+    const glm::vec3 jukebox = glm::vec3(m_jukeboxPlaying[1], m_jukeboxPlaying[2], m_jukeboxPlaying[3]) + glm::vec3(0.5f);
+    const bool music = m_jukeboxPlaying[0] == static_cast<int>(m_dimension);
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive()) continue;
+        const bool pet = mob.tamed() && !mob.sitting() && !mob.leashed() &&
+                         (mob.typeId() == MobId::Wolf || mob.typeId() == MobId::Cat || mob.typeId() == MobId::Parrot);
+        if (pet && !m_catPerches.count(mob.serial()) && m_player.onGround && glm::length(mob.position() - m_player.position) >= 12.0f)
+        {
+            const glm::ivec3 c(glm::floor(m_player.position));
+            for (int attempt = 0; attempt < 10; ++attempt)
             {
-                const BlockId hive = m_world->getBlock(x, y, z);
-                if (!isHive(hive) || hiveHoney(hive) >= 5) continue;
-                const glm::vec3 at(x + 0.5f, y + 0.5f, z + 0.5f);
-                bool near = false;
-                for (const glm::vec3& b : bees)
-                    if (glm::dot(b - at, b - at) < 256.0f) { near = true; break; }
-                if (!near) continue;
-                const BlockId fuller = hiveOf(isBeeNest(hive), hiveFacing(hive), hiveHoney(hive) + 1);
-                m_world->setBlock(x, y, z, fuller);
-                m_net.onLocalBlockChange(x, y, z, fuller);
+                const uint32_t roll = hashCoords(static_cast<int>(mob.serial()), attempt, static_cast<int>(m_elapsedSeconds), 0x7E1Eu);
+                const int dx = static_cast<int>(roll % 7u) - 3, dz = static_cast<int>((roll >> 4) % 7u) - 3, dy = static_cast<int>((roll >> 8) % 3u) - 1;
+                if (std::abs(dx) < 2 && std::abs(dz) < 2) continue;
+                const glm::ivec3 spot(c.x + dx, c.y + dy, c.z + dz);
+                if (!isSolid(m_world->getBlock(spot.x, spot.y - 1, spot.z)) || isSolid(m_world->getBlock(spot.x, spot.y, spot.z)) ||
+                    isSolid(m_world->getBlock(spot.x, spot.y + 1, spot.z)) || isLiquid(m_world->getBlock(spot.x, spot.y - 1, spot.z)))
+                    continue;
+                mob.teleportTo(glm::vec3(spot) + glm::vec3(0.5f, 0.0f, 0.5f));
+                break;
             }
+        }
+        if (mob.typeId() == MobId::Parrot)
+        {
+            mob.setDancing(music && glm::length(mob.position() - jukebox) <= 3.46f);
+            if (mob.dancing())
+            {
+                const auto anchor = m_danceSpots.emplace(mob.serial(), mob.position()).first;
+                mob.teleportTo(anchor->second);
+            }
+            else m_danceSpots.erase(mob.serial());
+            if (mob.tamed() && !mob.sitting() && m_shoulderCooldown <= 0.0f && !mob.dancing() && m_player.onGround &&
+                !m_player.isInWater(*m_world) && !m_sleeping && glm::length(mob.position() - (m_player.position + glm::vec3(0.0f, 1.2f, 0.0f))) < 1.6f)
+            {
+                const int slot = !m_shoulders[0].on ? 0 : !m_shoulders[1].on ? 1 : -1;
+                if (slot >= 0)
+                {
+                    ShoulderParrot& rider = m_shoulders[slot];
+                    rider.on = true;
+                    rider.seed = mob.birthSeed();
+                    rider.variant = mob.variant();
+                    rider.health = mob.health();
+                    rider.name = mob.customName();
+                    mob.vanish();
+                    m_audio.playNamed("entity/parrot/fly", Sound::MobParrotSay, 0.5f, 1.0f);
+                    continue;
+                }
+            }
+            if (mob.tamed() && !mob.sitting() && m_shoulderCooldown <= 0.0f && glm::length(mob.position() - m_player.position) < 12.0f &&
+                glm::length(mob.position() - m_player.position) > 1.4f && m_player.onGround)
+            {
+                const glm::vec3 goal = m_player.position + glm::vec3(0.0f, 1.4f, 0.0f) - mob.position();
+                const float far = glm::length(goal);
+                if (far < 3.0f) mob.shove((goal / far * 2.0f - mob.velocity()) * std::min(1.0f, 4.0f * deltaTime));
+            }
+            const uint32_t chance = hashCoords(static_cast<int>(m_elapsedSeconds * 20.0f), static_cast<int>(mob.serial()), 11, 0x9A77u);
+            if (chance % 400u == 0u)
+            {
+                const Mob* copied = nullptr;
+                float nearest = 20.0f;
+                for (const Mob& other : m_entities.mobs())
+                {
+                    if (!other.alive() || other.type().spawnClass != SpawnClass::Hostile) continue;
+                    const float d = glm::length(other.position() - mob.position());
+                    if (d < nearest)
+                    {
+                        nearest = d;
+                        copied = &other;
+                    }
+                }
+                if (copied)
+                {
+                    MobSound copy;
+                    copy.id = copied->type().voice;
+                    copy.position = mob.position();
+                    copy.volume = 0.7f;
+                    copy.pitch = 1.8f + (static_cast<float>((chance >> 9) % 100u) / 100.0f - 0.5f) * 0.2f;
+                    copy.mob = MobId::Parrot;
+                    playMobSound(copy);
+                    m_audio.clearAim();
+                }
+            }
+        }
+        if (mob.typeId() == MobId::Cat && mob.tamed())
+        {
+            auto perch = m_catPerches.find(mob.serial());
+            if (perch == m_catPerches.end())
+            {
+                if (mob.sitting()) continue;
+                float& wait = m_catPerchWait[mob.serial()];
+                const uint32_t chance = hashCoords(static_cast<int>(m_elapsedSeconds * 4.0f), static_cast<int>(mob.serial()), 13, 0xCA75u);
+                if (wait <= 0.0f) wait = 10.0f + static_cast<float>(chance % 200u) / 20.0f;
+                wait -= deltaTime;
+                if (wait > 0.0f) continue;
+                wait = 0.0f;
+                const glm::ivec3 c(glm::floor(mob.position()));
+                float best = 1e9f;
+                glm::ivec3 pick(0);
+                bool found = false;
+                for (int y = c.y - 2; y <= c.y + 2; ++y)
+                    for (int z = c.z - 8; z <= c.z + 8; ++z)
+                        for (int x = c.x - 8; x <= c.x + 8; ++x)
+                        {
+                            const BlockId id = m_world->getBlock(x, y, z);
+                            const bool lit = id == Blocks::FurnaceLit || id == Blocks::SmokerLit || id == Blocks::BlastFurnaceLit;
+                            if (!isStorageChest(id) && !lit && !isBed(id)) continue;
+                            if (isSolid(m_world->getBlock(x, y + 1, z)) || catOnTop(glm::ivec3(x, y, z))) continue;
+                            const float d = glm::length(glm::vec3(x, y, z) - glm::vec3(c));
+                            if (d < best)
+                            {
+                                best = d;
+                                pick = glm::ivec3(x, y, z);
+                                found = true;
+                            }
+                        }
+                if (!found) continue;
+                CatPerch fresh;
+                fresh.cell = pick;
+                fresh.time = 20.0f + static_cast<float>((chance >> 8) % 40u);
+                perch = m_catPerches.emplace(mob.serial(), fresh).first;
+            }
+            CatPerch& spot = perch->second;
+            const BlockId under = m_world->getBlock(spot.cell.x, spot.cell.y, spot.cell.z);
+            const bool still = isStorageChest(under) || isBed(under) || under == Blocks::FurnaceLit || under == Blocks::SmokerLit ||
+                               under == Blocks::BlastFurnaceLit;
+            spot.time -= deltaTime;
+            const glm::vec3 top = glm::vec3(spot.cell) + glm::vec3(0.5f, isBed(under) ? 0.5625f : 0.875f, 0.5f);
+            if (!still || spot.time <= 0.0f)
+            {
+                if (spot.seated) mob.setSitting(false);
+                m_catPerches.erase(perch);
+                continue;
+            }
+            if (!spot.seated)
+            {
+                const glm::vec3 to = top - mob.position();
+                if (glm::length(glm::vec2(to.x, to.z)) < 0.6f)
+                {
+                    mob.teleportTo(top);
+                    mob.setSitting(true);
+                    spot.seated = true;
+                }
+                else
+                {
+                    const glm::vec3 flat = glm::normalize(glm::vec3(to.x, 0.0f, to.z));
+                    const glm::vec3 next = mob.position() + flat * std::min(1.3f * deltaTime, glm::length(glm::vec2(to.x, to.z)));
+                    const glm::ivec3 cell(glm::floor(next + glm::vec3(0.0f, 0.1f, 0.0f)));
+                    const bool blocked = isSolid(m_world->getBlock(cell.x, cell.y, cell.z)) && cell != spot.cell;
+                    if (blocked || spot.time < 10.0f)
+                    {
+                        m_catPerches.erase(perch);
+                        continue;
+                    }
+                    mob.teleportTo(next);
+                    mob.setYaw(glm::degrees(std::atan2(flat.z, flat.x)));
+                }
+            }
+            else mob.teleportTo(top);
+        }
+    }
+    for (auto it = m_catPerches.begin(); it != m_catPerches.end();)
+    {
+        bool alive = false;
+        for (const Mob& mob : m_entities.mobs())
+            if (mob.serial() == it->first && mob.alive()) alive = true;
+        it = alive ? std::next(it) : m_catPerches.erase(it);
+    }
+    buildShoulderParrots();
+}
+
+void Application::tickBees(float deltaTime)
+{
+    const bool dark = Sleep::isNight(m_timeOfDay) || m_weather.raining();
+    std::set<uint32_t> living;
+    for (Mob& bee : m_entities.mobs())
+    {
+        if (bee.typeId() != MobId::Bee || !bee.alive()) continue;
+        living.insert(bee.serial());
+        BeeMind& mind = m_beeMinds[bee.serial()];
+        const glm::vec3 at = bee.position();
+        mind.cooldown = std::max(0.0f, mind.cooldown - deltaTime);
+        mind.cannotEnter = std::max(0.0f, mind.cannotEnter - deltaTime);
+        mind.sincePollination += deltaTime;
+        mind.search -= deltaTime;
+        const bool nectar = (bee.variant() & 1) != 0;
+        auto steer = [&](const glm::vec3& goal, float speed) {
+            const glm::vec3 to = goal - bee.position();
+            const float far = glm::length(to);
+            const glm::vec3 toward = far > 0.05f ? to / far * std::min(speed, far * 3.0f) : glm::vec3(0.0f);
+            bee.shove((toward - bee.velocity()) * std::min(1.0f, 6.0f * deltaTime));
+            if (far > 0.2f) bee.setYaw(glm::degrees(std::atan2(to.z, to.x)));
+        };
+        if (mind.hasHive && !isHive(m_world->getBlock(mind.hive.x, mind.hive.y, mind.hive.z))) mind.hasHive = false;
+        if (!mind.hasHive && mind.search <= 0.0f)
+        {
+            mind.search = 5.0f;
+            const glm::ivec3 c(glm::floor(at));
+            float best = 1e9f;
+            for (int y = c.y - 20; y <= c.y + 20; ++y)
+                for (int z = c.z - 20; z <= c.z + 20; ++z)
+                    for (int x = c.x - 20; x <= c.x + 20; ++x)
+                    {
+                        if (!isHive(m_world->getBlock(x, y, z))) continue;
+                        const auto inside = m_hiveBees.find({ static_cast<int>(m_dimension), x, y, z });
+                        if (inside != m_hiveBees.end() && inside->second.size() >= 3) continue;
+                        const float d = glm::length(glm::vec3(x, y, z) + glm::vec3(0.5f) - at);
+                        if (d < best)
+                        {
+                            best = d;
+                            mind.hive = glm::ivec3(x, y, z);
+                            mind.hasHive = true;
+                        }
+                    }
+        }
+        if (bee.hostileNow()) continue;
+        const glm::vec3 hiveCentre = glm::vec3(mind.hive) + glm::vec3(0.5f);
+        const bool home = mind.hasHive && mind.cannotEnter <= 0.0f && mind.atFlower <= 0.0f &&
+                          (nectar || dark || mind.sincePollination > 180.0f);
+        if (home)
+        {
+            if (glm::length(hiveCentre - at) <= 2.0f)
+            {
+                const std::array<int, 4> key{ static_cast<int>(m_dimension), mind.hive.x, mind.hive.y, mind.hive.z };
+                std::vector<HiveBee>& inside = m_hiveBees[key];
+                if (inside.size() < 3)
+                {
+                    HiveBee stored;
+                    stored.nectar = nectar;
+                    stored.minimum = nectar ? 120.0f : 30.0f;
+                    stored.seed = bee.birthSeed();
+                    stored.health = bee.health();
+                    stored.baby = bee.baby();
+                    stored.name = bee.customName();
+                    inside.push_back(stored);
+                    namedAt("block/beehive/enter", hiveCentre, 1.0f, 1.0f, Sound::MobBeeSay);
+                    bee.vanish();
+                    continue;
+                }
+                mind.hasHive = false;
+                mind.cannotEnter = 20.0f;
+            }
+            else
+            {
+                static const glm::ivec3 FRONT[4] = { { 0, 0, -1 }, { 1, 0, 0 }, { 0, 0, 1 }, { -1, 0, 0 } };
+                const BlockId hive = m_world->getBlock(mind.hive.x, mind.hive.y, mind.hive.z);
+                steer(hiveCentre + glm::vec3(FRONT[hiveFacing(hive) & 3]) * 0.9f, 2.4f);
+            }
+        }
+        if (nectar)
+        {
+            mind.growClock -= deltaTime;
+            if (mind.crops < 10 && mind.growClock <= 0.0f)
+            {
+                mind.growClock = 1.5f;
+                const glm::ivec3 c(glm::floor(at));
+                for (int below = 1; below <= 2; ++below)
+                {
+                    const glm::ivec3 cell(c.x, c.y - below, c.z);
+                    const BlockId under = m_world->getBlock(cell.x, cell.y, cell.z);
+                    BlockId grown = Blocks::Air;
+                    if (isCrop(under) && !isCropRipe(under) && cropStage(under) < 7) grown = cropAtStage(under, cropStage(under) + 1);
+                    else if (isSweetBerryBush(under) && sweetBerryStage(under) < 3) grown = static_cast<BlockId>(under + 1);
+                    if (grown == Blocks::Air) continue;
+                    m_world->setBlock(cell.x, cell.y, cell.z, grown);
+                    m_net.onLocalBlockChange(cell.x, cell.y, cell.z, grown);
+                    sprites(SpriteParticles::Kind::Happy, glm::vec3(cell) + glm::vec3(0.5f), 15, 0.4f, 0.4f, 0.12f, 1.0f, 0.0f);
+                    ++mind.crops;
+                    break;
+                }
+            }
+            if (hashCoords(static_cast<int>(m_elapsedSeconds * 20.0f), static_cast<int>(bee.serial()), 3, 0xBEEu) % 30u == 0u)
+                sprites(SpriteParticles::Kind::FallingNectar, at + glm::vec3(0.0f, 0.1f, 0.0f), 1, 0.15f, 0.0f, 0.06f, 2.0f, -2.0f);
+            continue;
+        }
+        if (home) continue;
+        if (mind.hasFlower)
+        {
+            const BlockId flower = m_world->getBlock(mind.flower.x, mind.flower.y, mind.flower.z);
+            const glm::vec3 above = glm::vec3(mind.flower) + glm::vec3(0.5f, 0.6f, 0.5f);
+            mind.chasing += deltaTime;
+            if (!beeFlower(flower) || m_weather.raining() || mind.chasing > 30.0f)
+            {
+                mind.hasFlower = false;
+                mind.atFlower = 0.0f;
+                continue;
+            }
+            if (glm::length(above - at) > 1.0f) steer(above, 2.4f);
+            else
+            {
+                mind.atFlower += deltaTime;
+                const float wobble = mind.atFlower * 1.3f;
+                steer(above + glm::vec3(std::sin(wobble) * 0.3f, 0.0f, std::cos(wobble * 0.7f) * 0.3f), 0.8f);
+                if (hashCoords(static_cast<int>(m_elapsedSeconds * 20.0f), static_cast<int>(bee.serial()), 5, 0xB00u) % 60u == 0u)
+                    namedAt("entity/bee/pollinate", at, 0.6f, 1.0f, Sound::MobBeeSay);
+                if (mind.atFlower > 20.0f)
+                {
+                    bee.setVariant(bee.variant() | 1);
+                    mind.hasFlower = false;
+                    mind.atFlower = 0.0f;
+                    mind.cooldown = 10.0f;
+                    mind.sincePollination = 0.0f;
+                    mind.crops = 0;
+                }
+            }
+            continue;
+        }
+        if (mind.cooldown > 0.0f || m_weather.raining() || dark) continue;
+        const glm::ivec3 c(glm::floor(at));
+        bool found = false;
+        float best = 1e9f;
+        for (int y = c.y - 6; y <= c.y + 4 && !found; ++y)
+            for (int z = c.z - 5; z <= c.z + 5; ++z)
+                for (int x = c.x - 5; x <= c.x + 5; ++x)
+                {
+                    if (!beeFlower(m_world->getBlock(x, y, z))) continue;
+                    const float d = glm::length(glm::vec3(x, y, z) + glm::vec3(0.5f) - at);
+                    if (d > 5.0f || d >= best) continue;
+                    best = d;
+                    mind.flower = glm::ivec3(x, y, z);
+                    mind.hasFlower = true;
+                }
+        if (mind.hasFlower)
+        {
+            mind.chasing = 0.0f;
+            mind.atFlower = 0.0f;
+        }
+        else
+        {
+            mind.cooldown = 1.0f + static_cast<float>(hashCoords(c.x, c.y, c.z, bee.serial()) % 40u) / 20.0f;
+            if (mind.hasHive && glm::length(hiveCentre - at) > 22.0f) steer(hiveCentre, 2.0f);
+        }
+    }
+    for (auto it = m_beeMinds.begin(); it != m_beeMinds.end();)
+        it = living.count(it->first) ? std::next(it) : m_beeMinds.erase(it);
 }
 
 // Rain fills a cauldron that has the sky over it, which is Minecraft's
@@ -25459,7 +26169,7 @@ void Application::shareMobs(float deltaTime)
         snap.variant = mob.variant();
         snap.seed = mob.birthSeed();
         snap.size = mob.size();
-        snap.profession = mob.professionSlot();
+        snap.profession = mob.typeId() == MobId::Villager ? villagerJob(mob) : mob.professionSlot();
         snap.shulkerColour = mob.shulkerColour();
         snap.armourDye = mob.armourDye();
         snap.flags = static_cast<uint16_t>((mob.baby() ? Net::MobBaby : 0) | (mob.tamed() ? Net::MobTamed : 0) | (mob.sitting() ? Net::MobSitting : 0) |

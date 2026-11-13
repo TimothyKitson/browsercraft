@@ -423,7 +423,9 @@ private:
     void queueBeams();
     void tickBreathClouds(float deltaTime);
     float m_jobSiteTimer = 0.0f;
-    static constexpr int JOB_SITE_REACH = 4;
+    static constexpr int JOB_SITE_REACH = 10;
+    int villagerJob(const Mob& villager) const;
+    std::map<std::array<int, 4>, std::pair<uint32_t, int>> m_jobClaims;
     void setBlockFor(const glm::ivec3& at, BlockId now, BlockId then, float seconds);
     void tickTimedBlocks(float deltaTime);
     uint32_t m_wearSeed = 0x2545F491u;
@@ -1004,6 +1006,65 @@ private:
     float m_crumbClock = 0.0f;
     float m_bushSting = 0.0f;
     float m_hiveClock = 0.0f;
+    struct BeeMind
+    {
+        glm::ivec3 hive{ 0 };
+        bool hasHive = false;
+        glm::ivec3 flower{ 0 };
+        bool hasFlower = false;
+        float atFlower = 0.0f;
+        float chasing = 0.0f;
+        float cooldown = 0.0f;
+        float sincePollination = 0.0f;
+        float search = 0.0f;
+        float cannotEnter = 0.0f;
+        float growClock = 0.0f;
+        int crops = 0;
+    };
+    struct HiveBee
+    {
+        bool nectar = false;
+        float inside = 0.0f;
+        float minimum = 30.0f;
+        uint32_t seed = 1u;
+        int health = 10;
+        bool baby = false;
+        std::string name;
+    };
+    std::map<uint32_t, BeeMind> m_beeMinds;
+    std::map<std::array<int, 4>, std::vector<HiveBee>> m_hiveBees;
+    std::set<std::array<int, 4>> m_seededNests;
+    float m_nestScan = 0.0f;
+    void tickBees(float deltaTime);
+    void releaseHiveBees(const glm::ivec3& cell, bool angry, bool all);
+    static bool beeFlower(BlockId id);
+    struct ShoulderParrot
+    {
+        bool on = false;
+        uint32_t seed = 1u;
+        int variant = 0;
+        int health = 6;
+        std::string name;
+    };
+    ShoulderParrot m_shoulders[2];
+    float m_shoulderCooldown = 0.0f;
+    int m_lastPlayerHealth = 20;
+    EntityManager m_shoulderMobs;
+    struct CatPerch
+    {
+        glm::ivec3 cell{ 0 };
+        float time = 0.0f;
+        bool seated = false;
+    };
+    std::map<uint32_t, CatPerch> m_catPerches;
+    std::map<uint32_t, float> m_catPerchWait;
+    std::map<uint32_t, glm::vec3> m_danceSpots;
+    float m_petClock = 0.0f;
+    void tickPets(float deltaTime);
+    void dropShoulderParrots();
+    void buildShoulderParrots();
+    bool catOnTop(const glm::ivec3& cell) const;
+    void giveCatGifts();
     HeldItem m_heldItem;
     HeldItem m_offhandItem;
 

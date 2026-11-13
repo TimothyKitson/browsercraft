@@ -347,12 +347,22 @@ bool Mob::tryBite(float deltaTime)
 bool Mob::tameWith(StackId food)
 {
     const StackId wants = tamingFood(m_type);
-    const bool alternative = m_type == MobId::Cat && food == Items::RawSalmon;
+    const bool seed = food == Items::WheatSeeds || food == Items::MelonSeeds || food == Items::PumpkinSeeds || food == Items::BeetrootSeeds ||
+                      food == Items::TorchflowerSeeds || food == Items::PitcherPod;
+    const bool alternative = (m_type == MobId::Cat && food == Items::RawSalmon) || (m_type == MobId::Parrot && seed);
     if (wants == Blocks::Air || (food != wants && !alternative)) return false;
     if (!alive() || m_tamed) return false;
 
+    m_tameTried = true;
+    const int odds = m_type == MobId::Parrot ? 10 : (m_type == MobId::Wolf || m_type == MobId::Cat) ? 3 : 1;
+    if (odds > 1 && static_cast<int>(random01() * static_cast<float>(odds)) != 0)
+    {
+        m_tameFailed = true;
+        return true;
+    }
     m_tamed = true;
-    m_panicTimer = 0.0f;   // it has no reason to run from you now
+    m_tameFailed = false;
+    m_panicTimer = 0.0f;
     emit(type().voice, 0.8f, 1.3f);
     return true;
 }

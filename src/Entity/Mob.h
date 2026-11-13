@@ -386,6 +386,10 @@ public:
     // gave it; nothing else in the game is tameable yet, so the item
     // is asked for by type rather than kept on one.
     static StackId tamingFood(MobId type);
+    bool tameFailed() const { return m_tameFailed; }
+    void setSitting(bool on) { m_sitting = on; }
+    bool dancing() const { return m_dancing; }
+    void setDancing(bool on) { m_dancing = on; }
     bool tamed() const { return m_tamed; }
 
     // A tamed animal told to stay. It keeps its place until it is told
@@ -668,6 +672,9 @@ private:
     bool m_asleep = false;
     bool m_tamed = false;
     bool m_sitting = false;
+    bool m_tameTried = false;
+    bool m_tameFailed = false;
+    bool m_dancing = false;
     float m_holdTimer = 0.0f;
     bool m_ridden = false;
     uint32_t m_serial = 0;

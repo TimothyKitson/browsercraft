@@ -3702,7 +3702,7 @@ namespace
             pet.toggleSit();
             check(!pet.sitting(), "and an untamed one ignores being told");
 
-            pet.tameWith(Items::Bone);
+            while (!pet.tamed()) pet.tameWith(Items::Bone);
             pet.toggleSit();
             check(pet.sitting(), "a tamed one sits when it is told");
             pet.toggleSit();
@@ -3719,8 +3719,29 @@ namespace
             check(!pup.tameWith(Items::Wheat), "wheat does nothing to it");
             check(!pup.tamed(), "and leaves it wild");
 
-            check(pup.tameWith(Items::Bone), "a bone tames it");
-            check(pup.tamed(), "and it stays tamed");
+            int bones = 0;
+            while (!pup.tamed() && bones < 100)
+            {
+                check(pup.tameWith(Items::Bone), "a bone is taken");
+                ++bones;
+            }
+            check(pup.tamed(), "bones tame it in the end");
+            int tamedFirst = 0;
+            for (uint32_t seed = 1; seed <= 300; ++seed)
+            {
+                Mob trial(MobId::Wolf, glm::vec3(0.0f, 70.0f, 0.0f), seed * 7919u);
+                trial.tameWith(Items::Bone);
+                if (trial.tamed()) ++tamedFirst;
+            }
+            check(tamedFirst > 70 && tamedFirst < 130, "about one bone in three does it, as in Minecraft");
+            int parrots = 0;
+            for (uint32_t seed = 1; seed <= 300; ++seed)
+            {
+                Mob trial(MobId::Parrot, glm::vec3(0.0f, 70.0f, 0.0f), seed * 7919u);
+                check(trial.tameWith(Items::MelonSeeds), "a parrot takes any seeds");
+                if (trial.tamed()) ++parrots;
+            }
+            check(parrots > 12 && parrots < 50, "and one seed in ten tames a parrot");
             check(!pup.tameWith(Items::Bone),
                   "a second bone does nothing, so one is not spent for no reason");
         }
@@ -3743,7 +3764,7 @@ namespace
         // Set on something, it goes at it rather than heeling.
         {
             Mob dog(MobId::Wolf, glm::vec3(0.0f, 70.0f, 0.0f), 14u);
-            dog.tameWith(Items::Bone);
+            while (!dog.tamed()) dog.tameWith(Items::Bone);
             check(!dog.hunting(), "a tamed wolf is not hunting to begin with");
 
             dog.huntTowards(glm::vec3(10.0f, 70.0f, 0.0f));
@@ -3752,7 +3773,7 @@ namespace
             // Pointed at where it already stands, there is nothing to
             // go at and nothing to divide by.
             Mob still(MobId::Wolf, glm::vec3(5.0f, 70.0f, 5.0f), 15u);
-            still.tameWith(Items::Bone);
+            while (!still.tamed()) still.tameWith(Items::Bone);
             still.huntTowards(glm::vec3(5.0f, 70.0f, 5.0f));
             check(!still.hunting(), "being set on its own feet sets it on nothing");
         }
@@ -3760,7 +3781,7 @@ namespace
         // It bites on a clock, not every frame it is in reach.
         {
             Mob dog(MobId::Wolf, glm::vec3(0.0f, 70.0f, 0.0f), 16u);
-            dog.tameWith(Items::Bone);
+            while (!dog.tamed()) dog.tameWith(Items::Bone);
 
             check(dog.tryBite(0.0f), "the first bite lands at once");
             check(!dog.tryBite(0.0f), "and the next does not");

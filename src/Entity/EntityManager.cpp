@@ -791,6 +791,21 @@ void EntityManager::update(float deltaTime, const World& world,
                 victim = static_cast<int>(k);
             }
         }
+        if (mob.typeId() == MobId::Creeper || mob.typeId() == MobId::Phantom)
+        {
+            const float wary = mob.typeId() == MobId::Creeper ? 6.0f : 16.0f;
+            for (const Mob& other : m_mobs)
+            {
+                if ((other.typeId() != MobId::Cat && other.typeId() != MobId::Ocelot) || !other.alive()) continue;
+                glm::vec3 away = mob.position() - other.position();
+                if (glm::length(away) >= wary) continue;
+                away.y = mob.typeId() == MobId::Phantom ? 0.0f : away.y;
+                if (glm::length(away) < 0.01f) away = glm::vec3(1.0f, 0.0f, 0.0f);
+                aim = mob.position() + glm::normalize(away) * 12.0f + (mob.typeId() == MobId::Phantom ? glm::vec3(0.0f, 6.0f, 0.0f) : glm::vec3(0.0f));
+                victim = -2;
+                break;
+            }
+        }
         mob.setVictim(victim);
         mob.setAim(aim);
         const bool unheard = mob.typeId() == MobId::Warden && m_playerQuiet && victim < 0 && glm::length(mob.position() - aim) > 5.0f;
@@ -1065,7 +1080,7 @@ void EntityManager::routeChasers(const World& world, const glm::vec3& hostPositi
     {
         if (searches >= PATHS_PER_UPDATE) break;
         if (!mob.wantsPath()) continue;
-        const glm::vec3 playerPosition = mob.victim() >= 0 ? mob.aim() : hostPosition;
+        const glm::vec3 playerPosition = mob.victim() != -1 ? mob.aim() : hostPosition;
         const glm::ivec3 goal(static_cast<int>(std::floor(playerPosition.x)), static_cast<int>(std::floor(playerPosition.y)),
                               static_cast<int>(std::floor(playerPosition.z)));
 
@@ -1525,7 +1540,6 @@ void EntityManager::pairOffLovers(const World& world)
                 // pointing at freed memory by the time it is asked.
                 const bool inherits = m_mobs[a].hasHome();
                 const glm::vec3 parentHome = m_mobs[a].home();
-                const int parentTrade = m_mobs[a].professionSlot();
 
                 const int woolA = m_mobs[a].woolColour(), woolB = m_mobs[b].woolColour();
                 m_mobs.emplace_back(mule ? MobId::Mule : m_mobs[a].typeId(), between,
@@ -1538,7 +1552,6 @@ void EntityManager::pairOffLovers(const World& world)
                 if (inherits)
                 {
                     m_mobs.back().setHome(parentHome, static_cast<float>(Village::MAX_RADIUS));
-                    if (parentTrade >= 0) m_mobs.back().setProfessionSlot(parentTrade);
                 }
 
                 m_births.push_back(between);

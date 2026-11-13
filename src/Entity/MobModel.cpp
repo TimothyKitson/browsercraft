@@ -121,10 +121,17 @@ void MobModel::build(const MobSkin& skin, const Mob& mob, float sky, float block
     // figure rather than re-posing each leg keeps every texture patch
     // the size the sheet says it is, which is the same reason a lamb is
     // scaled rather than rebuilt.
-    if (mob.sitting()) frame.feet.y -= SIT_DROP * mob.scale();
+    if (mob.sitting()) frame.feet.y -= (mob.typeId() == MobId::Parrot ? 1.9f / 16.0f : SIT_DROP) * mob.scale();
+    if (mob.typeId() == MobId::Parrot && mob.dancing())
+    {
+        const float beat = mob.age() * 20.0f;
+        const float turn = glm::radians(mob.yaw());
+        frame.feet += glm::vec3(-std::sin(turn), 0.0f, std::cos(turn)) * (std::cos(beat) / 16.0f) + glm::vec3(0.0f, std::sin(beat) / 16.0f, 0.0f);
+    }
 
     const bool spiderLike = mob.typeId() == MobId::Spider || mob.typeId() == MobId::CaveSpider;
     frame.deathRoll = mob.deathTilt() * glm::radians(spiderLike ? 180.0f : 90.0f);
+    if (mob.typeId() == MobId::Parrot && mob.dancing() && mob.alive()) frame.deathRoll = std::sin(mob.age() * 20.0f) * 0.2f;
     frame.hurt = mob.hurtFlash() > 0.0f || !mob.alive();
 
     const float phase = mob.gait();
@@ -353,6 +360,7 @@ void MobModel::render(Shader& chunkShader, const World& world, const EntityManag
                     {
                         if (mob.typeId() != id || mob.baby()) continue;
                         const int job = professionOf ? professionOf(mob) : 0;
+                        if (pass >= 1 && job < 0) continue;
                         if (pass == 2 && job == static_cast<int>(Trading::Profession::Nitwit)) continue;
                         const int which = pass == 0 ? biomeIndex(mob)
                                         : pass == 1 ? job
@@ -618,7 +626,11 @@ std::string MobModel::variantOf(const Mob& mob) const
             return root + "panda/" + (*gene ? std::string(gene) + "_" : std::string()) + "panda.png";
         }
         case MobId::Bee:
-            return mob.hostileNow() ? root + "bee/bee_angry.png" : std::string();
+        {
+            const bool nectar = (mob.variant() & 1) != 0;
+            if (mob.hostileNow()) return root + (nectar ? "bee/bee_angry_nectar.png" : "bee/bee_angry.png");
+            return nectar ? root + "bee/bee_nectar.png" : std::string();
+        }
         case MobId::Tadpole:
             return root + "tadpole/tadpole.png";
         case MobId::Armadillo:

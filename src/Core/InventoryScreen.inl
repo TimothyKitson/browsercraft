@@ -3863,8 +3863,8 @@ void Application::openTrading(const Mob& villager)
     // One met out in the country has no building to take it from, so it
     // falls back to the one its birth seed draws -- which is what every
     // villager did before there were villages.
-    m_tradeWith = (villager.professionSlot() >= 0)
-                      ? static_cast<Trading::Profession>(villager.professionSlot())
+    m_tradeWith = villager.typeId() == MobId::Villager && villagerJob(villager) >= 0
+                      ? static_cast<Trading::Profession>(villagerJob(villager))
                       : Trading::professionFor(villager.birthSeed());
     TraderRecord& record = openTrader();
     record.position = villager.position();
