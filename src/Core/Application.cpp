@@ -525,6 +525,14 @@ void Application::loadOptions()
         else if (std::sscanf(line, "autoSuggestions=%d", &value) == 1) m_autoSuggestions = value != 0;
         else if (std::sscanf(line, "advancedItemTooltips=%d", &value) == 1) m_advancedTooltips = value != 0;
         else if (std::sscanf(line, "reducedDebugInfo=%d", &value) == 1) m_reducedDebug = value != 0;
+        else if (std::sscanf(line, "menuBackgroundBlurriness=%d", &value) == 1) m_menuBlur = std::clamp(value, 0, 10);
+        else if (std::strncmp(line, "backgroundForChatOnly=", 22) == 0) m_backgroundForChatOnly = std::strncmp(line + 22, "false", 5) != 0;
+        else if (std::strncmp(line, "chatDelay=", 10) == 0) m_chatDelay = std::clamp(static_cast<float>(std::atof(line + 10)), 0.0f, 6.0f);
+        else if (std::strncmp(line, "notificationDisplayTime=", 24) == 0)
+            m_notificationTime = std::clamp(static_cast<float>(std::atof(line + 24)), 0.5f, 10.0f);
+        else if (std::strncmp(line, "glintStrength=", 14) == 0) m_glintStrength = std::clamp(static_cast<float>(std::atof(line + 14)), 0.0f, 1.0f);
+        else if (std::strncmp(line, "darkMojangStudiosBackground=", 28) == 0) m_darkStudioBackground = std::strncmp(line + 28, "true", 4) == 0;
+        else if (std::strncmp(line, "narratorHotkey=", 15) == 0) m_narratorHotkey = std::strncmp(line + 15, "false", 5) != 0;
         else if (std::strncmp(line, "modelPart_", 10) == 0)
         {
             static const char* KEYS[7] = { "cape", "jacket", "left_sleeve", "right_sleeve", "left_pants_leg", "right_pants_leg", "hat" };
@@ -591,6 +599,10 @@ void Application::saveOptions()
     static const char* CLOUD_NAMES[3] = { "false", "\"fast\"", "true" };
     std::fprintf(file, "autoJump=%s\n", m_autoJump ? "true" : "false");
     std::fprintf(file, "showSubtitles=%s\n", m_audio.captionsOn() ? "true" : "false");
+    std::fprintf(file, "menuBackgroundBlurriness=%d\nbackgroundForChatOnly=%s\nchatDelay=%.1f\nnotificationDisplayTime=%.1f\n"
+                       "glintStrength=%.2f\ndarkMojangStudiosBackground=%s\nnarratorHotkey=%s\n",
+                 m_menuBlur, m_backgroundForChatOnly ? "true" : "false", m_chatDelay, m_notificationTime, m_glintStrength,
+                 m_darkStudioBackground ? "true" : "false", m_narratorHotkey ? "true" : "false");
     {
         static const char* KEYS[7] = { "cape", "jacket", "left_sleeve", "right_sleeve", "left_pants_leg", "right_pants_leg", "hat" };
         for (int part = 0; part < 7; ++part)
@@ -20662,7 +20674,7 @@ void Application::render()
     {
         const float w = static_cast<float>(m_window.width());
         const float h = static_cast<float>(m_window.height());
-        m_ui.quad(0, 0, w, h, glm::vec4(0.04f, 0.05f, 0.07f, 0.92f));
+        m_ui.quad(0, 0, w, h, m_darkStudioBackground ? glm::vec4(0.0f, 0.0f, 0.0f, 1.0f) : glm::vec4(0.04f, 0.05f, 0.07f, 0.92f));
         centredText("Generating World", h * 0.45f, 4.0f, TEXT_COLOR);
         m_ui.end();
         return;
@@ -22483,7 +22495,7 @@ void Application::renderSubtitles()
 {
     if (!m_audio.captionsOn()) return;
     const uint32_t now = SDL_GetTicks();
-    m_audio.pruneCaptions(now, 3000);
+    m_audio.pruneCaptions(now, static_cast<uint32_t>(3000.0f * m_notificationTime));
     const std::vector<AudioEngine::Caption>& captions = m_audio.captions();
     if (captions.empty()) return;
     m_ui.setScale(static_cast<float>(guiScale()));
@@ -22502,9 +22514,10 @@ void Application::renderSubtitles()
         const AudioEngine::Caption& caption = captions[captions.size() - 1 - i];
         const float cx = w - halfWidth - 2.0f;
         const float cy = h - 35.0f - static_cast<float>(i) * 10.0f;
-        const float fade = std::clamp((now - caption.time) / 3000.0f, 0.0f, 1.0f);
+        const float fade = std::clamp((now - caption.time) / (3000.0f * m_notificationTime), 0.0f, 1.0f);
         const float shade = (255.0f - 180.0f * fade) / 255.0f;
-        m_ui.quad(cx - halfWidth - 1.0f, cy - 5.0f, 2.0f * halfWidth + 2.0f, 10.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.8f));
+        m_ui.quad(cx - halfWidth - 1.0f, cy - 5.0f, 2.0f * halfWidth + 2.0f, 10.0f,
+                  glm::vec4(0.0f, 0.0f, 0.0f, m_backgroundForChatOnly ? 0.8f : m_textBackground));
         const glm::vec4 colour(shade, shade, shade, 1.0f);
         const float textWidth = UIRenderer::textWidth(caption.text, 1.0f);
         m_ui.text(caption.text, cx - std::floor(textWidth * 0.5f), cy - 4.0f, 1.0f, colour);
@@ -27617,11 +27630,56 @@ bool Application::guiTiled(const char* path, float x, float y, float w, float h,
     return true;
 }
 
+void Application::blurBehindMenu(float w, float h)
+{
+    if (m_menuBlur <= 0) return;
+    GLint viewport[4] = { 0, 0, 0, 0 };
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    const int fw = viewport[2], fh = viewport[3];
+    if (fw <= 0 || fh <= 0) return;
+    GLint drawn = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawn);
+    const float factor = 1.0f + static_cast<float>(m_menuBlur) * 1.2f;
+    const int sizes[2][2] = { { std::max(1, static_cast<int>(fw / std::sqrt(factor))), std::max(1, static_cast<int>(fh / std::sqrt(factor))) },
+                              { std::max(1, static_cast<int>(fw / factor)), std::max(1, static_cast<int>(fh / factor)) } };
+    for (int k = 0; k < 2; ++k)
+    {
+        if (!m_blurFbo[k])
+        {
+            glGenFramebuffers(1, &m_blurFbo[k]);
+            glGenTextures(1, &m_blurTex[k]);
+        }
+        if (m_blurSize[k][0] != sizes[k][0] || m_blurSize[k][1] != sizes[k][1])
+        {
+            glBindTexture(GL_TEXTURE_2D, m_blurTex[k]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, sizes[k][0], sizes[k][1], 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glBindFramebuffer(GL_FRAMEBUFFER, m_blurFbo[k]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_blurTex[k], 0);
+            m_blurSize[k][0] = sizes[k][0];
+            m_blurSize[k][1] = sizes[k][1];
+        }
+    }
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(drawn));
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_blurFbo[0]);
+    glBlitFramebuffer(viewport[0], viewport[1], viewport[0] + fw, viewport[1] + fh, 0, 0, sizes[0][0], sizes[0][1], GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_blurFbo[0]);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_blurFbo[1]);
+    glBlitFramebuffer(0, 0, sizes[0][0], sizes[0][1], 0, 0, sizes[1][0], sizes[1][1], GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(drawn));
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    m_ui.texturedQuad(m_blurTex[1], 0.0f, 0.0f, w, h, 0.0f, 1.0f, 1.0f, 0.0f, glm::vec4(1.0f));
+}
+
 void Application::menuBackdrop(float w, float h, float fallbackAlpha)
 {
     const float unit = static_cast<float>(guiScale()) / m_ui.scale();
     const bool inWorld = m_world != nullptr && m_screen != Screen::Title && m_worldReady &&
                          m_optionsReturn == Screen::Paused;
+    if (inWorld) blurBehindMenu(w, h);
     const char* background = inWorld ? "inworld_menu_background" : "menu_background";
     const char* header = inWorld ? "inworld_header_separator" : "header_separator";
     const char* footer = inWorld ? "inworld_footer_separator" : "footer_separator";
@@ -28645,6 +28703,7 @@ void Application::renderPauseMenu()
     const float w = m_ui.canvasWidth();
     const float h = m_ui.canvasHeight();
 
+    if (m_world && m_worldReady) blurBehindMenu(w, h);
     m_ui.quad(0, 0, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.62f));
 
     centredText("Game Paused", h * 0.12f, 5.0f, TEXT_COLOR);

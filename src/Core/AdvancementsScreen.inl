@@ -572,7 +572,8 @@ void Application::renderToasts()
     {
         Toast& toast = m_toasts[i];
         const bool tutorial = toast.tutorialIcon >= 0;
-        if ((!tutorial && toast.age >= 5.6f) || (tutorial && toast.hidden && toast.age - toast.hiddenAt >= 0.6f))
+        const float stay = 5.0f * m_notificationTime;
+        if ((!tutorial && toast.age >= stay + 0.6f) || (tutorial && toast.hidden && toast.age - toast.hiddenAt >= 0.6f))
         {
             m_toasts.erase(m_toasts.begin() + static_cast<long>(i));
             continue;
@@ -585,7 +586,7 @@ void Application::renderToasts()
                 m_audio.play(Sound::ChallengeComplete, 0.8f, 1.0f);
         }
         const float shown = tutorial ? (toast.hidden ? std::max(0.0f, 1.0f - (toast.age - toast.hiddenAt) / 0.6f) : std::min(1.0f, toast.age / 0.6f))
-                          : toast.age < 0.6f ? toast.age / 0.6f : toast.age > 5.0f ? std::max(0.0f, 1.0f - (toast.age - 5.0f) / 0.6f) : 1.0f;
+                          : toast.age < 0.6f ? toast.age / 0.6f : toast.age > stay ? std::max(0.0f, 1.0f - (toast.age - stay) / 0.6f) : 1.0f;
         if (tutorial) toast.shownProgress += (toast.progress - toast.shownProgress) * 0.25f;
         const float wide = toast.systemTitle.empty() ? 160.0f : std::max(160.0f, 30.0f + UIRenderer::textWidth(toast.systemTitle, 1.0f));
         const float tx = w - wide * shown;

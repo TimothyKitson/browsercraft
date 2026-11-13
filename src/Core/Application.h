@@ -1791,6 +1791,18 @@ private:
     bool m_toggleSprint = false;
     bool m_hideLightning = false;
     bool m_hideSplash = false;
+    int m_menuBlur = 5;
+    bool m_backgroundForChatOnly = true;
+    float m_chatDelay = 0.0f;
+    float m_notificationTime = 1.0f;
+    float m_glintStrength = 0.75f;
+    float m_glintBuiltStrength = -1.0f;
+    bool m_darkStudioBackground = false;
+    bool m_narratorHotkey = true;
+    void blurBehindMenu(float w, float h);
+    unsigned int m_blurFbo[2] = { 0, 0 };
+    unsigned int m_blurTex[2] = { 0, 0 };
+    int m_blurSize[2][2] = { { 0, 0 }, { 0, 0 } };
     bool m_sneakLatched = false;
     bool m_sprintLatched = false;
     int m_activeSlider = -1;

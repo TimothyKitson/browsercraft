@@ -55,6 +55,7 @@ namespace
 void Application::menuScreenBackdrop(float w, float h)
 {
     const bool inWorld = m_world && !m_menuWorld;
+    if (inWorld && m_worldReady) blurBehindMenu(w, h);
     if (!guiTiled(inWorld ? "inworld_menu_background" : "menu_background", 0.0f, 0.0f, w, h, 32.0f))
         m_ui.quad(0.0f, 0.0f, w, h, glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
 }

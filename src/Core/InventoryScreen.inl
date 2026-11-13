@@ -580,6 +580,14 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
 unsigned int Application::glintTexture(bool entity)
 {
     unsigned int& texture = entity ? m_glintEntity : m_glintItem;
+    if (m_glintBuiltStrength != m_glintStrength)
+    {
+        if (m_glintEntity) glDeleteTextures(1, &m_glintEntity);
+        if (m_glintItem) glDeleteTextures(1, &m_glintItem);
+        m_glintEntity = 0;
+        m_glintItem = 0;
+        m_glintBuiltStrength = m_glintStrength;
+    }
     if (texture) return texture;
     int width = 0, height = 0, channels = 0;
     unsigned char* data = stbi_load(entity ? "assets/textures/misc/enchanted_glint_entity.png"
@@ -600,9 +608,14 @@ unsigned int Application::glintTexture(bool entity)
             painted[i * 4 + 3] = 255;
         }
     }
+    unsigned char* pixels = data ? data : painted.data();
+    for (int i = 0; i < width * height; ++i)
+        for (int c = 0; c < 3; ++c)
+            pixels[i * 4 + c] = static_cast<unsigned char>(std::lround(pixels[i * 4 + c] * m_glintStrength / 0.75f > 255.0f
+                                                                           ? 255.0f : pixels[i * 4 + c] * m_glintStrength / 0.75f));
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data ? data : painted.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, 0x8058, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
