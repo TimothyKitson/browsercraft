@@ -25286,7 +25286,7 @@ void Application::tickPets(float deltaTime)
                     rider.health = mob.health();
                     rider.name = mob.customName();
                     mob.vanish();
-                    m_audio.playNamed("entity/parrot/fly", Sound::MobParrotSay, 0.5f, 1.0f);
+                    m_audio.playNamed("mob/parrot/fly", Sound::MobParrotSay, 0.5f, 1.0f);
                     continue;
                 }
             }
@@ -26394,7 +26394,7 @@ void Application::sufferStrike(const MobStrike& strike)
         {
             m_shieldCooldown = 5.0f;
             m_player.blocking = false;
-            m_audio.playNamed("item/shield/break", Sound::DigWood, 0.8f, 1.0f);
+            m_audio.playNamed("random/break", Sound::DigWood, 0.8f, 1.0f);
         }
         m_audio.play(Sound::Click, 0.7f, 0.7f);
         m_stats.add(Stats::Custom::DamageBlockedByShield, static_cast<long long>(strike.damage) * 10);
