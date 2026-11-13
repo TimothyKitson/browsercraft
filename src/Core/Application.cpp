@@ -884,6 +884,7 @@ void Application::travelTo(Dimension dimension)
 
     m_world = std::make_unique<World>(m_world->seed(), m_savePath,
                                       DEFAULT_RENDER_DISTANCE, dimension, generatorOptions(m_worldMeta));
+    m_world->generator().setBiomeCells(m_biomeCells);
     m_world->forcedChunks = m_forcedChunks[static_cast<int>(dimension)];
 
     // The Nether is a slab with a ceiling, so the overworld's spawn
@@ -1077,6 +1078,15 @@ void Application::loadLevel()
     m_seededNests.clear();
     m_beeMinds.clear();
     m_jobClaims.clear();
+    m_biomeCells.clear();
+    {
+        std::ifstream biomes(m_savePath + "/biomes.txt");
+        std::array<int, 4> key{};
+        std::string id;
+        while (biomes >> key[0] >> key[1] >> key[2] >> key[3] >> id)
+            if (Biomes::known(id)) m_biomeCells[key] = Biomes::fromId(id);
+    }
+    if (m_world) m_world->generator().setBiomeCells(m_biomeCells);
     m_catPerches.clear();
     for (ShoulderParrot& rider : m_shoulders) rider = ShoulderParrot{};
     {
@@ -1592,6 +1602,13 @@ void Application::saveLevel()
         std::ofstream notes(m_savePath + "/notes.txt");
         if (notes)
             for (const auto& [key, note] : m_noteTunes) notes << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3] << ' ' << note << '\n';
+    }
+    if (m_world && !m_menuWorld)
+    {
+        std::ofstream biomes(m_savePath + "/biomes.txt");
+        if (biomes)
+            for (const auto& [key, kind] : m_biomeCells)
+                biomes << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3] << ' ' << Biomes::info(kind).id << '\n';
     }
     {
         std::ofstream riders(m_savePath + "/shoulders.txt");
@@ -30773,6 +30790,20 @@ void Application::runCheatAudit()
         run("/worldborder set 59999968");
     }
 
+    {
+        const glm::ivec3 here(glm::floor(m_player.position));
+        const auto [worked, said] = run("/fillbiome ~-6 ~-3 ~-6 ~6 ~3 ~6 minecraft:desert");
+        const Biomes::Kind now = m_world->generator().kindIn(m_dimension, here.x, here.y, here.z);
+        report(worked && now == Biomes::Kind::Desert && m_world->generator().kindAt(here.x, here.z) == Biomes::Kind::Desert,
+               "/fillbiome paints the biome where you stand", said);
+        const auto [refused, why] = run("/fillbiome ~-200 ~-200 ~-200 ~200 ~200 ~200 minecraft:desert");
+        report(!refused, "/fillbiome refuses more than 32768 cells", why);
+        const auto [swapped, swapSaid] = run("/fillbiome ~-6 ~-3 ~-6 ~6 ~3 ~6 minecraft:jungle replace minecraft:plains");
+        report(swapped && m_world->generator().kindIn(m_dimension, here.x, here.y, here.z) == Biomes::Kind::Desert,
+               "/fillbiome replace leaves other biomes alone", swapSaid);
+        const auto [bad, badSaid] = run("/fillbiome ~ ~ ~ ~ ~ ~ minecraft:nowhere");
+        report(!bad, "/fillbiome names unknown biomes", badSaid);
+    }
     std::printf("Cheat audit: %d passed, %d failed\n", passed, failed);
     std::fflush(stdout);
 }

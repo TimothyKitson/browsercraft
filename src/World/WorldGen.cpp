@@ -1,4 +1,5 @@
 #include "WorldGen.h"
+#include <atomic>
 #include "Game/EndPortal.h"
 #include "Game/Saplings.h"
 #include "BiomeColours.h"
@@ -276,8 +277,44 @@ float WorldGen::variantAt(int worldX, int worldZ) const
     return spread(m_hills.fbm2D(fx * 0.0031f + 911.0f, fz * 0.0031f - 407.0f, 3), 2.4f);
 }
 
+void WorldGen::setBiomeCells(const BiomeCells& cells) const
+{
+    auto fresh = std::make_shared<BiomeOverrides>();
+    fresh->cells = cells;
+    for (const auto& [key, kind] : cells) fresh->columns[{ key[0], key[1], key[3] }] = kind;
+    std::atomic_store(&m_overrides, std::shared_ptr<const BiomeOverrides>(fresh));
+}
+
+WorldGen::BiomeCells WorldGen::biomeCells() const
+{
+    const std::shared_ptr<const BiomeOverrides> now = std::atomic_load(&m_overrides);
+    return now ? now->cells : BiomeCells{};
+}
+
+bool WorldGen::forcedCell(Dimension dimension, int worldX, int y, int worldZ, Biomes::Kind& out) const
+{
+    const std::shared_ptr<const BiomeOverrides> now = std::atomic_load(&m_overrides);
+    if (!now || now->cells.empty()) return false;
+    const auto found = now->cells.find({ static_cast<int>(dimension), worldX >> 2, y >> 2, worldZ >> 2 });
+    if (found == now->cells.end()) return false;
+    out = found->second;
+    return true;
+}
+
+bool WorldGen::forcedColumn(Dimension dimension, int worldX, int worldZ, Biomes::Kind& out) const
+{
+    const std::shared_ptr<const BiomeOverrides> now = std::atomic_load(&m_overrides);
+    if (!now || now->columns.empty()) return false;
+    const auto found = now->columns.find({ static_cast<int>(dimension), worldX >> 2, worldZ >> 2 });
+    if (found == now->columns.end()) return false;
+    out = found->second;
+    return true;
+}
+
 Biomes::Kind WorldGen::kindAt(int worldX, int worldZ) const
 {
+    Biomes::Kind forced;
+    if (forcedColumn(m_dimension, worldX, worldZ, forced)) return forced;
     if (m_dimension == Dimension::Nether) return netherKindAt(worldX, worldZ);
     if (m_dimension == Dimension::End) return endKindAt(worldX, worldZ);
     if (m_options.type == Options::Type::Flat || m_options.type == Options::Type::SingleBiome) return m_options.kind;
@@ -351,6 +388,8 @@ Biomes::Kind WorldGen::variantOf(Biome family, int worldX, int worldZ, int heigh
 
 Biomes::Kind WorldGen::kindAt(int worldX, int y, int worldZ) const
 {
+    Biomes::Kind forced;
+    if (forcedCell(m_dimension, worldX, y, worldZ, forced)) return forced;
     if (m_dimension != Dimension::Overworld || flatWorld()) return kindAt(worldX, worldZ);
     if (y < surfaceHeight(worldX, worldZ) - 12)
     {
@@ -430,6 +469,8 @@ void WorldGen::paintTints(Chunk& chunk) const
 
 Biomes::Kind WorldGen::kindIn(Dimension dimension, int worldX, int y, int worldZ) const
 {
+    Biomes::Kind forced;
+    if (forcedCell(dimension, worldX, y, worldZ, forced)) return forced;
     if (dimension == Dimension::Nether) return netherKindAt(worldX, worldZ);
     if (dimension == Dimension::End) return endKindAt(worldX, worldZ);
     return kindAt(worldX, y, worldZ);

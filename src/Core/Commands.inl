@@ -1053,12 +1053,80 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
         return false;
     }
 
-    if (name == "fillbiome" || name == "transfer" || name == "setidletimeout" || name == "return")
+    if (name == "fillbiome")
+    {
+        float c[6];
+        const float base[6] = { origin.x, origin.y, origin.z, origin.x, origin.y, origin.z };
+        for (int k = 0; k < 6; ++k)
+            if (!coordinateNear(arg(static_cast<size_t>(k)), base[k], c[k]))
+            {
+                output = "/fillbiome <from> <to> <biome> [replace <filter>]";
+                return false;
+            }
+        std::string id = arg(6);
+        if (id.rfind("minecraft:", 0) == 0) id = id.substr(10);
+        if (!Biomes::known(id))
+        {
+            output = "Unknown biome: " + arg(6);
+            return false;
+        }
+        const Biomes::Kind kind = Biomes::fromId(id);
+        bool filtered = false;
+        Biomes::Kind only = kind;
+        if (arg(7) == "replace")
+        {
+            std::string filter = arg(8);
+            if (filter.rfind("minecraft:", 0) == 0) filter = filter.substr(10);
+            if (!Biomes::known(filter))
+            {
+                output = "Unknown biome: " + arg(8);
+                return false;
+            }
+            filtered = true;
+            only = Biomes::fromId(filter);
+        }
+        const glm::ivec3 low(static_cast<int>(std::floor(std::min(c[0], c[3]))), static_cast<int>(std::floor(std::min(c[1], c[4]))),
+                             static_cast<int>(std::floor(std::min(c[2], c[5]))));
+        const glm::ivec3 high(static_cast<int>(std::floor(std::max(c[0], c[3]))), static_cast<int>(std::floor(std::max(c[1], c[4]))),
+                              static_cast<int>(std::floor(std::max(c[2], c[5]))));
+        const glm::ivec3 q0(low.x >> 2, low.y >> 2, low.z >> 2), q1(high.x >> 2, high.y >> 2, high.z >> 2);
+        const long long cells = static_cast<long long>(q1.x - q0.x + 1) * (q1.y - q0.y + 1) * (q1.z - q0.z + 1);
+        if (cells > 32768)
+        {
+            output = "Too many blocks in the specified volume (maximum 32768, specified " + std::to_string(cells) + ")";
+            return false;
+        }
+        const WorldGen& gen = m_world->generator();
+        WorldGen::BiomeCells painted = gen.biomeCells();
+        int changed = 0;
+        for (int qx = q0.x; qx <= q1.x; ++qx)
+            for (int qy = q0.y; qy <= q1.y; ++qy)
+                for (int qz = q0.z; qz <= q1.z; ++qz)
+                {
+                    if (filtered && gen.kindIn(m_dimension, qx * 4, qy * 4, qz * 4) != only) continue;
+                    painted[{ static_cast<int>(m_dimension), qx, qy, qz }] = kind;
+                    ++changed;
+                }
+        gen.setBiomeCells(painted);
+        m_biomeCells = painted;
+        for (int cx = (low.x >> 4) - 1; cx <= (high.x >> 4) + 1; ++cx)
+            for (int cz = (low.z >> 4) - 1; cz <= (high.z >> 4) + 1; ++cz)
+                if (Chunk* chunk = m_world->chunkAt(cx, cz))
+                {
+                    gen.paintTints(*chunk);
+                    m_world->remeshChunk(cx, cz);
+                }
+        output = std::to_string(changed) + (changed == 1 ? " biome entry set between " : " biome entries set between ") + std::to_string(low.x) +
+                 ", " + std::to_string(low.y) + ", " + std::to_string(low.z) + " and " + std::to_string(high.x) + ", " + std::to_string(high.y) + ", " +
+                 std::to_string(high.z);
+        return true;
+    }
+
+    if (name == "transfer" || name == "setidletimeout" || name == "return")
     {
         if (name == "return") { output = "Returned"; return true; }
         if (name == "setidletimeout") { output = "The player idle timeout is now " + arg(0) + " minute(s)"; return !args.empty(); }
-        output = name == "fillbiome" ? "Biomes here come from the world's noise and cannot be painted over"
-                                     : "There is no other server to transfer to";
+        output = "There is no other server to transfer to";
         return false;
     }
 

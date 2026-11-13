@@ -1,5 +1,8 @@
 #pragma once
 #include "Chunk.h"
+#include <array>
+#include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -387,6 +390,9 @@ public:
     Biomes::Kind netherKindAt(int worldX, int worldZ) const;
     Biomes::Kind endKindAt(int worldX, int worldZ) const;
     Biomes::Kind kindIn(Dimension dimension, int worldX, int y, int worldZ) const;
+    using BiomeCells = std::map<std::array<int, 4>, Biomes::Kind>;
+    void setBiomeCells(const BiomeCells& cells) const;
+    BiomeCells biomeCells() const;
     float variantAt(int worldX, int worldZ) const;
     Biomes::Kind variantOf(Biome family, int worldX, int worldZ, int height) const;
     void paintTints(Chunk& chunk) const;
@@ -441,6 +447,14 @@ private:
     uint32_t m_seed;
     Dimension m_dimension;
     Options m_options;
+    struct BiomeOverrides
+    {
+        BiomeCells cells;
+        std::map<std::array<int, 3>, Biomes::Kind> columns;
+    };
+    mutable std::shared_ptr<const BiomeOverrides> m_overrides;
+    bool forcedCell(Dimension dimension, int worldX, int y, int worldZ, Biomes::Kind& out) const;
+    bool forcedColumn(Dimension dimension, int worldX, int worldZ, Biomes::Kind& out) const;
     float m_scale = 1.0f;
     float m_lift = 1.0f;
     int m_flatTop = 0;

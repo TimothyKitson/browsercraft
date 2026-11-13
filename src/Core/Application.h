@@ -1033,6 +1033,7 @@ private:
     };
     std::map<uint32_t, BeeMind> m_beeMinds;
     std::map<std::array<int, 4>, std::vector<HiveBee>> m_hiveBees;
+    WorldGen::BiomeCells m_biomeCells;
     std::set<std::array<int, 4>> m_seededNests;
     float m_nestScan = 0.0f;
     void tickBees(float deltaTime);
