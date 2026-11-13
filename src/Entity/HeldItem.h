@@ -63,6 +63,7 @@ public:
     // 0 at rest, 1 at the far end of the swing. Minecraft hangs every
     // part of the first-person pose off this one number.
     float swingProgress() const;
+    static bool flatInHand(StackId id);
 
     // 0 while something new is being raised, 1 once it is up.
     float equipProgress() const { return m_equip; }

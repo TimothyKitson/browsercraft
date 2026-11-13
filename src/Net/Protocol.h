@@ -18,7 +18,7 @@ namespace Net
     // new host with a clear error instead of garbled blocks.
     //   2: players carry an appearance, and a move says whether they are
     //      sneaking, so everyone can be drawn rather than inferred.
-    constexpr uint32_t PROTOCOL_VERSION = 3;
+    constexpr uint32_t PROTOCOL_VERSION = 4;
     constexpr uint16_t DEFAULT_PORT = 25585;
     constexpr uint16_t DISCOVERY_PORT = 25586;
     constexpr int MAX_PLAYERS = 8;
@@ -62,7 +62,9 @@ namespace Net
     // Bit flags on a movement packet.
     enum MoveFlags : uint8_t
     {
-        MoveSneaking = 1 << 0
+        MoveSneaking = 1 << 0,
+        MoveLeftHanded = 1 << 1,
+        MoveSwingOff = 1 << 2
     };
 
     // --- little-endian byte buffers -------------------------------------

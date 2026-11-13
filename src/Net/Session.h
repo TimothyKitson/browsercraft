@@ -43,6 +43,12 @@ namespace Net
         float silence = 0.0f;   // seconds since the last update
         bool sneaking = false;
         Appearance look;
+        uint16_t mainHand = 0;
+        uint16_t offHand = 0;
+        uint8_t swingCount = 0;
+        bool swingOff = false;
+        bool leftHanded = false;
+        float swingTimer = 0.0f;
 
         // False until they have told us where they are. Someone who has
         // joined but not yet moved would otherwise be drawn standing at
@@ -90,6 +96,18 @@ namespace Net
 
         // Posture that cannot be worked out from a position alone.
         void setLocalSneaking(bool sneaking) { m_localSneaking = sneaking; }
+        void setLocalHands(uint16_t mainHand, uint16_t offHand, bool leftHanded)
+        {
+            m_localMain = mainHand;
+            m_localOff = offHand;
+            m_localLeftHanded = leftHanded;
+        }
+        void noteSwing(bool offHand)
+        {
+            ++m_localSwings;
+            m_localSwingOff = offHand;
+        }
+        static constexpr float SWING_SECONDS = 0.30f;
 
         // Pumped once a frame. `world` is null until a guest has built it.
         void update(float deltaTime, World* world, const glm::vec3& localPosition,
@@ -129,6 +147,15 @@ namespace Net
         uint32_t m_localId = 0;
         Appearance m_localLook;
         bool m_localSneaking = false;
+        uint16_t m_localMain = 0;
+        uint16_t m_localOff = 0;
+        bool m_localLeftHanded = false;
+        uint8_t m_localSwings = 0;
+        bool m_localSwingOff = false;
+        uint16_t m_lastSentMain = 0;
+        uint16_t m_lastSentOff = 0;
+        uint8_t m_lastSentSwings = 0;
+        bool m_lastSentLeft = false;
 
         // Host-side copy of what every guest was told, so a late joiner
         // can be introduced to everyone already here.

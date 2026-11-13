@@ -382,10 +382,16 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
         const float sky = world.skyLight(lx, ly, lz) / 15.0f;
         const float blockLight = static_cast<float>(world.blockLightAt(lx, ly, lz)) / 15.0f;
         const glm::vec3 forward = glm::normalize(held.forward);
+        const glm::vec3 upward = glm::normalize(held.up);
+        const glm::vec3 side = glm::normalize(glm::cross(forward, upward)) * held.size;
+        if (held.placed)
+        {
+            emitSprite(atlasTileFor(held.item), held.origin, held.axisX, held.axisY, held.axisZ, sky, blockLight);
+            continue;
+        }
         const glm::vec3 along = forward * (held.size * 0.5f);
-        const glm::vec3 up(0.0f, held.size * 0.5f, 0.0f);
+        const glm::vec3 up = upward * (held.size * 0.5f);
         const glm::vec3 centre = held.grip + along * 0.6f;
-        const glm::vec3 side = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * held.size;
         emitSprite(atlasTileFor(held.item), centre - along - up, along * 2.0f, up * 2.0f, side, sky, blockLight);
     }
 
@@ -484,6 +490,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
         const float blockLight = std::max<float>(world.blockLightAt(lx, ly, lz), lightEmission(asBlock(cargo.block))) / 15.0f;
         const float s = std::sin(cargo.yaw);
         const float c = std::cos(cargo.yaw);
+        const bool flipped = cargo.oriented && glm::dot(glm::cross(cargo.axisX, cargo.axisY), cargo.axisZ) < 0.0f;
         for (int f = 0; f < 6; ++f)
         {
             const FaceDef& face = FACES[f];
@@ -494,12 +501,14 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
             {
                 const glm::vec3 local((face.corner[k][0] - 0.5f) * cargo.size, (face.corner[k][1] - 0.5f) * cargo.size,
                                       (face.corner[k][2] - 0.5f) * cargo.size);
-                corners[k] = cargo.centre + glm::vec3(local.x * c - local.z * s, local.y, local.x * s + local.z * c);
+                corners[k] = cargo.oriented ? cargo.centre + cargo.axisX * local.x + cargo.axisY * local.y + cargo.axisZ * local.z
+                                            : cargo.centre + glm::vec3(local.x * c - local.z * s, local.y, local.x * s + local.z * c);
                 u[k] = (face.uv[k][0] == 0.0f) ? uv.u0 : uv.u1;
                 v[k] = (face.uv[k][1] == 0.0f) ? uv.vTop : uv.vBottom;
             }
-            const int order[6] = { 0, 1, 2, 0, 2, 3 };
-            for (int k : order)
+            static const int AHEAD[6] = { 0, 1, 2, 0, 2, 3 };
+            static const int BEHIND[6] = { 0, 2, 1, 0, 3, 2 };
+            for (int k : (flipped ? BEHIND : AHEAD))
             {
                 m_vertices.push_back(corners[k].x);
                 m_vertices.push_back(corners[k].y);

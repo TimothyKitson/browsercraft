@@ -1557,6 +1557,7 @@ int main(int argc, char** argv)
     bool farmTest = false;
     bool shopTest = false;
     const char* joinAddress = nullptr;
+    const char* lanTest = nullptr;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -1677,6 +1678,10 @@ int main(int argc, char** argv)
         {
             joinAddress = argv[++i];
         }
+        else if (std::strcmp(argv[i], "--lantest") == 0 && i + 1 < argc)
+        {
+            lanTest = argv[++i];
+        }
         else if (argv[i][0] != '-' && i + 1 < argc && argv[i + 1][0] != '-')
         {
             const int requestedWidth = std::atoi(argv[i]);
@@ -1737,6 +1742,11 @@ int main(int argc, char** argv)
         if (hostOnStart) app.setHostOnStart();
         else if (joinAddress) app.setJoinOnStart(joinAddress);
         if (autoShotDelay > 0.0f) app.setAutoScreenshot(autoShotDelay);
+        if (lanTest)
+        {
+            app.setLanTest(lanTest);
+            if (autoShotDelay <= 0.0f) app.setAutoScreenshot(100000.0f);
+        }
         app.run();
         again = app.reloadRequested();
         resume = app.reloadWorld();

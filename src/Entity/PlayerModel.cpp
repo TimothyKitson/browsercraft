@@ -50,18 +50,19 @@ namespace
         body.u = 16; body.v = 16;
         body.jointed = true;
 
+        const float shoulder = arm < 4.0f ? SHOULDER_Y - 0.5f : SHOULDER_Y;
         Box rightArm;
-        rightArm.min = glm::vec3(4.0f, 10.0f, -2.0f);
-        rightArm.max = glm::vec3(4.0f + arm, 22.0f, 2.0f);
-        rightArm.pivot = glm::vec3(4.0f + arm * 0.5f, SHOULDER_Y, 0.0f);
+        rightArm.min = glm::vec3(4.0f, shoulder - 10.0f, -2.0f);
+        rightArm.max = glm::vec3(4.0f + arm, shoulder + 2.0f, 2.0f);
+        rightArm.pivot = glm::vec3(5.0f, shoulder, 0.0f);
         rightArm.pitch = PlayerAnimation::armAngle(phase, amount);
         rightArm.u = 40; rightArm.v = 16;
         rightArm.jointed = true;
 
         Box leftArm = rightArm;
-        leftArm.min = glm::vec3(-4.0f - arm, 10.0f, -2.0f);
-        leftArm.max = glm::vec3(-4.0f, 22.0f, 2.0f);
-        leftArm.pivot = glm::vec3(-(4.0f + arm * 0.5f), SHOULDER_Y, 0.0f);
+        leftArm.min = glm::vec3(-4.0f - arm, shoulder - 10.0f, -2.0f);
+        leftArm.max = glm::vec3(-4.0f, shoulder + 2.0f, 2.0f);
+        leftArm.pivot = glm::vec3(-5.0f, shoulder, 0.0f);
         leftArm.pitch = PlayerAnimation::armAngle(phase + halfTurn, amount);
         if (twoLayer) { leftArm.u = 32; leftArm.v = 48; }
         else          { leftArm.mirror = true; }
@@ -69,6 +70,30 @@ namespace
         {
             rightArm.pitch = -halfTurn * 0.5f + PlayerAnimation::armAngle(phase, amount) * 0.2f;
             leftArm.pitch = -halfTurn * 0.5f + PlayerAnimation::armAngle(phase + halfTurn, amount) * 0.2f;
+        }
+        if (pose.rightItem) rightArm.pitch = rightArm.pitch * 0.5f - halfTurn / 10.0f;
+        if (pose.leftItem) leftArm.pitch = leftArm.pitch * 0.5f - halfTurn / 10.0f;
+        if (pose.swing > 0.0f && pose.swing < 1.0f)
+        {
+            const float f = pose.swing;
+            body.yaw = std::sin(std::sqrt(f) * halfTurn * 2.0f) * 0.2f * (pose.leftHanded ? -1.0f : 1.0f);
+            auto shift = [](Box& limb, const glm::vec3& to) {
+                const glm::vec3 delta = to - limb.pivot;
+                limb.min += delta;
+                limb.max += delta;
+                limb.pivot = to;
+            };
+            shift(rightArm, glm::vec3(std::cos(body.yaw) * 5.0f, shoulder, -std::sin(body.yaw) * 5.0f));
+            shift(leftArm, glm::vec3(-std::cos(body.yaw) * 5.0f, shoulder, std::sin(body.yaw) * 5.0f));
+            rightArm.yaw += body.yaw;
+            leftArm.yaw += body.yaw;
+            leftArm.pitch += body.yaw;
+            float eased = 1.0f - f;
+            eased = 1.0f - eased * eased * eased * eased;
+            Box& swinging = pose.leftHanded ? leftArm : rightArm;
+            swinging.pitch -= std::sin(eased * halfTurn) * 1.2f + std::sin(f * halfTurn) * -(headTilt - 0.7f) * 0.75f;
+            swinging.yaw += body.yaw * 2.0f;
+            swinging.roll += std::sin(f * halfTurn) * -0.4f;
         }
 
         Box rightLeg;
@@ -159,6 +184,52 @@ void PlayerModel::build(const PlayerSkin& skin, const PlayerPose& pose,
     }
 
     BoxMesh::appendAll(m_vertices, boxes, frame);
+}
+
+void PlayerModel::armFrame(const PlayerPose& pose, float armWidth, bool right, glm::vec3& origin, glm::vec3& axisX, glm::vec3& axisY,
+                           glm::vec3& axisZ)
+{
+    std::vector<Box> boxes;
+    buildBoxes(boxes, armWidth, false, pose);
+    const Box& arm = boxes[right ? 2 : 3];
+    auto turnX = [](const glm::vec3& p, float a) {
+        const float s = std::sin(a), c = std::cos(a);
+        return glm::vec3(p.x, p.y * c - p.z * s, p.y * s + p.z * c);
+    };
+    auto turnY = [](const glm::vec3& p, float a) {
+        const float s = std::sin(a), c = std::cos(a);
+        return glm::vec3(p.x * c + p.z * s, p.y, -p.x * s + p.z * c);
+    };
+    auto turnZ = [](const glm::vec3& p, float a) {
+        const float s = std::sin(a), c = std::cos(a);
+        return glm::vec3(p.x * c - p.y * s, p.x * s + p.y * c, p.z);
+    };
+    const float joint = pose.sneaking ? SNEAK_TILT : 0.0f;
+    const float bodyPitch = pose.swimming ? glm::radians(pose.inWater ? std::clamp(90.0f - pose.headPitch, 10.0f, 170.0f) : 90.0f) : 0.0f;
+    const glm::vec3 bodyPivot(0.0f, 16.0f, 0.0f);
+    const glm::vec3 bodyShift = pose.swimming ? glm::vec3(0.0f, -11.0f, 0.0f) : glm::vec3(0.0f);
+    const glm::vec3 jointPivot(0.0f, HIP_Y, 0.0f);
+    auto place = [&](glm::vec3 local, bool point) {
+        const glm::vec3 pivot = point ? arm.pivot : glm::vec3(0.0f);
+        local = turnX(local - pivot, arm.pitch) + pivot;
+        if (arm.yaw != 0.0f) local = turnY(local - pivot, arm.yaw) + pivot;
+        if (arm.roll != 0.0f) local = turnZ(local - pivot, arm.roll) + pivot;
+        const glm::vec3 jp = point ? jointPivot : glm::vec3(0.0f);
+        if (joint != 0.0f) local = turnX(local - jp, joint) + jp;
+        const glm::vec3 bp = point ? bodyPivot : glm::vec3(0.0f);
+        if (bodyPitch != 0.0f) local = turnX(local - bp, bodyPitch) + bp + (point ? bodyShift : glm::vec3(0.0f));
+        return local;
+    };
+    const float radians = glm::radians(pose.bodyYaw);
+    const glm::vec3 ahead(std::cos(radians), 0.0f, std::sin(radians));
+    const glm::vec3 side(-ahead.z, 0.0f, ahead.x);
+    const glm::vec3 above(0.0f, 1.0f, 0.0f);
+    const float pixel = pose.scale / 16.0f;
+    auto world = [&](const glm::vec3& v) { return (side * v.x + above * v.y + ahead * v.z) * pixel; };
+    origin = pose.feet + world(place(arm.pivot, true));
+    axisX = world(place(glm::vec3(1.0f, 0.0f, 0.0f), false));
+    axisY = world(place(glm::vec3(0.0f, 1.0f, 0.0f), false));
+    axisZ = world(place(glm::vec3(0.0f, 0.0f, 1.0f), false));
 }
 
 void PlayerModel::buildArmour(const PlayerPose& pose, int piece, float sky, float blockLight, float inflateExtra)

@@ -231,6 +231,7 @@ public:
     // Dev aids: start a world and immediately share it, or join one.
     void setHostOnStart() { m_hostOnStart = true; m_startImmediately = true; }
     void setJoinOnStart(const std::string& address) { m_joinOnStart = address; }
+    void setLanTest(const std::string& role) { m_lanTest = role; }
     // Dev aid: stamp a landmark at spawn, so an automated run has
     // something to check block syncing against.
     void setBuildTest() { m_buildTest = true; }
@@ -1031,6 +1032,18 @@ private:
     std::map<uint32_t, float> m_doorBreaking;
     void renderMobGear(Shader& shader);
     PlayerPose gearPose(const Mob& mob) const;
+    PlayerPose remotePose(uint32_t id, const Net::RemotePlayer& player);
+    PlayerPose localPose();
+    void holdPlayerItems(const PlayerPose& pose, bool slim, uint16_t rightItem, uint16_t leftItem);
+    void tickLanTest(float deltaTime);
+    std::string m_lanTest;
+    std::string m_lanShotName;
+    int m_lanStage = 0;
+    float m_lanClock = 0.0f;
+    glm::vec3 m_lanBase{ 0.0f };
+    std::set<std::string> m_lanTaken;
+    float m_lastMainSwing = 0.0f;
+    float m_lastOffSwing = 0.0f;
     float m_shieldRaise = 0.0f;
     float m_shieldCooldown = 0.0f;
     float m_totemShown = 0.0f;

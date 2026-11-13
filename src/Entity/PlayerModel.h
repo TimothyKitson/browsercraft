@@ -27,6 +27,10 @@ struct PlayerPose
     bool armsForward = false;
     float scale = 1.0f;
     unsigned parts = 0x7Fu;
+    float swing = 0.0f;
+    bool rightItem = false;
+    bool leftItem = false;
+    bool leftHanded = false;
 };
 
 // A Minecraft player: six boxes wrapped in a 64x32 or 64x64 skin, built
@@ -72,6 +76,8 @@ public:
     // position, uv, shade, sky light, block light, face.
     static constexpr int FLOATS_PER_VERTEX = BoxMesh::FLOATS_PER_VERTEX;
     void build(const PlayerSkin& skin, const PlayerPose& pose, float sky, float blockLight);
+    static void armFrame(const PlayerPose& pose, float armWidth, bool right, glm::vec3& origin, glm::vec3& axisX, glm::vec3& axisY,
+                         glm::vec3& axisZ);
     void buildArmour(const PlayerPose& pose, int piece, float sky, float blockLight, float inflateExtra = 0.0f);
     void buildElytra(const PlayerPose& pose, float sky, float blockLight);
     void renderElytra(Shader& chunkShader, const World& world, const PlayerPose& pose,

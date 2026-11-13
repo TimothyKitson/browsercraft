@@ -254,6 +254,11 @@ namespace
     }
 }
 
+bool HeldItem::flatInHand(StackId id)
+{
+    return drawsFlat(id);
+}
+
 void HeldItem::update(float deltaTime, StackId held)
 {
     if (m_swing > 0.0f) m_swing = std::max(0.0f, m_swing - deltaTime);

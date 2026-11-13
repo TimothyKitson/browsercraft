@@ -95,6 +95,12 @@ public:
         glm::vec3 forward{ 0.0f, 0.0f, 1.0f };
         float size = 0.55f;
         StackId item = Blocks::Air;
+        glm::vec3 up{ 0.0f, 1.0f, 0.0f };
+        bool placed = false;
+        glm::vec3 origin{ 0.0f };
+        glm::vec3 axisX{ 1.0f, 0.0f, 0.0f };
+        glm::vec3 axisY{ 0.0f, 1.0f, 0.0f };
+        glm::vec3 axisZ{ 0.0f, 0.0f, 1.0f };
     };
     void hold(const Held& one) { m_held.push_back(one); }
     void clearPinned() { m_pinned.clear(); m_cargo.clear(); m_held.clear(); }
@@ -106,6 +112,10 @@ public:
         float yaw = 0.0f;
         float size = 0.6f;
         StackId block = Blocks::Air;
+        bool oriented = false;
+        glm::vec3 axisX{ 1.0f, 0.0f, 0.0f };
+        glm::vec3 axisY{ 0.0f, 1.0f, 0.0f };
+        glm::vec3 axisZ{ 0.0f, 0.0f, 1.0f };
     };
     void carry(const Cargo& one) { m_cargo.push_back(one); }
     std::vector<ItemStack> takeNear(const glm::vec3& at, float radius);

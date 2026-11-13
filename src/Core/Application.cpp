@@ -35,6 +35,7 @@
 #include "World/Structures.h"
 #include "World/WorldSave.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <SDL.h>
 #include <stb_image.h>
 #ifdef __EMSCRIPTEN__
@@ -2390,6 +2391,16 @@ bool Application::frame()
     // somebody on screen wearing the wrong character.
     m_net.setLocalAppearance(localAppearance());
     m_net.setLocalSneaking(m_player.sneaking);
+    m_net.setLocalHands(m_inventory.selected().empty() ? 0 : m_inventory.selected().id,
+                        m_inventory.slot(Inventory::OFFHAND).empty() ? 0 : m_inventory.slot(Inventory::OFFHAND).id, m_leftHanded);
+    {
+        const float mainSwing = m_heldItem.swingProgress();
+        const float offSwing = m_offhandItem.swingProgress();
+        if (mainSwing > 0.0f && (m_lastMainSwing == 0.0f || mainSwing < m_lastMainSwing)) m_net.noteSwing(false);
+        else if (offSwing > 0.0f && (m_lastOffSwing == 0.0f || offSwing < m_lastOffSwing)) m_net.noteSwing(true);
+        m_lastMainSwing = mainSwing;
+        m_lastOffSwing = offSwing;
+    }
     m_net.update(deltaTime, m_world && !m_menuWorld ? m_world.get() : nullptr,
                  m_player.position, m_camera.yaw, m_camera.pitch, m_timeOfDay);
     notePeers();
@@ -2429,6 +2440,7 @@ bool Application::frame()
             // shows an empty one -- which is how the mob spawner came to
             // look broken when it was only ever being skipped.
             m_player.update(deltaTime, *m_world, Player::Controls{});
+            if (!m_lanTest.empty()) tickLanTest(deltaTime);
             m_camera.position = m_player.eyePosition();
             updateWorldAround(deltaTime);
             if (m_devScope)
@@ -8828,10 +8840,16 @@ bool Application::frame()
     if (m_pendingScreenshot)
     {
         m_pendingScreenshot = false;
-        const std::string path = saveScreenshot(m_window.width(), m_window.height(), "screenshots");
+        std::string path = saveScreenshot(m_window.width(), m_window.height(), "screenshots");
+        if (!path.empty() && !m_lanShotName.empty())
+        {
+            const std::string named = "screenshots/" + m_lanShotName + ".png";
+            if (std::rename(path.c_str(), named.c_str()) == 0) path = named;
+            m_lanShotName.clear();
+        }
         std::printf("%s\n", path.empty() ? "Screenshot failed" : ("Saved screenshot " + path).c_str());
         std::fflush(stdout);
-        if (m_autoScreenshotDelay > 0.0f) m_running = false;
+        if (m_autoScreenshotDelay > 0.0f && m_lanTest.empty()) m_running = false;
     }
 
     m_window.swapBuffers();
@@ -20953,6 +20971,7 @@ void Application::renderWorldShaded()
         entry.chunk->opaqueMesh.draw(GL_TRIANGLES);
     }
 
+    if (inGame()) pinFramedItems();
     m_drops.render(world, *m_world);
     m_orbs.render(world, *m_world);
     m_rain.render(world, *m_world, m_camera.right, m_camera.up);
@@ -21105,6 +21124,7 @@ void Application::renderWorld()
     }
 
     // Dropped items and particles are opaque, so they join the terrain pass.
+    if (inGame()) pinFramedItems();
     m_drops.render(m_chunkShader, *m_world);
     m_orbs.render(m_chunkShader, *m_world);
     m_rain.render(m_chunkShader, *m_world, m_camera.right, m_camera.up);
@@ -23922,7 +23942,6 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
     const glm::vec3 cameraPosition = viewCamera().position;
 
     collectSignPlates(viewProjection, screenWidth, screenHeight);
-    pinFramedItems();
 
     auto draw = [&](const PlayerSkin& skin, const PlayerPose& pose, const std::string& name) {
         m_playerModel.render(m_activeShader ? *m_activeShader : m_chunkShader, *m_world, skin, pose);
@@ -23953,19 +23972,7 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
     {
         const Net::RemotePlayer& player = entry.second;
         if (!player.positioned) continue;
-
-        const Animation& animation = m_animation[entry.first];
-
-        PlayerPose pose;
-        pose.feet = player.smoothed();
-        pose.headYaw = player.yaw;
-        pose.headPitch = player.pitch;
-        pose.bodyYaw = animation.started ? animation.bodyYaw : player.yaw;
-        pose.limbPhase = animation.phase;
-        pose.limbAmount = animation.amount;
-        pose.sneaking = player.sneaking;
-
-        draw(skinFor(player.look), pose, player.name);
+        draw(skinFor(player.look), remotePose(entry.first, player), player.name);
     }
 
     for (const Mob& mob : m_entities.mobs())
@@ -24010,22 +24017,7 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
     // name tag: you know who you are, and Minecraft does not draw one.
     if (m_perspective != Perspective::FirstPerson)
     {
-        const Animation& animation = m_animation[LOCAL_ANIM];
-
-        PlayerPose pose;
-        pose.feet = m_player.position;
-        pose.headYaw = m_camera.yaw;
-        pose.headPitch = m_camera.pitch;
-        pose.bodyYaw = animation.started ? animation.bodyYaw : m_camera.yaw;
-        pose.limbPhase = animation.phase;
-        pose.limbAmount = animation.amount;
-        pose.sneaking = m_player.sneaking && !m_player.swimming();
-        pose.gliding = m_player.gliding;
-        pose.swimming = m_player.swimming();
-        pose.inWater = m_world && m_player.isInWater(*m_world);
-        const float speed = glm::length(m_player.velocity);
-        pose.fall = (speed > 0.001f && m_player.velocity.y < 0.0f) ? -m_player.velocity.y / speed : 0.0f;
-        pose.parts = m_skinParts;
+        const PlayerPose pose = localPose();
 
         if (!m_player.effects.has(Effects::Kind::Invisibility)) draw(activeSkin(), pose, std::string());
         Shader& armourShader = m_activeShader ? *m_activeShader : m_chunkShader;
@@ -26170,6 +26162,208 @@ void Application::pinPotPatterns()
 
 // Every frame near enough to see, handed to the one pass that draws
 // an item standing in the world.
+void Application::tickLanTest(float deltaTime)
+{
+    const bool host = m_net.role() == Net::Role::Host;
+    m_showDebug = false;
+    bool remoteHere = false;
+    float remoteSwing = 0.0f;
+    glm::vec3 remoteAt(0.0f);
+    for (const auto& entry : m_net.players())
+        if (entry.second.positioned)
+        {
+            remoteHere = true;
+            remoteAt = entry.second.smoothed();
+            if (entry.second.swingTimer > 0.0f) remoteSwing = 1.0f - entry.second.swingTimer / Net::Session::SWING_SECONDS;
+        }
+    if (!remoteHere && m_lanStage < 2) return;
+    if (m_lanStage == 0)
+    {
+        const int bx = static_cast<int>(std::floor(m_spawnPoint.x));
+        const int by = static_cast<int>(std::floor(m_spawnPoint.y));
+        const int bz = static_cast<int>(std::floor(m_spawnPoint.z));
+        for (int x = -6; x <= 6; ++x)
+            for (int z = -6; z <= 6; ++z)
+            {
+                m_world->setBlock(bx + x, by - 1, bz + z, Blocks::Stone);
+                for (int y = 0; y < 6; ++y) m_world->setBlock(bx + x, by + y, bz + z, Blocks::Air);
+            }
+        m_lanBase = glm::vec3(bx + 0.5f, static_cast<float>(by), bz + 0.5f);
+        ItemStack mainHand, offHand;
+        mainHand.id = host ? static_cast<StackId>(Items::DiamondSword) : static_cast<StackId>(Blocks::Planks);
+        offHand.id = host ? static_cast<StackId>(Blocks::Torch) : static_cast<StackId>(Items::Apple);
+        mainHand.count = offHand.count = 1;
+        m_inventory.selected() = mainHand;
+        m_inventory.slot(Inventory::OFFHAND) = offHand;
+        if (host) m_timeOfDay = 0.3f;
+        m_lanStage = 1;
+        std::printf("[lantest] %s ready at %d %d %d\n", host ? "host" : "guest", bx, by, bz);
+        std::fflush(stdout);
+    }
+    m_lanStage = 2;
+    m_heldItem.update(deltaTime, m_inventory.selected().id);
+    m_offhandItem.update(deltaTime, m_inventory.slot(Inventory::OFFHAND).id);
+    const float before = m_lanClock;
+    m_lanClock += deltaTime;
+    const float t = m_lanClock;
+    auto at = [&](float when) { return before < when && t >= when; };
+    auto shot = [&](const std::string& name) {
+        if (m_lanTaken.count(name) || m_pendingScreenshot) return;
+        m_lanTaken.insert(name);
+        m_lanShotName = std::string("lan-") + (host ? "host-" : "guest-") + name;
+        m_pendingScreenshot = true;
+        std::printf("[lantest] %s: me %.2f %.2f %.2f, other %.2f %.2f %.2f\n", name.c_str(), m_player.position.x, m_player.position.y,
+                    m_player.position.z, remoteAt.x, remoteAt.y, remoteAt.z);
+    };
+    const float side = host ? -1.0f : 1.0f;
+    glm::vec3 where = m_lanBase + glm::vec3(1.5f * side, 0.0f, 0.0f);
+    const bool walking = t >= 23.0f;
+    if (walking) where.z += std::sin((t - 23.0f) * 2.2f) * 1.6f * side;
+    m_player.position = where;
+    m_player.velocity = glm::vec3(0.0f);
+    m_player.sneaking = t >= 26.0f;
+    const bool hostTurned = t >= 8.0f && t < 14.0f;
+    const bool guestTurned = t >= 14.0f && t < 20.0f;
+    const bool turned = host ? hostTurned : guestTurned;
+    m_camera.setOrientation(turned ? (host ? 90.0f : 270.0f) : (host ? 0.0f : 180.0f), -4.0f);
+    m_perspective = turned ? Perspective::ThirdFront : (t >= 20.0f && t < 23.0f) || t >= 28.0f ? Perspective::ThirdBack : Perspective::FirstPerson;
+    const float myTurn = host ? 8.0f : 14.0f;
+    const float theirTurn = host ? 14.0f : 8.0f;
+    if (t >= 2.5f && t < 3.5f) shot("see-idle");
+    if (at(host ? 4.0f : 5.5f)) m_heldItem.swing();
+    if (t > 3.5f && t < 8.0f && remoteSwing >= 0.15f && remoteSwing < 0.85f) shot("see-swing");
+    if (t >= myTurn + 0.8f && t < myTurn + 1.5f) shot("self-front-idle");
+    if (at(myTurn + 1.5f)) m_heldItem.swing();
+    if (t > myTurn + 1.5f && t < myTurn + 3.5f && m_heldItem.swingProgress() >= 0.3f) shot("self-front-swing");
+    if (at(myTurn + 3.5f)) m_offhandItem.swing();
+    if (t > myTurn + 3.5f && t < myTurn + 6.0f && m_offhandItem.swingProgress() >= 0.3f) shot("self-front-offswing");
+    if (t >= theirTurn + 0.8f && t < theirTurn + 1.5f) shot("see-side-idle");
+    if (t > theirTurn + 1.5f && t < theirTurn + 3.5f && remoteSwing >= 0.15f && remoteSwing < 0.85f) shot("see-side-swing");
+    if (t > theirTurn + 3.5f && t < theirTurn + 6.0f && remoteSwing >= 0.15f && remoteSwing < 0.85f) shot("see-side-offswing");
+    if (t >= 20.8f && t < 23.0f) shot("self-back");
+    if (t >= 25.0f && t < 26.0f) shot("see-walk");
+    if (t >= 27.3f && t < 28.0f) shot("see-sneak-walk");
+    if (t >= 29.0f && t < 30.5f) shot("self-back-sneak-walk");
+    if (t >= 30.5f)
+    {
+        std::printf("[lantest] done, %zu shots\n", m_lanTaken.size());
+        std::fflush(stdout);
+        m_running = false;
+    }
+}
+
+PlayerPose Application::remotePose(uint32_t id, const Net::RemotePlayer& player)
+{
+    const Animation& animation = m_animation[id];
+    PlayerPose pose;
+    pose.feet = player.smoothed();
+    pose.headYaw = player.yaw;
+    pose.headPitch = player.pitch;
+    pose.bodyYaw = animation.started ? animation.bodyYaw : player.yaw;
+    pose.limbPhase = animation.phase;
+    pose.limbAmount = animation.amount;
+    pose.sneaking = player.sneaking;
+    pose.leftHanded = player.swingOff != player.leftHanded;
+    pose.rightItem = (player.leftHanded ? player.offHand : player.mainHand) != 0;
+    pose.leftItem = (player.leftHanded ? player.mainHand : player.offHand) != 0;
+    if (player.swingTimer > 0.0f) pose.swing = 1.0f - player.swingTimer / Net::Session::SWING_SECONDS;
+    return pose;
+}
+
+PlayerPose Application::localPose()
+{
+    const Animation& animation = m_animation[LOCAL_ANIM];
+    PlayerPose pose;
+    pose.feet = m_player.position;
+    pose.headYaw = m_camera.yaw;
+    pose.headPitch = m_camera.pitch;
+    pose.bodyYaw = animation.started ? animation.bodyYaw : m_camera.yaw;
+    pose.limbPhase = animation.phase;
+    pose.limbAmount = animation.amount;
+    pose.sneaking = m_player.sneaking && !m_player.swimming();
+    pose.gliding = m_player.gliding;
+    pose.swimming = m_player.swimming();
+    pose.inWater = m_world && m_player.isInWater(*m_world);
+    const float speed = glm::length(m_player.velocity);
+    pose.fall = (speed > 0.001f && m_player.velocity.y < 0.0f) ? -m_player.velocity.y / speed : 0.0f;
+    pose.parts = m_skinParts;
+    const bool mainHeld = !m_inventory.selected().empty();
+    const bool offHeld = !m_inventory.slot(Inventory::OFFHAND).empty();
+    pose.rightItem = m_leftHanded ? offHeld : mainHeld;
+    pose.leftItem = m_leftHanded ? mainHeld : offHeld;
+    const float mainSwing = m_heldItem.swingProgress();
+    const float offSwing = m_offhandItem.swingProgress();
+    pose.swing = mainSwing > 0.0f ? mainSwing : offSwing;
+    pose.leftHanded = (mainSwing > 0.0f || offSwing <= 0.0f) ? m_leftHanded : !m_leftHanded;
+    return pose;
+}
+
+void Application::holdPlayerItems(const PlayerPose& pose, bool slim, uint16_t rightItem, uint16_t leftItem)
+{
+    struct Display { glm::vec3 rotation, translation; float scale; };
+    static const Display GENERATED[2]{ { { 0.0f, 0.0f, 0.0f }, { 0.0f, 3.0f, 1.0f }, 0.55f }, { { 0.0f, 0.0f, 0.0f }, { 0.0f, 3.0f, 1.0f }, 0.55f } };
+    static const Display HANDHELD[2]{ { { 0.0f, -90.0f, 55.0f }, { 0.0f, 4.0f, 0.5f }, 0.85f }, { { 0.0f, 90.0f, -55.0f }, { 0.0f, 4.0f, 0.5f }, 0.85f } };
+    static const Display MACE[2]{ { { 0.0f, -90.0f, 55.0f }, { 0.0f, 4.0f, 1.0f }, 1.0f }, { { 0.0f, 90.0f, -55.0f }, { 0.0f, 4.0f, 1.0f }, 1.0f } };
+    static const Display ROD[2]{ { { 0.0f, 90.0f, 55.0f }, { 0.0f, 4.0f, 2.5f }, 0.85f }, { { 0.0f, -90.0f, -55.0f }, { 0.0f, 4.0f, 2.5f }, 0.85f } };
+    static const Display BOW[2]{ { { -80.0f, 260.0f, -40.0f }, { -1.0f, -2.0f, 2.5f }, 0.9f }, { { -80.0f, -280.0f, 40.0f }, { -1.0f, -2.0f, 2.5f }, 0.9f } };
+    static const Display CROSSBOW[2]{ { { -90.0f, 0.0f, -60.0f }, { 2.0f, 0.1f, -3.0f }, 0.9f }, { { -90.0f, 0.0f, 30.0f }, { 2.0f, 0.1f, -3.0f }, 0.9f } };
+    static const Display BLOCK[2]{ { { 75.0f, 45.0f, 0.0f }, { 0.0f, 2.5f, 0.0f }, 0.375f }, { { 75.0f, 45.0f, 0.0f }, { 0.0f, 2.5f, 0.0f }, 0.375f } };
+    for (const bool right : { true, false })
+    {
+        const uint16_t item = right ? rightItem : leftItem;
+        if (item == 0) continue;
+        const StackId id = static_cast<StackId>(item);
+        glm::vec3 origin, ax, ay, az;
+        PlayerModel::armFrame(pose, slim ? 3.0f : 4.0f, right, origin, ax, ay, az);
+        const float outward = right ? 1.0f : -1.0f;
+        const glm::vec3 anchor = origin + ax * (outward * (slim ? 0.5f : 1.0f)) - ay * 10.0f + az * 2.0f;
+        const glm::vec3 itemX = ax, itemY = az, itemZ = ay;
+        const bool block = !HeldItem::flatInHand(id);
+        const Display* table = block ? BLOCK
+                               : (id == Items::FishingRod || id == Items::CarrotOnAStick || id == Items::WarpedFungusOnAStick) ? ROD
+                               : id == Items::Bow ? BOW
+                               : id == Items::Crossbow ? CROSSBOW
+                               : id == Items::Mace ? MACE
+                               : (Tools::isTool(id) || id == Items::Stick || id == Items::BlazeRod || id == Items::Bone ||
+                                  id == Items::BreezeRod || id == Items::DebugStick)
+                                   ? HANDHELD
+                                   : GENERATED;
+        const Display& display = table[right ? 0 : 1];
+        const float side = right ? 1.0f : -1.0f;
+        const glm::quat turn = glm::angleAxis(glm::radians(display.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
+                               glm::angleAxis(glm::radians(display.rotation.y * side), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                               glm::angleAxis(glm::radians(display.rotation.z * side), glm::vec3(0.0f, 0.0f, 1.0f));
+        auto toWorld = [&](const glm::vec3& v) { return itemX * v.x + itemY * v.y + itemZ * v.z; };
+        const glm::vec3 centre = anchor + toWorld(glm::vec3(display.translation.x * side, display.translation.y, display.translation.z));
+        const float span = 16.0f * display.scale;
+        const glm::vec3 vx = toWorld(turn * glm::vec3(span, 0.0f, 0.0f));
+        const glm::vec3 vy = toWorld(turn * glm::vec3(0.0f, span, 0.0f));
+        const glm::vec3 vz = toWorld(turn * glm::vec3(0.0f, 0.0f, span));
+        if (block)
+        {
+            DroppedItems::Cargo cargo;
+            cargo.block = static_cast<BlockId>(item);
+            cargo.centre = centre;
+            cargo.size = glm::length(vx);
+            cargo.oriented = true;
+            cargo.axisX = glm::normalize(vx);
+            cargo.axisY = glm::normalize(vy);
+            cargo.axisZ = glm::normalize(vz);
+            m_drops.carry(cargo);
+            continue;
+        }
+        DroppedItems::Held held;
+        held.item = id;
+        held.grip = centre;
+        held.placed = true;
+        held.axisX = vx;
+        held.axisY = vy;
+        held.axisZ = vz;
+        held.origin = centre - (vx + vy) * 0.5f;
+        m_drops.hold(held);
+    }
+}
+
 PlayerPose Application::gearPose(const Mob& mob) const
 {
     PlayerPose pose;
@@ -26207,6 +26401,19 @@ void Application::renderMobGear(Shader& shader)
 void Application::pinFramedItems()
 {
     m_drops.clearPinned();
+    for (const auto& entry : m_net.players())
+    {
+        const Net::RemotePlayer& player = entry.second;
+        if (!player.positioned || glm::length(player.smoothed() - m_camera.position) > 48.0f) continue;
+        holdPlayerItems(remotePose(entry.first, player), skinFor(player.look).armWidth() < 4,
+                        player.leftHanded ? player.offHand : player.mainHand, player.leftHanded ? player.mainHand : player.offHand);
+    }
+    if (m_perspective != Perspective::FirstPerson && m_world)
+    {
+        const uint16_t mainHeld = m_inventory.selected().empty() ? 0 : m_inventory.selected().id;
+        const uint16_t offHeld = m_inventory.slot(Inventory::OFFHAND).empty() ? 0 : m_inventory.slot(Inventory::OFFHAND).id;
+        holdPlayerItems(localPose(), activeSkin().armWidth() < 4, m_leftHanded ? offHeld : mainHeld, m_leftHanded ? mainHeld : offHeld);
+    }
     for (const Mob& mob : m_entities.mobs())
     {
         if (mob.alive() && (mob.typeId() == MobId::BlockDisplay || mob.typeId() == MobId::ItemDisplay) && mob.gear(Mob::MainHand) != 0)

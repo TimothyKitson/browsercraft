@@ -97,6 +97,8 @@
 #include "Game/Servers.h"
 #include "Net/Ping.h"
 #include "Net/Protocol.h"
+#include "Net/Session.h"
+#include <thread>
 #include "Core/Packs.h"
 #include "Game/Golems.h"
 #include "Renderer/Atlas.h"
@@ -1242,6 +1244,107 @@ namespace
         check(walkLow > pose.feet.y, "at full stride the feet have left the ground");
         check(walkFront > turnedHigh.z, "one leg has swung out in front");
         check(walkBack < turnedLow.z, "and the other out behind");
+    }
+
+    void testPlayerHands()
+    {
+        section("players: arms and held items");
+        auto about = [](float a, float b) { return std::fabs(a - b) < 0.002f; };
+        PlayerPose pose;
+        pose.feet = glm::vec3(0.0f, 64.0f, 0.0f);
+        glm::vec3 origin, ax, ay, az;
+        PlayerModel::armFrame(pose, 4.0f, true, origin, ax, ay, az);
+        const glm::vec3 anchor = origin + ax - ay * 10.0f + az * 2.0f;
+        check(about(origin.y - 64.0f, 22.0f / 16.0f) && about(origin.z, 5.0f / 16.0f) && about(origin.x, 0.0f),
+              "the right shoulder turns where Minecraft's does, five pixels out and twenty-two up");
+        check(about(anchor.y - 64.0f, 12.0f / 16.0f) && about(anchor.z, 6.0f / 16.0f) && about(anchor.x, 2.0f / 16.0f),
+              "the hand holds things ten pixels down the arm and two in front of it");
+        PlayerModel::armFrame(pose, 4.0f, false, origin, ax, ay, az);
+        check(about(origin.z, -5.0f / 16.0f), "the left shoulder mirrors it");
+
+        PlayerPose holding = pose;
+        holding.rightItem = true;
+        PlayerModel::armFrame(holding, 4.0f, true, origin, ax, ay, az);
+        const glm::vec3 lifted = origin + ax - ay * 10.0f + az * 2.0f;
+        check(lifted.x > anchor.x + 0.1f && lifted.y > anchor.y, "holding something raises that arm a tenth of a turn");
+        PlayerModel::armFrame(holding, 4.0f, false, origin, ax, ay, az);
+        check(about(ay.x, 0.0f), "and leaves the empty one hanging");
+
+        PlayerPose swinging = holding;
+        swinging.swing = 0.4f;
+        PlayerModel::armFrame(swinging, 4.0f, true, origin, ax, ay, az);
+        const glm::vec3 struck = origin + ax - ay * 10.0f + az * 2.0f;
+        check(struck.x > lifted.x + 0.2f, "mid-swing the hand is well out in front");
+        check(!about(origin.z, 5.0f / 16.0f), "and the shoulder has turned with the body");
+        PlayerPose lefty = swinging;
+        lefty.leftHanded = true;
+        PlayerModel::armFrame(lefty, 4.0f, false, origin, ax, ay, az);
+        const glm::vec3 leftStruck = origin - ax - ay * 10.0f + az * 2.0f;
+        check(leftStruck.x > 0.3f, "a left-handed swing swings the left arm");
+
+        PlayerModel::armFrame(pose, 3.0f, true, origin, ax, ay, az);
+        check(about(origin.y - 64.0f, 21.5f / 16.0f), "slim arms hang half a pixel lower, as Alex's do");
+
+        PlayerSkin skin;
+        PlayerModel model;
+        model.build(skin, pose, 1.0f, 0.0f);
+        float armTop = -1e9f;
+        const std::vector<float>& v = model.vertices();
+        for (size_t i = 0; i < v.size(); i += PlayerModel::FLOATS_PER_VERTEX)
+            if (std::fabs(v[i + 2]) > 4.6f / 16.0f && std::fabs(v[i + 2]) < 8.01f / 16.0f) armTop = std::max(armTop, v[i + 1]);
+        check(about(armTop - 64.0f, (skin.armWidth() < 4 ? 23.5f : 24.0f) / 16.0f), "the arms start level with the shoulders");
+
+        check(HeldItem::flatInHand(Items::DiamondSword) && HeldItem::flatInHand(Blocks::Torch) && !HeldItem::flatInHand(Blocks::Planks),
+              "tools and torches are held as sprites, planks as a little block");
+    }
+
+    void testLanHands()
+    {
+        section("multiplayer: what other players hold");
+        Net::Session host, guest;
+        const uint16_t port = 25677;
+        if (!host.openToLan("Steve", 7u, 0, 0.25f, glm::vec3(0.0f, 70.0f, 0.0f), port))
+        {
+            check(false, "a world can be opened to LAN on the loopback");
+            return;
+        }
+        check(guest.join("127.0.0.1", port, "Alex"), "a second player can join it");
+        float hostTime = 0.25f, guestTime = 0.25f;
+        auto pump = [&](int frames) {
+            for (int k = 0; k < frames; ++k)
+            {
+                host.update(0.05f, nullptr, glm::vec3(-1.5f, 70.0f, 0.0f), 0.0f, 0.0f, hostTime);
+                guest.update(0.05f, nullptr, glm::vec3(1.5f, 70.0f, 0.0f), 180.0f, 0.0f, guestTime);
+                std::this_thread::sleep_for(std::chrono::milliseconds(4));
+            }
+        };
+        host.setLocalHands(Items::DiamondSword, Blocks::Torch, false);
+        guest.setLocalHands(Blocks::Planks, Items::Apple, true);
+        pump(60);
+        const Net::RemotePlayer* seenByGuest = nullptr;
+        for (const auto& entry : guest.players()) seenByGuest = &entry.second;
+        const Net::RemotePlayer* seenByHost = nullptr;
+        for (const auto& entry : host.players()) seenByHost = &entry.second;
+        check(seenByGuest && seenByHost && seenByGuest->positioned && seenByHost->positioned, "each sees the other standing in the world");
+        if (!seenByGuest || !seenByHost) return;
+        check(seenByGuest->mainHand == Items::DiamondSword && seenByGuest->offHand == Blocks::Torch && !seenByGuest->leftHanded,
+              "the guest sees the host's sword and torch");
+        check(seenByHost->mainHand == Blocks::Planks && seenByHost->offHand == Items::Apple && seenByHost->leftHanded,
+              "the host sees the guest's planks and apple, held left-handed");
+        check(seenByGuest->swingTimer == 0.0f && seenByHost->swingTimer == 0.0f, "nobody is swinging yet");
+        host.noteSwing(false);
+        pump(2);
+        check(seenByGuest->swingTimer > 0.0f && !seenByGuest->swingOff, "the host's swing reaches the guest straight away");
+        guest.noteSwing(true);
+        pump(2);
+        check(seenByHost->swingTimer > 0.0f && seenByHost->swingOff, "and the guest's off-hand swing reaches the host");
+        pump(10);
+        check(seenByGuest->swingTimer == 0.0f && seenByHost->swingTimer == 0.0f, "a swing runs its course and stops");
+        host.setLocalHands(Blocks::Air, Items::Bow, false);
+        pump(6);
+        check(seenByGuest->mainHand == 0 && seenByGuest->offHand == Items::Bow, "emptying a hand and changing the other shows up too");
+        guest.leave();
+        host.leave();
     }
 
     // --- mobs -----------------------------------------------------------
@@ -18253,6 +18356,8 @@ int runSelfTest()
     testPlayerAnimation();
     testPlayerModel();
     testPlayerGeometry();
+    testPlayerHands();
+    testLanHands();
     testBoxWinding();
     testMobTypes();
     testSunlightBurning();

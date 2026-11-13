@@ -184,6 +184,7 @@ void Session::update(float deltaTime, World* world, const glm::vec3& localPositi
         RemotePlayer& player = entry.second;
         player.blend = std::min(1.0f, player.blend + deltaTime / MOVE_INTERVAL);
         player.silence += deltaTime;
+        if (player.swingTimer > 0.0f) player.swingTimer = std::max(0.0f, player.swingTimer - deltaTime);
     }
 
     if (m_timeSynced)
@@ -214,7 +215,7 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
     if (m_status != Status::Playing || m_players.empty()) return;
 
     m_moveTimer += deltaTime;
-    if (m_moveTimer < MOVE_INTERVAL) return;
+    if (m_moveTimer < MOVE_INTERVAL && m_localSwings == m_lastSentSwings) return;
     m_moveTimer = 0.0f;
 
     // Standing still costs nothing -- but dropping into a sneak while
@@ -225,7 +226,9 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
         glm::length(position - m_lastSentPosition) < MOVE_EPSILON &&
         std::abs(yaw - m_lastSentYaw) < LOOK_EPSILON &&
         std::abs(pitch - m_lastSentPitch) < LOOK_EPSILON &&
-        m_localSneaking == m_lastSentSneak)
+        m_localSneaking == m_lastSentSneak &&
+        m_localMain == m_lastSentMain && m_localOff == m_lastSentOff &&
+        m_localSwings == m_lastSentSwings && m_localLeftHanded == m_lastSentLeft)
         return;
 
     m_forceMove = false;
@@ -234,8 +237,13 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
     m_lastSentYaw = yaw;
     m_lastSentPitch = pitch;
     m_lastSentSneak = m_localSneaking;
+    m_lastSentMain = m_localMain;
+    m_lastSentOff = m_localOff;
+    m_lastSentSwings = m_localSwings;
+    m_lastSentLeft = m_localLeftHanded;
 
-    const uint8_t flags = m_localSneaking ? static_cast<uint8_t>(MoveSneaking) : uint8_t{ 0 };
+    const uint8_t flags = static_cast<uint8_t>((m_localSneaking ? MoveSneaking : 0) | (m_localLeftHanded ? MoveLeftHanded : 0) |
+                                               (m_localSwingOff ? MoveSwingOff : 0));
 
     if (m_role == Role::Host)
     {
@@ -245,6 +253,9 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
         move.f32(yaw);
         move.f32(pitch);
         move.u8(flags);
+        move.u16(m_localMain);
+        move.u16(m_localOff);
+        move.u8(m_localSwings);
         m_transport->broadcast(move.bytes());
     }
     else
@@ -254,6 +265,9 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
         move.f32(yaw);
         move.f32(pitch);
         move.u8(flags);
+        move.u16(m_localMain);
+        move.u16(m_localOff);
+        move.u8(m_localSwings);
         m_transport->send(HOST_PEER, move.bytes());
     }
 }
@@ -466,8 +480,12 @@ void Session::handleAsHost(const Packet& packet, World* world)
                 where.vec3(entry.second.position);
                 where.f32(entry.second.yaw);
                 where.f32(entry.second.pitch);
-                where.u8(entry.second.sneaking ? static_cast<uint8_t>(MoveSneaking)
-                                               : uint8_t{ 0 });
+                where.u8(static_cast<uint8_t>((entry.second.sneaking ? MoveSneaking : 0) |
+                                              (entry.second.leftHanded ? MoveLeftHanded : 0) |
+                                              (entry.second.swingOff ? MoveSwingOff : 0)));
+                where.u16(entry.second.mainHand);
+                where.u16(entry.second.offHand);
+                where.u8(entry.second.swingCount);
                 m_transport->send(packet.peer, where.bytes());
             }
 
@@ -524,10 +542,19 @@ void Session::handleAsHost(const Packet& packet, World* world)
             const float yaw = reader.f32();
             const float pitch = reader.f32();
             const uint8_t flags = reader.u8();
+            const uint16_t mainHand = reader.u16();
+            const uint16_t offHand = reader.u16();
+            const uint8_t swings = reader.u8();
             if (!reader.ok()) return;
 
             auto it = m_players.find(packet.peer);
             if (it == m_players.end()) return;
+            if (it->second.positioned && swings != it->second.swingCount) it->second.swingTimer = SWING_SECONDS;
+            it->second.swingCount = swings;
+            it->second.swingOff = (flags & MoveSwingOff) != 0;
+            it->second.leftHanded = (flags & MoveLeftHanded) != 0;
+            it->second.mainHand = mainHand;
+            it->second.offHand = offHand;
 
             // A first position, or one after a long silence, is where
             // they are rather than somewhere to glide towards.
@@ -547,6 +574,9 @@ void Session::handleAsHost(const Packet& packet, World* world)
             move.f32(yaw);
             move.f32(pitch);
             move.u8(flags);
+            move.u16(mainHand);
+            move.u16(offHand);
+            move.u8(swings);
             m_transport->broadcast(move.bytes(), packet.peer);
             break;
         }
@@ -676,10 +706,19 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             const float yaw = reader.f32();
             const float pitch = reader.f32();
             const uint8_t flags = reader.u8();
+            const uint16_t mainHand = reader.u16();
+            const uint16_t offHand = reader.u16();
+            const uint8_t swings = reader.u8();
             if (!reader.ok() || who == m_localId) return;
 
             RemotePlayer& player = m_players[who];
             player.id = who;
+            if (player.positioned && swings != player.swingCount) player.swingTimer = SWING_SECONDS;
+            player.swingCount = swings;
+            player.swingOff = (flags & MoveSwingOff) != 0;
+            player.leftHanded = (flags & MoveLeftHanded) != 0;
+            player.mainHand = mainHand;
+            player.offHand = offHand;
             player.previous = (!player.positioned || player.silence > 2.0f)
                                   ? position : player.smoothed();
             player.position = position;
