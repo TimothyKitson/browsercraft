@@ -137,10 +137,6 @@ public:
     // alone: sand really is flat.
     static void stretchHeightRange(std::vector<uint8_t>& rgba);
 
-    // An item sprite as Minecraft draws a held or dropped item: the
-    // picture on a front and a back face one pixel apart, and a side
-    // wall along every edge where an opaque pixel meets a clear one.
-    // In a unit box, x and y across the picture with y up, z its depth.
     static const std::vector<SpriteFace>& extrudedSprite(int tile);
 
 private:
