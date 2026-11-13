@@ -1102,6 +1102,8 @@ private:
     void shareMobs(float deltaTime);
     void followHostMobs(float deltaTime);
     void forwardHit(const Mob& target, int damage, const glm::vec3& push, float fireSeconds);
+    void blastPlayer(const glm::vec3& at, float radius, int damage);
+    std::map<uint32_t, std::pair<uint32_t, float>> m_guestKills;
     std::vector<uint32_t> m_otherPeers;
     float m_mobSyncClock = 0.0f;
     std::unordered_map<uint32_t, uint32_t> m_puppetLocal;

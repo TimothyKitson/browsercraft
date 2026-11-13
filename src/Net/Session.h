@@ -120,6 +120,41 @@ namespace Net
         int attacker = -1;
     };
 
+    struct BlastEvent
+    {
+        glm::vec3 at{ 0.0f };
+        float radius = 0.0f;
+        int damage = 0;
+        int source = -1;
+        std::string cause;
+    };
+
+    struct ShotEvent
+    {
+        glm::vec3 from{ 0.0f };
+        glm::vec3 velocity{ 0.0f };
+        int damage = 0;
+        int kind = 0;
+        int effect = 0;
+        int shooter = -1;
+    };
+
+    struct LootItem
+    {
+        glm::vec3 at{ 0.0f };
+        uint16_t id = 0;
+        int count = 1;
+        int damage = 0;
+        uint32_t enchantments = 0;
+    };
+
+    struct LootEvent
+    {
+        std::vector<LootItem> items;
+        glm::vec3 orbsAt{ 0.0f };
+        int experience = 0;
+    };
+
     // What a guest needs before it can build the world at all.
     struct Handshake
     {
@@ -175,6 +210,12 @@ namespace Net
         void broadcastMobNoise(const MobNoise& noise);
         void strikeGuest(uint32_t peer, const StrikeOnYou& strike);
         void sendMobHit(uint32_t serial, int damage, const glm::vec3& push, float fireSeconds);
+        void broadcastBlast(const BlastEvent& blast);
+        void sendShot(uint32_t peer, const ShotEvent& shot);
+        void sendLoot(uint32_t peer, const LootEvent& loot);
+        std::vector<BlastEvent> takeBlasts() { std::vector<BlastEvent> all; all.swap(m_blasts); return all; }
+        std::vector<ShotEvent> takeShots() { std::vector<ShotEvent> all; all.swap(m_shots); return all; }
+        std::vector<LootEvent> takeLoot() { std::vector<LootEvent> all; all.swap(m_loot); return all; }
         bool takeMobStates(std::vector<MobSnap>& out);
         std::vector<MobNoise> takeMobNoises() { std::vector<MobNoise> all; all.swap(m_mobNoises); return all; }
         std::vector<StrikeOnYou> takeStrikesOnMe() { std::vector<StrikeOnYou> all; all.swap(m_strikesOnMe); return all; }
@@ -223,6 +264,9 @@ namespace Net
         std::vector<MobNoise> m_mobNoises;
         std::vector<StrikeOnYou> m_strikesOnMe;
         std::vector<MobHitRequest> m_mobHits;
+        std::vector<BlastEvent> m_blasts;
+        std::vector<ShotEvent> m_shots;
+        std::vector<LootEvent> m_loot;
         uint16_t m_localMain = 0;
         uint16_t m_localOff = 0;
         bool m_localLeftHanded = false;

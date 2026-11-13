@@ -63,6 +63,7 @@ struct MobShot
     glm::vec3 target{ 0.0f };
     int effect = 0;
     int shooter = -1;
+    int victim = -1;
 };
 
 // A living thing: gravity and box collision against the voxel world, plus

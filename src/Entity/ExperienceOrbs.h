@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include "World/Block.h"
 #include "Renderer/Mesh.h"
 #include <vector>
@@ -42,6 +43,17 @@ public:
 
     void clear() { m_orbs.clear(); }
     int count() const { return static_cast<int>(m_orbs.size()); }
+    int takeFrom(int first, glm::vec3& at)
+    {
+        int worth = 0;
+        for (size_t k = static_cast<size_t>(std::max(0, first)); k < m_orbs.size(); ++k)
+        {
+            worth += m_orbs[k].worth;
+            at = m_orbs[k].position;
+        }
+        if (static_cast<size_t>(std::max(0, first)) < m_orbs.size()) m_orbs.erase(m_orbs.begin() + std::max(0, first), m_orbs.end());
+        return worth;
+    }
     void positions(std::vector<glm::vec3>& out) const
     {
         for (const Orb& orb : m_orbs) out.push_back(orb.position);

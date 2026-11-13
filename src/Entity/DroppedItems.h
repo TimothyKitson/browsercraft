@@ -39,6 +39,23 @@ public:
     // its enchantments, and spawn() above would hand back a brand new
     // unenchanted one when you walked over it.
     void spawnStack(const glm::vec3& position, const ItemStack& stack);
+    size_t itemCount() const { return m_items.size(); }
+    struct Taken
+    {
+        glm::vec3 position{ 0.0f };
+        StackId id = Blocks::Air;
+        int count = 1;
+        int damage = 0;
+        uint32_t enchantments = 0;
+    };
+    std::vector<Taken> takeFrom(size_t first)
+    {
+        std::vector<Taken> out;
+        for (size_t k = first; k < m_items.size(); ++k)
+            out.push_back({ m_items[k].position, m_items[k].block, m_items[k].count, m_items[k].damage, m_items[k].enchantments });
+        if (first < m_items.size()) m_items.erase(m_items.begin() + static_cast<long>(first), m_items.end());
+        return out;
+    }
     void flingLast(const glm::vec3& velocity)
     {
         if (!m_items.empty()) m_items.back().velocity = velocity;

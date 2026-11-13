@@ -121,6 +121,9 @@ void Session::leave()
     m_mobNoises.clear();
     m_strikesOnMe.clear();
     m_mobHits.clear();
+    m_blasts.clear();
+    m_shots.clear();
+    m_loot.clear();
 }
 
 // ------------------------------------------------------------- update ---
@@ -797,6 +800,51 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             break;
         }
 
+        case MessageId::BlastNear:
+        {
+            BlastEvent blast;
+            blast.at = reader.vec3();
+            blast.radius = reader.f32();
+            blast.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            blast.source = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            blast.cause = reader.str();
+            if (reader.ok() && m_blasts.size() < 64) m_blasts.push_back(blast);
+            break;
+        }
+
+        case MessageId::MobShotYou:
+        {
+            ShotEvent shot;
+            shot.from = reader.vec3();
+            shot.velocity = reader.vec3();
+            shot.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            shot.kind = static_cast<int>(reader.u8());
+            shot.effect = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            shot.shooter = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            if (reader.ok() && m_shots.size() < 128) m_shots.push_back(shot);
+            break;
+        }
+
+        case MessageId::LootForYou:
+        {
+            LootEvent loot;
+            const uint32_t count = reader.u16();
+            for (uint32_t k = 0; k < count && reader.ok() && k < 256; ++k)
+            {
+                LootItem item;
+                item.at = reader.vec3();
+                item.id = reader.u16();
+                item.count = static_cast<int>(static_cast<int32_t>(reader.u32()));
+                item.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
+                item.enchantments = reader.u32();
+                loot.items.push_back(item);
+            }
+            loot.orbsAt = reader.vec3();
+            loot.experience = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            if (reader.ok() && m_loot.size() < 64) m_loot.push_back(loot);
+            break;
+        }
+
         case MessageId::MobStrikeYou:
         {
             StrikeOnYou strike;
@@ -880,6 +928,50 @@ void Session::sendMobHit(uint32_t serial, int damage, const glm::vec3& push, flo
     out.vec3(push);
     out.f32(fireSeconds);
     m_transport->send(HOST_PEER, out.bytes());
+}
+
+void Session::broadcastBlast(const BlastEvent& blast)
+{
+    if (m_role != Role::Host || !m_transport || m_players.empty()) return;
+    Writer out(MessageId::BlastNear);
+    out.vec3(blast.at);
+    out.f32(blast.radius);
+    out.i32(blast.damage);
+    out.i32(blast.source);
+    out.str(blast.cause);
+    m_transport->broadcast(out.bytes());
+}
+
+void Session::sendShot(uint32_t peer, const ShotEvent& shot)
+{
+    if (m_role != Role::Host || !m_transport || !m_players.count(peer)) return;
+    Writer out(MessageId::MobShotYou);
+    out.vec3(shot.from);
+    out.vec3(shot.velocity);
+    out.i32(shot.damage);
+    out.u8(static_cast<uint8_t>(shot.kind));
+    out.i32(shot.effect);
+    out.i32(shot.shooter);
+    m_transport->send(peer, out.bytes());
+}
+
+void Session::sendLoot(uint32_t peer, const LootEvent& loot)
+{
+    if (m_role != Role::Host || !m_transport || !m_players.count(peer)) return;
+    Writer out(MessageId::LootForYou);
+    const size_t count = std::min<size_t>(loot.items.size(), 256);
+    out.u16(static_cast<uint16_t>(count));
+    for (size_t k = 0; k < count; ++k)
+    {
+        out.vec3(loot.items[k].at);
+        out.u16(loot.items[k].id);
+        out.i32(loot.items[k].count);
+        out.i32(loot.items[k].damage);
+        out.u32(loot.items[k].enchantments);
+    }
+    out.vec3(loot.orbsAt);
+    out.i32(loot.experience);
+    m_transport->send(peer, out.bytes());
 }
 
 bool Session::takeMobStates(std::vector<MobSnap>& out)

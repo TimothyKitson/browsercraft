@@ -16570,8 +16570,46 @@ void Application::updateFuses(float deltaTime)
     }
 }
 
+void Application::blastPlayer(const glm::vec3& at, float radius, int damage)
+{
+    const glm::vec3 chest = m_player.position + glm::vec3(0.0f, m_player.height() * 0.5f, 0.0f);
+    const float toPlayer = glm::length(chest - at);
+    const int onPlayer = m_blastSource >= 0 ? Player::scaledByDifficulty(Explosion::damageAt(toPlayer, radius, damage), m_player.difficulty)
+                                            : Explosion::damageAt(toPlayer, radius, damage);
+
+    if (onPlayer > 0) m_player.cause = m_blastCause;
+    m_blastCause = "explosion";
+    if (onPlayer > 0 && m_player.damage(onPlayer))
+    {
+        if (m_blastSource >= 0)
+        {
+            m_lastAttacker = m_blastSource;
+            m_lastAttackerAge = 0.0f;
+            m_lastAttackKind = 2;
+        }
+        wearArmour(onPlayer);
+        m_audio.play(Sound::Hurt, 0.9f);
+
+        const glm::vec3 away = chest - at;
+        if (glm::length(away) > 0.001f)
+            m_player.velocity += glm::normalize(away) * 8.0f *
+                                 (1.0f - std::clamp(static_cast<float>(m_player.attributes.value(Attributes::Kind::ExplosionKnockbackResistance)) +
+                                                        static_cast<float>(Enchanting::levelOf(m_inventory.slot(Inventory::ARMOR_FIRST + 1).enchantments, Enchanting::Kind::BlastProtection)) * 0.15f, 0.0f, 1.0f));
+    }
+}
+
 void Application::applyBlast(const glm::vec3& at, float radius, int damage)
 {
+    if (m_net.role() == Net::Role::Host)
+    {
+        Net::BlastEvent blast;
+        blast.at = at;
+        blast.radius = radius;
+        blast.damage = damage;
+        blast.source = m_blastSource;
+        blast.cause = m_blastCause;
+        m_net.broadcastBlast(blast);
+    }
     vibrate(at, 15);
     sprites(SpriteParticles::Kind::Explosion, at, 10 + static_cast<int>(radius * 3.0f), radius * 0.6f, 0.6f,
             radius * 0.8f, 0.9f);
@@ -16655,31 +16693,7 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
                 }
             }
 
-    // Then everything living, the player included.
-    const glm::vec3 chest = m_player.position + glm::vec3(0.0f, m_player.height() * 0.5f, 0.0f);
-    const float toPlayer = glm::length(chest - at);
-    const int onPlayer = m_blastSource >= 0 ? Player::scaledByDifficulty(Explosion::damageAt(toPlayer, radius, damage), m_player.difficulty)
-                                            : Explosion::damageAt(toPlayer, radius, damage);
-
-    if (onPlayer > 0) m_player.cause = m_blastCause;
-    m_blastCause = "explosion";
-    if (onPlayer > 0 && m_player.damage(onPlayer))
-    {
-        if (m_blastSource >= 0)
-        {
-            m_lastAttacker = m_blastSource;
-            m_lastAttackerAge = 0.0f;
-            m_lastAttackKind = 2;
-        }
-        wearArmour(onPlayer);
-        m_audio.play(Sound::Hurt, 0.9f);
-
-        const glm::vec3 away = chest - at;
-        if (glm::length(away) > 0.001f)
-            m_player.velocity += glm::normalize(away) * 8.0f *
-                                 (1.0f - std::clamp(static_cast<float>(m_player.attributes.value(Attributes::Kind::ExplosionKnockbackResistance)) +
-                                                        static_cast<float>(Enchanting::levelOf(m_inventory.slot(Inventory::ARMOR_FIRST + 1).enchantments, Enchanting::Kind::BlastProtection)) * 0.15f, 0.0f, 1.0f));
-    }
+    blastPlayer(at, radius, damage);
 
     for (Mob& mob : m_entities.mobs())
     {
@@ -17023,6 +17037,7 @@ namespace
         bool splash = false;
         int arrowHits = 0;
         int tridentHits = 0;
+        std::vector<std::pair<uint32_t, std::pair<int, float>>> mobHits;
 
         bool strike(const glm::vec3& point, int damage, bool fromPlayer) override
         {
@@ -17059,6 +17074,7 @@ namespace
                             ++ghastsReturned;
                         }
                         mob.damage(damage, feet - point);
+                        mobHits.push_back({ mob.serial(), { damage, flame ? 5.0f : 0.0f } });
                         if (punch > 0)
                         {
                             const glm::vec3 push(heading.x, 0.0f, heading.z);
@@ -17139,6 +17155,10 @@ void Application::updateArrows(float deltaTime)
 
     m_arrows.setHomingTarget(m_player.eyePosition());
     m_arrows.update(deltaTime, *m_world, targets);
+    if (m_net.role() == Net::Role::Guest)
+        for (const auto& hit : targets.mobHits)
+            for (const Mob& mob : m_entities.mobs())
+                if (mob.serial() == hit.first) forwardHit(mob, hit.second.first, glm::vec3(0.0f), hit.second.second);
     for (const glm::vec3& eye : m_arrows.takeEyeEnds())
         namedAt("entity/endereye/dead", eye, 1.0f, 1.0f, Sound::Click);
     if (targets.arrowHits > 0) m_audio.playNamed("random/bowhit", Sound::Hurt, 0.5f, 1.0f);
@@ -26141,6 +26161,7 @@ void Application::shareMobs(float deltaTime)
             if (mob.serial() != hit.serial) continue;
             if (mob.alive() && mob.strike(std::max(0, hit.damage), mob.position() - from))
             {
+                m_guestKills[mob.serial()] = { hit.peer, m_elapsedSeconds };
                 if (glm::length(hit.push) > 0.001f) mob.shove(hit.push);
                 if (hit.fireSeconds > 0.0f) mob.ignite(hit.fireSeconds);
                 mob.markPlayerHit(0, glm::length(mob.position() - from));
@@ -26260,6 +26281,27 @@ void Application::followHostMobs(float deltaTime)
         playMobSound(sound);
     }
     m_audio.clearAim();
+    for (const Net::BlastEvent& blast : m_net.takeBlasts())
+    {
+        sprites(SpriteParticles::Kind::Explosion, blast.at, 10 + static_cast<int>(blast.radius * 3.0f), blast.radius * 0.6f, 0.6f, blast.radius * 0.8f, 0.9f);
+        sprites(SpriteParticles::Kind::Smoke, blast.at, 16, blast.radius * 0.7f, 1.5f, 0.6f, 1.6f, -0.3f);
+        m_audio.aimNext(blast.at.x, blast.at.y, blast.at.z);
+        m_audio.playNamed("random/explode", Sound::DigStone, 1.0f, 1.0f);
+        m_audio.clearAim();
+        m_blastSource = blast.source;
+        static std::set<std::string> causes;
+        m_blastCause = blast.cause.empty() ? "explosion" : causes.insert(blast.cause).first->c_str();
+        blastPlayer(blast.at, blast.radius, blast.damage);
+        m_blastSource = -1;
+    }
+    for (const Net::ShotEvent& shot : m_net.takeShots())
+        m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, static_cast<Arrows::Kind>(shot.kind), shot.effect, shot.shooter);
+    for (const Net::LootEvent& loot : m_net.takeLoot())
+    {
+        for (const Net::LootItem& item : loot.items)
+            m_drops.spawnStack(item.at, ItemStack{ static_cast<StackId>(item.id), item.count, item.damage, item.enchantments });
+        if (loot.experience > 0) m_orbs.spawnValue(loot.orbsAt, loot.experience);
+    }
     for (const Net::StrikeOnYou& far : m_net.takeStrikesOnMe())
     {
         MobStrike strike;
@@ -26538,6 +26580,17 @@ void Application::updateMobs(float deltaTime)
     {
         if (shot.fangs) conjureFangs(shot.from, shot.target, shot.damage);
         else m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.kind, shot.effect, shot.shooter);
+        if (!shot.fangs && shot.victim >= 0 && shot.victim < static_cast<int>(m_otherPeers.size()))
+        {
+            Net::ShotEvent far;
+            far.from = shot.from;
+            far.velocity = shot.velocity;
+            far.damage = shot.damage;
+            far.kind = static_cast<int>(shot.kind);
+            far.effect = shot.effect;
+            far.shooter = shot.shooter;
+            m_net.sendShot(m_otherPeers[static_cast<size_t>(shot.victim)], far);
+        }
     }
 
     // What they leave behind. Most species drop nothing yet, because
@@ -26586,6 +26639,8 @@ void Application::updateMobs(float deltaTime)
 
     for (const EntityManager::Death& death : m_entities.drainDeaths())
     {
+        const size_t dropMark = m_drops.itemCount();
+        const int orbMark = m_orbs.count();
         vibrate(death.position, 15);
         if (m_rules.on(GameRules::Rule::DoMobLoot))
         {
@@ -26802,6 +26857,16 @@ void Application::updateMobs(float deltaTime)
         // in the game.
         if (type.experience > 0 && !death.baby && (death.byPlayer || death.type == MobId::EnderDragon || death.type == MobId::Wither))
             m_orbs.spawnValue(where, type.experience);
+        const auto killer = m_guestKills.find(death.serial);
+        if (killer != m_guestKills.end() && death.byPlayer && m_elapsedSeconds - killer->second.second < 5.0f && m_net.role() == Net::Role::Host)
+        {
+            Net::LootEvent loot;
+            for (const DroppedItems::Taken& item : m_drops.takeFrom(dropMark))
+                loot.items.push_back({ item.position, static_cast<uint16_t>(item.id), item.count, item.damage, item.enchantments });
+            loot.experience = m_orbs.takeFrom(orbMark, loot.orbsAt);
+            m_net.sendLoot(killer->second.first, loot);
+        }
+        if (killer != m_guestKills.end()) m_guestKills.erase(killer);
     }
 
     for (const glm::vec3& born : m_entities.drainBirths())
@@ -27209,7 +27274,25 @@ void Application::tickLanTest(float deltaTime)
         std::printf("[lantest] mobs: %zu, pig health %d\n", m_entities.mobs().size(), pig ? pig->health() : -1);
         std::fflush(stdout);
     }
-    if (t >= 36.0f)
+    if (!host && at(35.5f))
+    {
+        std::printf("[lantest] guest loot items %zu, health %d\n", m_drops.itemCount(), m_player.health);
+        std::fflush(stdout);
+    }
+    if (host && at(36.0f)) applyBlast(m_lanBase + glm::vec3(3.5f, 0.5f, 0.0f), 3.0f, 8);
+    if (!host && at(36.8f))
+    {
+        std::printf("[lantest] guest health after blast %d\n", m_player.health);
+        std::fflush(stdout);
+    }
+    if (host && at(37.0f) && m_entities.summonAt(MobId::Skeleton, m_lanBase + glm::vec3(4.0f, 0.0f, 8.0f)))
+        m_entities.mobs().back().setGear(Mob::MainHand, Items::Bow, true);
+    if (!host && at(43.5f))
+    {
+        std::printf("[lantest] guest health after skeleton %d\n", m_player.health);
+        std::fflush(stdout);
+    }
+    if (t >= 44.0f)
     {
         std::printf("[lantest] done, %zu shots\n", m_lanTaken.size());
         std::fflush(stdout);

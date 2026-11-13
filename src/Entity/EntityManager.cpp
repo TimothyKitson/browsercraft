@@ -1154,7 +1154,11 @@ std::vector<MobShot> EntityManager::drainShots()
     for (Mob& mob : m_mobs)
     {
         if (mob.shots().empty()) continue;
-        for (MobShot& shot : mob.shots()) shot.shooter = static_cast<int>(mob.typeId());
+        for (MobShot& shot : mob.shots())
+        {
+            shot.shooter = static_cast<int>(mob.typeId());
+            shot.victim = mob.victim();
+        }
         all.insert(all.end(), mob.shots().begin(), mob.shots().end());
         mob.shots().clear();
     }
