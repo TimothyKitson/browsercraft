@@ -139,9 +139,20 @@ enum class MobId : uint8_t
     SkeletonHorse,
     ZombieHorse,
     Giant,
+    BlockDisplay,
+    ItemDisplay,
+    TextDisplay,
+    Interaction,
+    Marker,
 
     Count
 };
+
+inline bool isTechnicalMob(MobId id)
+{
+    return id == MobId::BlockDisplay || id == MobId::ItemDisplay || id == MobId::TextDisplay || id == MobId::Interaction ||
+           id == MobId::Marker;
+}
 
 inline bool isHorseKind(MobId id)
 {

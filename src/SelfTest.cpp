@@ -1270,6 +1270,12 @@ namespace
             const std::string who = type.name;
 
             check(type.name && *type.name, "species " + std::to_string(i) + " is named");
+            if (isTechnicalMob(id))
+            {
+                check(type.inanimate && type.model.empty() && type.walkSpeed == 0.0f,
+                      who + " is a technical entity: nothing to draw as a mob and nowhere to walk");
+                continue;
+            }
             check(type.maxHealth > 0, who + " can be killed");
             check(type.width > 0.0f && type.height > 0.0f, who + " has a collision box");
             // Everything walks but the one thing that is bolted down.
@@ -5290,6 +5296,7 @@ namespace
         for (int i = 0; i < mobTypeCount(); ++i)
         {
             const MobType& t = mobType(static_cast<MobId>(i));
+            if (isTechnicalMob(static_cast<MobId>(i))) continue;
             const std::string sheet = t.packSheet;
             if (sheet.size() < 5 || sheet.substr(sheet.size() - 4) != ".png") named = false;
             else if (packHere && !std::filesystem::exists("assets/textures/entity/" + sheet)) present = false;
@@ -10039,6 +10046,7 @@ namespace
             const MobId id = static_cast<MobId>(i);
             const MobType& type = mobType(id);
             const std::string who = type.name;
+            if (isTechnicalMob(id)) continue;
 
             // Boats and minecarts ride in the mob table because they
             // are entities with models, but nothing spawns them.

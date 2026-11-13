@@ -713,6 +713,19 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
         out.position = at;
         for (size_t k = words.size() >= 5 ? 5 : 2; k < words.size(); ++k) out.sub += (out.sub.empty() ? "" : " ") + words[k];
         if (spawnerCart) out.sub += (out.sub.empty() ? "" : " ") + std::string("Variant:6");
+        if (mob == static_cast<int>(MobId::BlockDisplay) || mob == static_cast<int>(MobId::ItemDisplay))
+        {
+            const bool block = mob == static_cast<int>(MobId::BlockDisplay);
+            const size_t group = out.sub.find(block ? "block_state" : "item:");
+            const size_t key = group == std::string::npos ? group : out.sub.find(block ? "Name" : "id", group);
+            const size_t open = key == std::string::npos ? key : out.sub.find_first_of("\"'", key);
+            const size_t close = open == std::string::npos ? open : out.sub.find(out.sub[open], open + 1);
+            if (close != std::string::npos)
+            {
+                const StackId found = lookUp(out.sub.substr(open + 1, close - open - 1));
+                if (found != Blocks::Air && (!block || !isItem(found))) out.item = found;
+            }
+        }
         out.text = std::string("Summoned a new ") + mobType(static_cast<MobId>(mob)).name + ".";
         return out;
     }

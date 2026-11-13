@@ -3863,6 +3863,27 @@ namespace
             t.model.push_back(mc(Part::Body, 0, 0, 0, 2, 7, 0, -1, 0, 0, 22, 0));
         }
 
+        for (const MobId kind : { MobId::BlockDisplay, MobId::ItemDisplay, MobId::TextDisplay, MobId::Interaction, MobId::Marker })
+        {
+            MobType& t = table[static_cast<size_t>(kind)];
+            t.id = kind;
+            t.experience = 0;
+            t.voice = Sound::Click;
+            t.hurtVoice = Sound::Click;
+            t.deathVoice = Sound::Click;
+            t.name = kind == MobId::BlockDisplay ? "Block Display" : kind == MobId::ItemDisplay ? "Item Display"
+                   : kind == MobId::TextDisplay ? "Text Display" : kind == MobId::Interaction ? "Interaction" : "Marker";
+            t.texture = "";
+            t.spawnClass = SpawnClass::Passive;
+            t.maxHealth = 1;
+            t.width = kind == MobId::Interaction ? 1.0f : 0.0f;
+            t.height = kind == MobId::Interaction ? 1.0f : 0.0f;
+            t.walkSpeed = 0.0f;
+            t.inanimate = true;
+            t.drop = Blocks::Air;
+            t.dropCount = 0;
+        }
+
         struct Sheet { MobId id; const char* path; };
         static const Sheet SHEETS[] = {
             { MobId::Sheep, "sheep/sheep.png" }, { MobId::Pig, "pig/pig.png" }, { MobId::Cow, "cow/cow.png" },

@@ -674,6 +674,11 @@ void Mob::burnInSunlight(float deltaTime, const World& world, float daylight)
 void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPosition,
                  float daylight)
 {
+    if (isTechnicalMob(m_type))
+    {
+        m_velocity = glm::vec3(0.0f);
+        return;
+    }
     if (!m_dressed) dress(g_gearDifficultyFor());
 
     m_daylight = daylight;
@@ -1625,7 +1630,7 @@ bool Mob::hostileNow() const
 
 bool Mob::strike(int amount, const glm::vec3& fromDirection)
 {
-    if (amount <= 0 || !alive()) return false;
+    if (amount <= 0 || !alive() || isTechnicalMob(m_type)) return false;
     if (m_strikeGuard > 0.0f)
     {
         if (amount <= m_lastStrike) return false;
@@ -1694,7 +1699,7 @@ bool Mob::teleportRandom(const World& world, float range)
 
 void Mob::damage(int amount, const glm::vec3& fromDirection)
 {
-    if (amount <= 0 || !alive() || m_spawnPhase > 0.0f || m_burrow != 0.0f) return;
+    if (amount <= 0 || !alive() || m_spawnPhase > 0.0f || m_burrow != 0.0f || isTechnicalMob(m_type)) return;
     if ((m_type == MobId::Enderman && random01() < 0.6f) ||
         (m_type == MobId::Shulker && m_health * 2 < type().maxHealth && random01() < 0.25f))
         m_wantsTeleport = true;

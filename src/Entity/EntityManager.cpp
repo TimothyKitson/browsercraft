@@ -929,6 +929,7 @@ void EntityManager::update(float deltaTime, const World& world,
     m_mobs.erase(
         std::remove_if(m_mobs.begin(), m_mobs.end(), [&](const Mob& mob) {
             if (mob.finished()) return true;
+            if (isTechnicalMob(mob.typeId())) return false;
             if (m_peaceful && mob.typeId() != MobId::EnderDragon && mobType(mob.typeId()).spawnClass == SpawnClass::Hostile) return true;
             const glm::vec3 delta = mob.position() - playerPosition;
             const float keep = (mob.customName().empty() && !mob.leashed() && !mob.persistent()) ? DESPAWN_DISTANCE : DESPAWN_DISTANCE * 3.0f;
@@ -1613,7 +1614,7 @@ Mob* EntityManager::pick(const glm::vec3& origin, const glm::vec3& direction, fl
 
     for (Mob& mob : m_mobs)
     {
-        if (!mob.alive()) continue;
+        if (!mob.alive() || isTechnicalMob(mob.typeId())) continue;
 
         // Against the mob's own box rather than a sphere around it. A
         // sphere wide enough to cover a zombie's height is a metre wide
