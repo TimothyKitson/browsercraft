@@ -992,6 +992,7 @@ private:
     bool m_hasTarget = false;
     glm::ivec3 m_targetBlock{ 0 };
     float m_breakProgress = 0.0f;
+    float m_breakCooldown = 0.0f;
     float m_digSoundTimer = 0.0f;
     float m_attackTicker = 10.0f;
     StackId m_attackItem = 0;

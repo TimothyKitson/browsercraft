@@ -23,6 +23,7 @@
 #include <algorithm>
 #include "World/Structures.h"
 #include <cstdio>
+#include <fstream>
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
@@ -531,6 +532,30 @@ namespace
         }
 
         std::printf("\n%d species in all.\n", mobTypeCount());
+        return 0;
+    }
+
+    int printHardnessAudit(const char* path)
+    {
+        std::ifstream in(path);
+        if (!in) return 1;
+        std::string id;
+        float vanilla = 0.0f;
+        int checked = 0, off = 0;
+        while (in >> id >> vanilla)
+        {
+            const StackId stack = RecipeBook::stackNamed(id);
+            if (stack == Blocks::Air || isItem(stack)) continue;
+            const BlockId block = asBlock(stack);
+            const float ours = blockInfo(block).hardness;
+            ++checked;
+            if (std::fabs(ours - vanilla) > 0.001f)
+            {
+                ++off;
+                std::printf("hard %s %g %g\n", id.c_str(), static_cast<double>(vanilla), static_cast<double>(ours));
+            }
+        }
+        std::printf("%d checked, %d differ\n", checked, off);
         return 0;
     }
 
@@ -1668,6 +1693,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--blockaudit") == 0)
         {
             blockAudit = true;
+        }
+        else if (std::strcmp(argv[i], "--hardnessaudit") == 0 && i + 1 < argc)
+        {
+            return printHardnessAudit(argv[++i]);
         }
         else if (std::strcmp(argv[i], "--idaudit") == 0 && i + 1 < argc)
         {

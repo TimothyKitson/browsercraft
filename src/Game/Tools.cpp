@@ -156,25 +156,26 @@ bool Tools::canHarvest(StackId tool, BlockId block)
     return harvestLevel(tierOf(tool)) >= needed;
 }
 
+float Tools::digSpeed(StackId tool, BlockId block)
+{
+    if (block == Blocks::Cobweb && (kindOf(tool) == Kind::Sword || tool == Items::Shears)) return 15.0f;
+    if (tool == Items::Shears)
+    {
+        if (isLeaves(block) || block == Blocks::FloweringAzaleaLeaves) return 15.0f;
+        if (isWool(block)) return 5.0f;
+        if (isVine(block) || isGlowLichen(block)) return 2.0f;
+    }
+    if (kindOf(tool) != Kind::None && kindOf(tool) == toolFor(block))
+        return TIERS[static_cast<int>(tierOf(tool))].speed;
+    return 1.0f;
+}
+
 float Tools::breakSeconds(StackId tool, BlockId block)
 {
     const float hardness = blockInfo(block).hardness;
-    if (hardness < 0.0f) return -1.0f;       // never breaks
-    if (hardness == 0.0f) return 0.0f;       // comes apart on contact
-
-    float seconds = hardness;
-
-    // The right tool speeds the work up by its tier; the wrong one is
-    // no better than bare hands.
-    if (kindOf(tool) != Kind::None && kindOf(tool) == toolFor(block))
-        seconds /= TIERS[static_cast<int>(tierOf(tool))].speed;
-
-    // Going at a block that wanted a tool without one is slow, and
-    // leaves nothing behind either.
-    if (!canHarvest(tool, block)) seconds *= 3.33f;
-    if (block == Blocks::Cobweb && (kindOf(tool) == Kind::Sword || tool == Items::Shears)) seconds /= 15.0f;
-
-    return seconds;
+    if (hardness < 0.0f) return -1.0f;
+    if (hardness == 0.0f) return 0.0f;
+    return hardness * (canHarvest(tool, block) ? 1.5f : 5.0f) / digSpeed(tool, block);
 }
 
 bool Tools::wearsOnBlock(StackId tool, BlockId block)

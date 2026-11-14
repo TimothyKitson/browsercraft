@@ -8838,6 +8838,9 @@ namespace
         check(attackDamage(Items::IronAxe) == 9 && attackDamage(Items::IronSword) == 6 && attackSpeed(Items::IronAxe) < attackSpeed(Items::IronSword),
               "an iron axe hits for nine to the sword's six but swings slower, as in Java Edition");
         check(attackDamageExact(Items::DiamondShovel) == 5.5f && attackDamage(Items::Mace) == 6, "a diamond shovel hits for five and a half, a mace for six");
+        check(std::fabs(breakSeconds(Items::WoodPickaxe, Blocks::Stone) - 1.125f) < 0.001f && std::fabs(breakSeconds(Blocks::Air, Blocks::Stone) - 7.5f) < 0.001f &&
+                  std::fabs(breakSeconds(Items::DiamondPickaxe, Blocks::Obsidian) - 9.375f) < 0.001f,
+              "stone takes Minecraft's 7.5 seconds by hand and 1.15 with a wooden pick, obsidian 9.4 with diamond");
         check(Armour::maxDurability(Items::NetheriteChestplate) == 592 && Armour::maxDurability(Items::LeatherBoots) == 65 &&
                   Armour::maxDurability(Items::DiamondBoots) == 429 && Armour::maxDurability(Items::GoldBoots) == 91,
               "armour lasts as long as Minecraft's, piece by piece");
@@ -12744,8 +12747,8 @@ namespace
               "an ominous vault is a vault");
         check(isOminousVault(Blocks::OminousVault), "and knows which sort it is");
         check(!isOminousVault(Blocks::Vault), "where a plain one does too");
-        check(blockInfo(Blocks::OminousVault).hardness < 0.0f,
-              "and neither can be mined open");
+        check(blockInfo(Blocks::OminousVault).hardness == 50.0f && blockDrop(Blocks::OminousVault) == Blocks::Air,
+              "and neither breaks easily, nor gives anything back, as in Minecraft");
 
         // Bad omen does nothing to the body. That is deliberate: it is
         // a flag you carry rather than a thing you feel, and if it
@@ -12798,9 +12801,9 @@ namespace
                   lightEmission(Blocks::TrialSpawnerSpent),
               "a spawner with its wave out is lit and a spent one is dark");
         check(isVault(Blocks::Vault) && isVault(Blocks::VaultOpen), "both vaults are vaults");
-        check(blockInfo(Blocks::Vault).hardness < 0.0f, "and a vault cannot be mined open");
-        check(blockInfo(Blocks::TrialSpawner).hardness < 0.0f,
-              "nor a spawner taken home");
+        check(blockInfo(Blocks::Vault).hardness == 50.0f && blockDrop(Blocks::Vault) == Blocks::Air, "a vault takes hardness fifty to break and drops nothing");
+        check(blockInfo(Blocks::TrialSpawner).hardness == 50.0f && blockDrop(Blocks::TrialSpawner) == Blocks::Air,
+              "nor can a spawner be taken home");
     }
 
     void testTrickyTrials()

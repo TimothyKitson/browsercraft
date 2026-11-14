@@ -10432,6 +10432,7 @@ void Application::updateMovementAudio(const glm::vec3& positionBefore, bool jump
 
 void Application::updateMining(float deltaTime)
 {
+    if (m_breakCooldown > 0.0f) m_breakCooldown = std::max(0.0f, m_breakCooldown - deltaTime);
     const float blockReach = REACH_DISTANCE * static_cast<float>(m_player.attributes.ratio(Attributes::Kind::BlockInteractionRange));
     const RaycastHit hit = m_world->raycast(m_camera.position, m_camera.front, blockReach);
 
@@ -10636,12 +10637,18 @@ void Application::updateMining(float deltaTime)
     // folded into breakSeconds, which stays a pure function of a tool
     // and a block and knows nothing about what has been put on it.
     if (seconds > 0.0f)
-        seconds /= Enchanting::digSpeedMultiplier(m_inventory.selected().enchantments) * Effects::digMultiplier(m_player.effects);
-    if (seconds > 0.0f)
     {
-        const float efficiency = static_cast<float>(m_player.attributes.value(Attributes::Kind::MiningEfficiency));
-        seconds /= std::max(0.01f, static_cast<float>(m_player.attributes.value(Attributes::Kind::BlockBreakSpeed))) *
-                   (Tools::breakSeconds(m_inventory.selected().id, id) < Tools::breakSeconds(Blocks::Air, id) ? 1.0f + efficiency * 0.25f : 1.0f);
+        const float toolSpeed = Tools::digSpeed(tool, id);
+        float speed = toolSpeed;
+        if (speed > 1.0f)
+        {
+            const int level = Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::Efficiency);
+            speed += static_cast<float>(level > 0 ? level * level + 1 : 0) +
+                     static_cast<float>(m_player.attributes.value(Attributes::Kind::MiningEfficiency));
+        }
+        speed *= Effects::digMultiplier(m_player.effects) *
+                 std::max(0.01f, static_cast<float>(m_player.attributes.value(Attributes::Kind::BlockBreakSpeed)));
+        seconds *= toolSpeed / std::max(0.0001f, speed);
     }
     if (seconds > 0.0f && !m_player.creative())
     {
@@ -10651,6 +10658,8 @@ void Application::updateMining(float deltaTime)
         if (!m_player.onGround && !m_player.flying) seconds *= 5.0f;
     }
     if (seconds < 0.0f && !(m_player.creative() && isCreativeOnly(id))) return;
+    if (seconds > 0.0f) seconds = seconds <= 0.05f ? 0.0f : std::ceil(seconds * 20.0f - 0.0001f) / 20.0f;
+    if (m_breakCooldown > 0.0f) return;
 
     if (m_player.creative() || seconds <= 0.0f)
         m_breakProgress = 1.0f;
@@ -10663,6 +10672,7 @@ void Application::updateMining(float deltaTime)
 
     if (m_breakProgress >= 1.0f)
     {
+        if (m_player.creative() || seconds > 0.0f) m_breakCooldown = 0.25f;
         if (!m_player.creative())
         {
             m_stats.item(Stats::ItemStat::Mined, statBlockItem(id));

@@ -62,6 +62,7 @@ namespace Tools
     // The damage a mob takes from being hit with it. A sword hits
     // hardest, an axe nearly as hard, a bare hand barely at all.
     int attackDamage(StackId tool);
+    float digSpeed(StackId tool, BlockId block);
     float attackDamageExact(StackId tool);
     float attackSpeed(StackId tool);
 

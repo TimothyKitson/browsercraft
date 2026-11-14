@@ -527,6 +527,9 @@ StackId blockDrop(BlockId id)
 
     // A cocoa pod gives its beans; the pod itself is not a thing.
     if (isCocoa(id)) return Items::CocoaBeans;
+    if (isTrialSpawner(id) || isVault(id) || id == Blocks::ReinforcedDeepslate || id == Blocks::BuddingAmethyst ||
+        id == Blocks::MonsterSpawner)
+        return Blocks::Air;
 
     // A cake part eaten is not a cake. Minecraft gives nothing back
     // for breaking one either -- you eat it or you lose it.
