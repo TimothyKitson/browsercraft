@@ -2554,7 +2554,7 @@ inline bool isLeaves(BlockId id)
            id == Blocks::MangroveLeaves;
 }
 inline bool isVisible(BlockId id) { return blockInfo(id).render != RenderType::None; }
-inline uint8_t lightEmission(BlockId id) { return blockInfo(id).lightEmission; }
+uint8_t lightEmission(BlockId id);
 inline bool fallsByGravity(BlockId id)
 {
     return id == Blocks::Sand || id == Blocks::RedSand || id == Blocks::Gravel || isConcretePowder(id) ||

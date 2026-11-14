@@ -12487,8 +12487,11 @@ namespace
 
         check(isCrafter(Blocks::Crafter) && isCrafter(Blocks::CrafterLit),
               "both crafters are crafters");
-        check(lightEmission(Blocks::CrafterLit) > lightEmission(Blocks::Crafter),
+        check(blockInfo(Blocks::CrafterLit).tileFront != blockInfo(Blocks::Crafter).tileFront || blockInfo(Blocks::CrafterLit).tileTop != blockInfo(Blocks::Crafter).tileTop,
               "and the one that has just fired shows it");
+        check(lightEmission(Blocks::CrafterLit) == 0 && lightEmission(Blocks::EndPortal) == 15 && lightEmission(Blocks::RespawnAnchor2) == 7 &&
+                  lightEmission(Blocks::TrialSpawner) == 4 && lightEmission(pickleOf(4, false)) == 15 && lightEmission(pickleOf(4, true)) == 0,
+              "blocks give Minecraft's light by state");
 
         {
             ItemStack bench[9];

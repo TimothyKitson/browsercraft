@@ -559,6 +559,20 @@ namespace
         return 0;
     }
 
+    int printLightAudit(const char* path)
+    {
+        std::ifstream in(path);
+        if (!in) return 1;
+        std::string id, kind, level;
+        while (in >> id >> kind >> level)
+        {
+            const StackId stack = RecipeBook::stackNamed(id);
+            if (stack == Blocks::Air || isItem(stack)) { std::printf("light %s %s %s none\n", id.c_str(), kind.c_str(), level.c_str()); continue; }
+            std::printf("light %s %s %s %d\n", id.c_str(), kind.c_str(), level.c_str(), blockInfo(asBlock(stack)).lightEmission);
+        }
+        return 0;
+    }
+
     int printStackAudit(const char* path)
     {
         std::ifstream in(path);
@@ -1718,6 +1732,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--hardnessaudit") == 0 && i + 1 < argc)
         {
             return printHardnessAudit(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--lightaudit") == 0 && i + 1 < argc)
+        {
+            return printLightAudit(argv[++i]);
         }
         else if (std::strcmp(argv[i], "--stackaudit") == 0 && i + 1 < argc)
         {

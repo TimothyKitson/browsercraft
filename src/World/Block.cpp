@@ -6522,3 +6522,33 @@ BlockId transformBlock(BlockId id, int turns, int mirror)
         return specialRailOf(specialRailFamily(id), (turns & 1) ? !specialRailEastWest(id) : specialRailEastWest(id), specialRailPowered(id));
     return id;
 }
+
+uint8_t lightEmission(BlockId id)
+{
+    switch (id)
+    {
+        case Blocks::EndPortal: return 15;
+        case Blocks::EndPortalFrameFilled: return 1;
+        case Blocks::SculkSensor: case Blocks::SculkSensorLit: return 1;
+        case Blocks::TrialSpawner: return 4;
+        case Blocks::TrialSpawnerActive: case Blocks::TrialSpawnerActiveOminous:
+        case Blocks::TrialSpawnerEjecting: case Blocks::TrialSpawnerEjectingOminous: return 8;
+        case Blocks::TrialSpawnerSpent: case Blocks::TrialSpawnerSpentOminous: return 0;
+        case Blocks::Vault: case Blocks::OminousVault: case Blocks::VaultOpen: case Blocks::OminousVaultOpen: return 6;
+        case Blocks::VaultEjecting: case Blocks::OminousVaultEjecting: return 12;
+        default: break;
+    }
+    if (isRespawnAnchor(id)) return static_cast<uint8_t>((id - Blocks::RespawnAnchor0) * 15 / 4);
+    if (isCalibratedSensor(id)) return 1;
+    if (isCrafter(id)) return 0;
+    if (isLightBlock(id)) return static_cast<uint8_t>(lightBlockLevel(id));
+    if (isSeaPickle(id)) return pickleDry(id) ? 0 : static_cast<uint8_t>(3 + 3 * pickleCount(id));
+    if (isCandleCake(id)) return candleCakeLit(id) ? 3 : 0;
+    if (isCopperBulb(id))
+    {
+        static const uint8_t BY_STAGE[4] = { 15, 12, 8, 4 };
+        const CopperForm form = copperForm(id);
+        return (form.state & 1) != 0 ? BY_STAGE[std::clamp(form.stage, 0, 3)] : 0;
+    }
+    return blockInfo(id).lightEmission;
+}
