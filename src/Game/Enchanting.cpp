@@ -1,4 +1,5 @@
 #include "Enchanting.h"
+#include "EntityLoot.h"
 #include "Tools.h"
 #include "Armour.h"
 #include <algorithm>
@@ -235,8 +236,7 @@ namespace Enchanting
             return hasA && hasB;
         };
         if (within({ Kind::Protection, Kind::FireProtection, Kind::BlastProtection, Kind::ProjectileProtection })) return true;
-        if (within({ Kind::Sharpness, Kind::Smite, Kind::BaneOfArthropods })) return true;
-        if (within({ Kind::Density, Kind::Breach, Kind::Smite, Kind::BaneOfArthropods })) return true;
+        if (within({ Kind::Sharpness, Kind::Smite, Kind::BaneOfArthropods, Kind::Density, Kind::Breach })) return true;
         return pair(Kind::Fortune, Kind::SilkTouch) || pair(Kind::DepthStrider, Kind::FrostWalker) ||
                pair(Kind::Infinity, Kind::Mending) || pair(Kind::Multishot, Kind::Piercing);
     }
@@ -363,6 +363,9 @@ namespace Enchanting
             return tridentLevel(set, TridentKind::Loyalty) > 0 || tridentLevel(set, TridentKind::Channeling) > 0;
         if (kind == TridentKind::Loyalty || kind == TridentKind::Channeling)
             return tridentLevel(set, TridentKind::Riptide) > 0;
+        if (kind == TridentKind::Impaling)
+            return levelOf(set, Kind::Sharpness) > 0 || levelOf(set, Kind::Smite) > 0 || levelOf(set, Kind::BaneOfArthropods) > 0 ||
+                   levelOf(set, Kind::Density) > 0 || levelOf(set, Kind::Breach) > 0;
         return false;
     }
 
@@ -484,6 +487,8 @@ namespace Enchanting
         }
     }
 
+    uint32_t tableSeed(uint32_t roll, int row) { return stir(roll, static_cast<uint32_t>(row) + 70u); }
+
     Offer offerFor(int row, int shelves, StackId item, uint32_t roll)
     {
         Offer offer;
@@ -492,56 +497,16 @@ namespace Enchanting
         offer.cost = costForRow(row, shelves, roll);
         if (offer.cost <= 0) return offer;
 
-        if (item == Items::Trident)
-        {
-            int order[5] = { -1, 0, 1, 2, 3 };
-            for (int i = 4; i > 0; --i) std::swap(order[i], order[stir(roll, static_cast<uint32_t>(i) + 40u) % static_cast<uint32_t>(i + 1)]);
-            const int pick = order[row % 5];
-            const int reach = (offer.cost * (1 + enchantability(item) / 8)) / 12;
-            if (pick < 0)
-            {
-                offer.kind = Kind::Unbreaking;
-                offer.level = std::clamp(1 + reach, 1, maxLevel(Kind::Unbreaking));
-            }
-            else
-            {
-                offer.special = pick;
-                offer.level = std::clamp(1 + reach, 1, tridentMax(static_cast<TridentKind>(pick)));
-            }
-            return offer;
-        }
-
-        // Everything that could go on this item, so the pick is made
-        // from what fits rather than rolled and thrown away.
-        std::vector<Kind> fits;
-        for (int i = 0; i < static_cast<int>(Kind::Count); ++i)
-        {
-            const Kind kind = static_cast<Kind>(i);
-            if (appliesTo(kind, item) && !isTreasure(kind)) fits.push_back(kind);
-        }
-        if (fits.empty())
+        const std::vector<EntityLoot::Pick> picks = EntityLoot::tablePicks(item, offer.cost, tableSeed(roll, row));
+        if (picks.empty())
         {
             offer.cost = 0;
             return offer;
         }
-
-        // Shuffled once for the whole table, then each row takes its
-        // own place in the order. Picking a row's kind independently
-        // let two rows land on the same one, and a table offering silk
-        // touch twice has really only two offers on it.
-        for (size_t i = fits.size(); i > 1; --i)
-        {
-            const size_t j = stir(roll, static_cast<uint32_t>(i) + 20u) % i;
-            std::swap(fits[i - 1], fits[j]);
-        }
-        offer.kind = fits[static_cast<size_t>(row) % fits.size()];
-
-        // A dearer row buys a higher level, scaled by how well the
-        // material takes it: the same thirty levels put more on gold
-        // than on diamond.
-        const int ceiling = maxLevel(offer.kind);
-        const int reach = (offer.cost * (1 + enchantability(item) / 8)) / 12;
-        offer.level = std::clamp(1 + reach, 1, ceiling);
+        const EntityLoot::Pick& clue = picks[stir(roll, static_cast<uint32_t>(row) + 90u) % picks.size()];
+        if (clue.trident) offer.special = clue.kind;
+        else offer.kind = static_cast<Kind>(clue.kind);
+        offer.level = clue.level;
         return offer;
     }
 

@@ -207,21 +207,23 @@ namespace EntityLoot
                 stack.enchantments = Enchanting::withLevel(stack.enchantments, static_cast<Enchanting::Kind>(ref.kind), level);
         }
 
-        void enchantLevels(ItemStack& stack, int level, Dice& dice, bool randomLoot)
+        struct Option { int index; int level; };
+
+        std::vector<Option> chooseLevels(StackId item, int level, Dice& dice, bool randomLoot)
         {
-            const int enchantability = Enchanting::enchantability(stack.id);
-            if (enchantability <= 0) return;
+            std::vector<Option> chosen;
+            const int enchantability = Enchanting::enchantability(item);
+            if (enchantability <= 0) return chosen;
             level += 1 + dice.below(enchantability / 4 + 1) + dice.below(enchantability / 4 + 1);
             const float spread = (dice.unit() + dice.unit() - 1.0f) * 0.15f;
             level = std::max(1, static_cast<int>(std::floor(static_cast<float>(level) + static_cast<float>(level) * spread + 0.5f)));
 
-            struct Option { int index; int level; };
             std::vector<Option> options;
             for (int i = 0; i < ENCHANT_COUNT; ++i)
             {
                 const Enchant& e = ENCHANTS[i];
                 if (randomLoot ? !e.randomLoot : !e.nonTreasure) continue;
-                if (!primary(refOf(i), stack.id)) continue;
+                if (!primary(refOf(i), item)) continue;
                 for (int l = e.maxLevel; l >= 1; --l)
                     if (level >= minCost(e, l) && level <= maxCost(e, l))
                     {
@@ -229,9 +231,8 @@ namespace EntityLoot
                         break;
                     }
             }
-            if (options.empty()) return;
+            if (options.empty()) return chosen;
 
-            std::vector<Option> chosen;
             auto pick = [&]() {
                 int total = 0;
                 for (const Option& o : options) total += ENCHANTS[o.index].weight;
@@ -262,8 +263,12 @@ namespace EntityLoot
                 pick();
                 level /= 2;
             }
+            return chosen;
+        }
 
-            for (const Option& o : chosen) addEnchant(stack, o.index, o.level);
+        void enchantLevels(ItemStack& stack, int level, Dice& dice, bool randomLoot)
+        {
+            for (const Option& o : chooseLevels(stack.id, level, dice, randomLoot)) addEnchant(stack, o.index, o.level);
         }
 
         void enchantRandomly(ItemStack& stack, const char* options, Dice& dice)
@@ -559,6 +564,35 @@ namespace EntityLoot
             free.pop_back();
         }
         return out;
+    }
+
+    std::vector<Pick> tablePicks(StackId item, int level, uint32_t seed)
+    {
+        Dice dice{ scramble(seed) };
+        std::vector<Option> chosen = chooseLevels(item, level, dice, false);
+        if (item == Items::Book && chosen.size() > 1)
+            chosen.erase(chosen.begin() + static_cast<long>(dice.below(static_cast<int>(chosen.size()))));
+        std::vector<Pick> out;
+        for (const Option& o : chosen)
+        {
+            const Ref& ref = refOf(o.index);
+            out.push_back(Pick{ ref.trident, ref.kind, o.level });
+        }
+        return out;
+    }
+
+    ItemStack applyPicks(ItemStack stack, const std::vector<Pick>& picks)
+    {
+        for (const Pick& pick : picks)
+        {
+            if (pick.kind < 0 || pick.level <= 0) continue;
+            if (stack.id == Items::Book) stack.id = Items::EnchantedBook;
+            if (pick.trident)
+                stack.enchantments = Enchanting::withTrident(stack.enchantments, static_cast<Enchanting::TridentKind>(pick.kind), pick.level);
+            else
+                stack.enchantments = Enchanting::withLevel(stack.enchantments, static_cast<Enchanting::Kind>(pick.kind), pick.level);
+        }
+        return stack;
     }
 
     ItemStack enchantWithLevels(ItemStack stack, int levels, uint32_t seed, bool treasure)

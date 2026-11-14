@@ -279,6 +279,25 @@ namespace
         bool same = one.size() == 27 && again.size() == 27;
         for (size_t i = 0; same && i < one.size(); ++i) same = one[i].id == again[i].id && one[i].count == again[i].count;
         check(same, "the same chest always rolls the same contents");
+
+        int several = 0, mended = 0, swords = 0;
+        for (uint32_t seed = 1; seed <= 400; ++seed)
+        {
+            const std::vector<EntityLoot::Pick> picks = EntityLoot::tablePicks(Items::DiamondSword, 30, seed);
+            if (picks.size() > 1) ++several;
+            for (const EntityLoot::Pick& pick : picks)
+                if (!pick.trident && pick.kind == static_cast<int>(Enchanting::Kind::Mending)) ++mended;
+            if (!picks.empty()) ++swords;
+        }
+        check(swords == 400 && several > 100 && mended == 0,
+              "a level thirty table offer on a sword often carries several enchantments, never a treasure one");
+        ItemStack tableBook;
+        tableBook.id = Items::Book;
+        tableBook.count = 1;
+        const ItemStack bought = EntityLoot::applyPicks(tableBook, EntityLoot::tablePicks(Items::Book, 30, 7u));
+        check(bought.id == Items::EnchantedBook && Enchanting::any(bought.enchantments), "and a book bought at the table is an enchanted book");
+        const Enchanting::Offer first = Enchanting::offerFor(2, 15, Items::DiamondPickaxe, 1234u);
+        check(first.valid() && first.cost == Enchanting::costForRow(2, 15, 1234u), "the clue on a row is one of what that row will give");
     }
 
     void testAdd()

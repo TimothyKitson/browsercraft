@@ -116,4 +116,13 @@ namespace EntityLoot
     std::vector<ItemStack> roll(const std::string& table, Context context);
     std::vector<ItemStack> fillChest(const std::string& table, uint32_t seed, int slots);
     ItemStack enchantWithLevels(ItemStack stack, int levels, uint32_t seed, bool treasure);
+
+    struct Pick
+    {
+        bool trident = false;
+        int kind = -1;
+        int level = 0;
+    };
+    std::vector<Pick> tablePicks(StackId item, int level, uint32_t seed);
+    ItemStack applyPicks(ItemStack stack, const std::vector<Pick>& picks);
 }

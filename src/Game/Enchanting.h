@@ -186,6 +186,7 @@ namespace Enchanting
     // The whole offer, including what you actually get. Returns an
     // invalid offer when nothing can go on this item.
     Offer offerFor(int row, int shelves, StackId item, uint32_t roll);
+    uint32_t tableSeed(uint32_t roll, int row);
 
     // How enchantable the material is: gold takes the best enchantments
     // by far and wood is close behind, while diamond is middling, which
