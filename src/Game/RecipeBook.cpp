@@ -1,4 +1,5 @@
 #include "RecipeBook.h"
+#include "Discs.h"
 #include <cstring>
 #include "Crafting.h"
 #include "Smelting.h"
@@ -277,6 +278,7 @@ namespace
 
 std::string RecipeBook::vanillaIdOf(StackId id)
 {
+    if (Discs::discOf(id) >= 0) return std::string("music_disc_") + Discs::song(Discs::discOf(id)).key;
     const char* shown = displayName(id);
     if (shown)
         for (const VanillaName& entry : VANILLA_NAMES)
@@ -286,6 +288,9 @@ std::string RecipeBook::vanillaIdOf(StackId id)
 
 StackId RecipeBook::stackForVanillaId(const std::string& id)
 {
+    if (id.rfind("music_disc_", 0) == 0)
+        for (int disc = 0; disc < Discs::COUNT; ++disc)
+            if (id.substr(11) == Discs::song(disc).key) return static_cast<StackId>(Items::MusicDiscFirst + disc);
     for (const VanillaName& entry : VANILLA_NAMES)
         if (id == entry.id)
         {
@@ -312,7 +317,7 @@ std::string RecipeBook::idOf(StackId id)
 
 RecipeBook::Group RecipeBook::craftingGroup(StackId result)
 {
-    const std::string id = idOf(result);
+    const std::string id = vanillaIdOf(result);
     const char mojang = mojangGroup(id);
     auto ends = [&](const char* suffix) {
         const std::string tail(suffix);

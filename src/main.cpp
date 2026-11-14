@@ -7,6 +7,7 @@
 #include "Game/Discs.h"
 #include "Renderer/Atlas.h"
 #include "Game/Crafting.h"
+#include "Game/RecipeBook.h"
 #include "Game/Stonecutting.h"
 #include "Game/Smithing.h"
 #include "Game/Smelting.h"
@@ -529,6 +530,28 @@ namespace
         }
 
         std::printf("\n%d species in all.\n", mobTypeCount());
+        return 0;
+    }
+
+    int printIdAudit(const char* path)
+    {
+        std::FILE* list = std::fopen(path, "r");
+        if (!list) return 1;
+        char kind[16], id[128];
+        int known = 0, missing = 0;
+        while (std::fscanf(list, "%15s %127s", kind, id) == 2)
+        {
+            if (RecipeBook::stackNamed(id) != Blocks::Air) { ++known; continue; }
+            std::printf("missing %s %s\n", kind, id);
+            ++missing;
+        }
+        std::fclose(list);
+        for (int block = 1; isBlockId(block); block = nextBlockId(block))
+            if (displayName(static_cast<StackId>(block)) && isObtainable(static_cast<BlockId>(block)))
+                std::printf("name block %d %s\n", block, displayName(static_cast<StackId>(block)));
+        for (StackId item = Items::FIRST; item < Items::Count; ++item)
+            if (displayName(item)) std::printf("name item %d %s\n", static_cast<int>(item), displayName(item));
+        std::printf("ids known %d, missing %d\n", known, missing);
         return 0;
     }
 
@@ -1625,6 +1648,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--blockaudit") == 0)
         {
             blockAudit = true;
+        }
+        else if (std::strcmp(argv[i], "--idaudit") == 0 && i + 1 < argc)
+        {
+            return printIdAudit(argv[++i]);
         }
         else if (std::strcmp(argv[i], "--packcheck") == 0)
         {

@@ -79,7 +79,7 @@ namespace
 
     std::string vanillaName(StackId id)
     {
-        std::string n = RecipeBook::idOf(id);
+        std::string n = RecipeBook::vanillaIdOf(id);
         static const std::map<std::string, std::string> RENAMED = {
             { "planks", "oak_planks" }, { "sign", "oak_sign" }, { "wool", "white_wool" }, { "mossy_cobble", "mossy_cobblestone" },
             { "hay_bale", "hay_block" }, { "jack_olantern", "jack_o_lantern" }, { "jigsaw_block", "jigsaw" },
@@ -305,11 +305,9 @@ namespace
         if (stack.id == Items::LingeringPotion) return Brewing::fullName(Brewing::decode(stack.damage), Brewing::Form::Lingering);
         if (stack.id == Items::TippedArrow)
             return Brewing::tippedName(stack.damage);
-        if (stack.id == Items::GoatHorn)
-        {
-            static const char* CALLS[8] = { "Ponder", "Sing", "Seek", "Feel", "Admire", "Call", "Yearn", "Dream" };
-            return std::string("Goat Horn (") + CALLS[std::clamp(stack.damage, 0, 7)] + ")";
-        }
+        if (stack.id == Items::GoatHorn) return "Goat Horn";
+        if (stack.id >= Items::NetheriteUpgradeTemplate && stack.id <= Items::BoltTemplate) return "Smithing Template";
+        if (Banners::isPatternItem(stack.id)) return "Banner Pattern";
         if (stack.id == Items::SpawnEgg)
             return std::string(mobType(static_cast<MobId>(std::clamp(stack.damage, 0, mobTypeCount() - 1))).name) + " Spawn Egg";
         if (stack.id == Items::FilledMap && (stack.enchantments >> 24) != 0u)
@@ -382,6 +380,28 @@ namespace
             return lore;
         }
         if (Discs::discOf(stack.id) >= 0) line(Discs::song(Discs::discOf(stack.id)).title);
+        if (stack.id == Items::GoatHorn)
+        {
+            static const char* CALLS[8] = { "Ponder", "Sing", "Seek", "Feel", "Admire", "Call", "Yearn", "Dream" };
+            line(std::string("\u00a77") + CALLS[std::clamp(stack.damage, 0, 7)]);
+        }
+        if (stack.id >= Items::NetheriteUpgradeTemplate && stack.id <= Items::BoltTemplate)
+        {
+            const bool upgrade = stack.id == Items::NetheriteUpgradeTemplate;
+            line(std::string("\u00a77") + displayName(stack.id));
+            line("");
+            line("\u00a77Applies to:");
+            line(upgrade ? "\u00a79 Diamond Equipment" : "\u00a79 Armor");
+            line("\u00a77Ingredients:");
+            line(upgrade ? "\u00a79 Netherite Ingot" : "\u00a79 Ingots & Crystals");
+        }
+        if (Banners::isPatternItem(stack.id))
+        {
+            std::string what = displayName(stack.id);
+            const std::string tail = " Banner Pattern";
+            if (what.size() > tail.size() && what.compare(what.size() - tail.size(), tail.size(), tail) == 0) what.resize(what.size() - tail.size());
+            line("\u00a77" + what);
+        }
         if (stack.id == Items::Shield && (stack.enchantments >> 24) != 0u && Banners::active())
         {
             const Banners::Design look = Banners::active()->design(static_cast<int>(stack.enchantments >> 24));

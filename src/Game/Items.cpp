@@ -55,9 +55,9 @@ namespace
 
 
         // Armour is one of a kind too, so it never stacks.
-        { "Leather Helmet",      Tiles::ItemArmourFirst + 0,  1 },
-        { "Leather Chestplate",  Tiles::ItemArmourFirst + 1,  1 },
-        { "Leather Leggings",    Tiles::ItemArmourFirst + 2,  1 },
+        { "Leather Cap",         Tiles::ItemArmourFirst + 0,  1 },
+        { "Leather Tunic",       Tiles::ItemArmourFirst + 1,  1 },
+        { "Leather Pants",       Tiles::ItemArmourFirst + 2,  1 },
         { "Leather Boots",       Tiles::ItemArmourFirst + 3,  1 },
         { "Golden Helmet",       Tiles::ItemArmourFirst + 4,  1 },
         { "Golden Chestplate",   Tiles::ItemArmourFirst + 5,  1 },
@@ -117,7 +117,7 @@ namespace
         { "Blaze Rod",       Tiles::ItemBlazeRod,       64 },
         { "Nether Brick",    Tiles::ItemNetherBrick,    64 },
         { "Magma Cream",     Tiles::ItemMagmaCream,     64 },
-        { "Redstone",        Tiles::ItemRedstone,       64 },
+        { "Redstone Dust",   Tiles::ItemRedstone,       64 },
         { "Breeze Rod",      Tiles::ItemBreezeRod,      64 },
         { "Wind Charge",     Tiles::ItemWindCharge,     64 },
         { "Mace",            Tiles::ItemMace,            1 },

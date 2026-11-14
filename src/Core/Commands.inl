@@ -1068,7 +1068,7 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
                 output = self + " has the following entity data: [" + std::to_string(m_player.position.x) + "d, " + std::to_string(m_player.position.y) + "d, " +
                          std::to_string(m_player.position.z) + "d]";
             else if (path == "SelectedItem")
-                output = self + " has the following entity data: {id: \"" + (held.empty() ? std::string("air") : RecipeBook::idOf(held.id)) + "\", count: " +
+                output = self + " has the following entity data: {id: \"" + (held.empty() ? std::string("air") : RecipeBook::vanillaIdOf(held.id)) + "\", count: " +
                          std::to_string(held.count) + "}";
             else
                 output = self + " has the following entity data: {Health: " + std::to_string(m_player.health) + ".0f, foodLevel: " + std::to_string(m_player.hunger) +
