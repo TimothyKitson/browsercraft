@@ -7,6 +7,7 @@
 #include "World/World.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace
 {
@@ -157,7 +158,7 @@ void Player::regenerate(float deltaTime)
             addExhaustion(spent);
         }
     }
-    else if (health > 0 && health < maxHealth() && damageFlash <= 0.0f && wellFed)
+    else if (health > 0 && health < maxHealth() && wellFed)
     {
         m_regenTimer += deltaTime;
         if (m_regenTimer >= 4.0f)
@@ -604,7 +605,12 @@ bool Player::damage(int amount, bool throughArmour)
 
     damageFlash = 0.4f;
     m_hurtCooldown = HURT_IMMUNITY;
-    m_exhaustion += 0.1f;
+    static const char* const RESTFUL[] = { "cramming", "dragonBreath", "drown", "fall", "flyIntoWall", "freeze", "inWall", "magic",
+                                           "onFire", "outOfWorld", "outsideBorder", "sonicBoom", "stalagmite", "starve", "wither", "kill" };
+    bool tiring = true;
+    for (const char* name : RESTFUL)
+        if (cause && std::strcmp(cause, name) == 0) tiring = false;
+    if (tiring) m_exhaustion += 0.1f;
     return true;
 }
 
@@ -1040,7 +1046,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
         const glm::vec3 moved = position - m_lastPosition;
         const float distance = glm::length(glm::vec3(moved.x, 0.0f, moved.z));
         if (distance > 0.0f)
-            addExhaustion(distance * (sprinting ? 0.1f : sneaking ? 0.0f : 0.01f));
+            addExhaustion(sprinting ? distance * 0.1f : 0.0f);
     }
     else if (inWater && !flying)
     {
