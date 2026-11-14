@@ -104,16 +104,16 @@ bool Food::leavesBowl(StackId id)
 Food::StewEffect Food::stewEffect(int flower)
 {
     static const StewEffect EFFECTS[] = {
-        { Effects::Kind::FireResistance, 3.0f },
-        { Effects::Kind::Blindness, 11.0f },
+        { Effects::Kind::FireResistance, 4.0f },
+        { Effects::Kind::Blindness, 8.0f },
         { Effects::Kind::Saturation, 0.35f },
         { Effects::Kind::Saturation, 0.35f },
-        { Effects::Kind::JumpBoost, 5.0f },
-        { Effects::Kind::Poison, 11.0f },
-        { Effects::Kind::Regeneration, 7.0f },
+        { Effects::Kind::JumpBoost, 6.0f },
+        { Effects::Kind::Poison, 12.0f },
+        { Effects::Kind::Regeneration, 8.0f },
         { Effects::Kind::NightVision, 5.0f },
-        { Effects::Kind::Weakness, 7.0f },
-        { Effects::Kind::Wither, 7.0f },
+        { Effects::Kind::Weakness, 9.0f },
+        { Effects::Kind::Wither, 8.0f },
         { Effects::Kind::NightVision, 5.0f },
     };
     const int count = static_cast<int>(sizeof(EFFECTS) / sizeof(EFFECTS[0]));
@@ -154,12 +154,19 @@ Food::Bite Food::chew(bool holdingUse, StackId held, bool hungry, float timer, f
     bite.chewing = true;
     bite.timer = timer + deltaTime;
 
-    if (bite.timer >= EAT_SECONDS)
+    if (bite.timer >= eatSeconds(held))
     {
         bite.swallowed = true;
         bite.timer = 0.0f;
     }
     return bite;
+}
+
+float Food::eatSeconds(StackId id)
+{
+    if (id == Items::DriedKelp) return 0.8f;
+    if (id == Items::HoneyBottle) return 2.0f;
+    return EAT_SECONDS;
 }
 
 FoodValue Food::valueOf(StackId id)

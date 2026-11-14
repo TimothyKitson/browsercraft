@@ -4,6 +4,7 @@
 #include "Game/Items.h"
 #include "Game/Armour.h"
 #include "Game/Tools.h"
+#include "Game/Food.h"
 #include <algorithm>
 #include <initializer_list>
 
@@ -37,7 +38,7 @@ Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
     if (baby) m_babyTimer = BABY_SECONDS;
     m_removeTimer = deathSeconds();
     const MobType& t = mobType(type);
-    m_health = t.maxHealth;
+    m_health = maxHealth();
     m_yaw = random01() * 360.0f;
 
     // A shulker is a block that happens to be alive. It goes in the
@@ -60,7 +61,7 @@ Mob::Mob(MobId type, glm::vec3 feetPosition, uint32_t seed, bool baby)
     if (type == MobId::Wither)
     {
         m_spawnPhase = WITHER_SPAWN_SECONDS;
-        m_health = std::max(1, t.maxHealth / 3);
+        m_health = std::max(1, maxHealth() / 3);
     }
 }
 
@@ -363,6 +364,7 @@ bool Mob::tameWith(StackId food)
     m_tamed = true;
     m_tameFailed = false;
     m_panicTimer = 0.0f;
+    if (m_type == MobId::Wolf) m_health = maxHealth();
     emit(type().voice, 0.8f, 1.3f);
     return true;
 }
@@ -376,27 +378,45 @@ bool Mob::feed(StackId food)
         m_growthBoost += TADPOLE_SECONDS * 0.1f;
         return true;
     }
-    if ((t.id == MobId::Horse || t.id == MobId::Donkey || t.id == MobId::Mule) && !m_tamed && alive())
+    if ((isHorseKind(t.id) || t.id == MobId::Llama || t.id == MobId::TraderLlama) && alive())
     {
+        const bool llama = t.id == MobId::Llama || t.id == MobId::TraderLlama;
+        const bool golden = food == Items::GoldenApple || food == Items::EnchantedGoldenApple;
+        int heal = 0;
         int calm = 0;
-        if (food == Items::Wheat || food == Items::Sugar || food == Items::Apple) calm = 3;
-        else if (food == Items::GoldenCarrot) calm = 5;
-        else if (food == Items::GoldenApple || food == Items::EnchantedGoldenApple) calm = 10;
-        const bool hurt = m_health < t.maxHealth;
-        if (calm > 0 && (m_temper < 100 || hurt))
+        if (llama)
+        {
+            if (food == Items::Wheat) { heal = 2; calm = 3; }
+            else if (food == static_cast<StackId>(Blocks::HayBale)) { heal = 10; calm = 6; }
+        }
+        else if (food == Items::Wheat) { heal = 2; calm = 3; }
+        else if (food == Items::Sugar) { heal = 1; calm = 3; }
+        else if (food == static_cast<StackId>(Blocks::HayBale)) heal = 20;
+        else if (food == Items::Apple) { heal = 3; calm = 3; }
+        else if (food == Items::GoldenCarrot) { heal = 4; calm = 5; }
+        else if (golden) { heal = 10; calm = 10; }
+        bool ate = false;
+        if (heal > 0 && m_health < maxHealth())
+        {
+            m_health = std::min(maxHealth(), m_health + heal);
+            ate = true;
+        }
+        if (calm > 0 && (ate || !m_tamed) && m_temper < 100 && t.id != MobId::SkeletonHorse && t.id != MobId::ZombieHorse)
         {
             addTemper(calm);
-            if (hurt) m_health = std::min(t.maxHealth, m_health + (food == Items::GoldenApple || food == Items::EnchantedGoldenApple ? 10 : 3));
-            return true;
+            ate = true;
         }
+        if (ate)
+        {
+            emit(t.voice, 0.6f, 1.2f);
+            if (!m_tamed || (food != Items::GoldenCarrot && !golden)) return true;
+        }
+        if (!m_tamed) return false;
     }
-    const bool healer = (t.id == MobId::Wolf && m_tamed && acceptsFood(t.id, food, t.breedingFood)) ||
-                        (isHorseKind(t.id) && (food == Items::Wheat || food == Items::Apple || food == Items::Sugar || food == Items::GoldenCarrot ||
-                                               food == static_cast<StackId>(Blocks::HayBale))) ||
-                        (t.id == MobId::Llama && (food == Items::Wheat || food == static_cast<StackId>(Blocks::HayBale)));
-    if (healer && alive() && m_health < t.maxHealth)
+    if ((t.id == MobId::Wolf || t.id == MobId::Cat) && m_tamed && alive() && m_health < maxHealth() && acceptsFood(t.id, food, t.breedingFood))
     {
-        m_health = std::min(t.maxHealth, m_health + (food == static_cast<StackId>(Blocks::HayBale) ? 10 : 4));
+        const int nutrition = std::max(1, Food::valueOf(food).hunger);
+        m_health = std::min(maxHealth(), m_health + (t.id == MobId::Wolf ? 2 * nutrition : nutrition));
         emit(t.voice, 0.6f, 1.2f);
         return true;
     }
@@ -597,10 +617,57 @@ void Mob::moveAxis(const World& world, float delta, int axis)
     }
 }
 
+int Mob::maxHealth() const
+{
+    const uint32_t seed = birthSeed() * 2246822519u;
+    switch (m_type)
+    {
+        case MobId::Horse: case MobId::Donkey: case MobId::Mule: case MobId::Llama: case MobId::TraderLlama:
+            return 15 + static_cast<int>((seed >> 8) % 8u) + static_cast<int>((seed >> 16) % 9u);
+        case MobId::Wolf:
+            return m_tamed ? 40 : type().maxHealth;
+        default:
+            return type().maxHealth;
+    }
+}
+
+float Mob::horseSpeedAttribute() const
+{
+    switch (m_type)
+    {
+        case MobId::Horse:
+        {
+            const uint32_t seed = birthSeed() * 3266489917u;
+            float sum = 0.0f;
+            for (int k = 0; k < 3; ++k) sum += static_cast<float>((seed >> (k * 10)) & 1023u) / 1024.0f;
+            return (0.45f + 0.3f * sum) * 0.25f;
+        }
+        case MobId::SkeletonHorse: case MobId::ZombieHorse: return 0.2f;
+        default: return 0.175f;
+    }
+}
+
+float Mob::horseJumpAttribute() const
+{
+    switch (m_type)
+    {
+        case MobId::Horse: case MobId::SkeletonHorse: case MobId::ZombieHorse:
+        {
+            const uint32_t seed = birthSeed() * 668265263u;
+            float sum = 0.0f;
+            for (int k = 0; k < 3; ++k) sum += static_cast<float>((seed >> (k * 10)) & 1023u) / 1024.0f;
+            return 0.4f + 0.2f * sum;
+        }
+        default: return 0.5f;
+    }
+}
+
 float Mob::currentSpeed() const
 {
     float speed = type().walkSpeed * (panicking() ? PANIC_SPEED : 1.0f) * (m_slowTimer > 0.0f ? 0.6f : 1.0f);
-    if (m_type == MobId::Horse) speed *= horseSpeedFactor();
+    if (isHorseKind(m_type))
+        speed = m_ridden ? 43.17f * horseSpeedAttribute() * (m_slowTimer > 0.0f ? 0.6f : 1.0f)
+                         : speed * horseSpeedAttribute() / 0.225f;
     if (m_ridden && type().saddleRide)
     {
         speed *= 1.15f;
@@ -842,13 +909,13 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     {
         m_spawnPhase = std::max(0.0f, m_spawnPhase - deltaTime);
         const float grown = 1.0f - m_spawnPhase / WITHER_SPAWN_SECONDS;
-        const int target = t.maxHealth / 3 + static_cast<int>(grown * (t.maxHealth - t.maxHealth / 3));
-        m_health = std::max(m_health, std::min(t.maxHealth, target));
+        const int target = maxHealth() / 3 + static_cast<int>(grown * (maxHealth() - maxHealth() / 3));
+        m_health = std::max(m_health, std::min(maxHealth(), target));
         m_holdTimer = std::max(m_holdTimer, 0.1f);
         m_shootTimer = std::max(m_shootTimer, 1.0f);
         if (m_spawnPhase <= 0.0f)
         {
-            m_health = t.maxHealth;
+            m_health = maxHealth();
             MobBlast blast;
             blast.at = m_position + glm::vec3(0.0f, height() * 0.5f, 0.0f);
             blast.radius = WITHER_SPAWN_BLAST;
@@ -981,7 +1048,19 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         m_moving = m_steerForward;
 
         // A boat has no legs to push off with, so it does not jump.
-        if (m_steerJump && m_onGround && !t.inanimate) m_velocity.y = RIDDEN_JUMP * m_jumpPower * (m_type == MobId::Horse ? horseJumpFactor() : 1.0f);
+        if (m_steerJump && m_onGround && !t.inanimate)
+        {
+            if (isHorseKind(m_type))
+            {
+                const float j = horseJumpAttribute() * m_jumpPower;
+                const float top = std::max(0.3f, ((-0.1817584952f * j + 3.689713992f) * j + 2.128599134f) * j - 0.343930367f);
+                m_velocity.y = std::sqrt(2.0f * -GRAVITY * top);
+            }
+            else
+            {
+                m_velocity.y = RIDDEN_JUMP * m_jumpPower;
+            }
+        }
         m_steerJump = false;
     }
     else if (t.inanimate || t.stationary || m_sitting || m_holdTimer > 0.0f)
@@ -1602,7 +1681,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             case MobId::Wolf:
                 if (hostile && !m_tamed) stem = "mob/wolf/growl";
                 else if (random01() < 0.33f)
-                    stem = m_tamed && m_health * 2 < t.maxHealth ? "mob/wolf/whine" : "mob/wolf/panting";
+                    stem = m_tamed && m_health * 2 < maxHealth() ? "mob/wolf/whine" : "mob/wolf/panting";
                 else if (!m_tamed && random01() < 0.05f) stem = "mob/wolf/howl";
                 break;
             case MobId::Cat:
@@ -1762,7 +1841,7 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
     if (amount <= 0 || !alive() || m_spawnPhase > 0.0f || m_burrow != 0.0f || isTechnicalMob(m_type)) return;
     if (m_invulnerable && amount < 1000000) return;
     if ((m_type == MobId::Enderman && random01() < 0.6f) ||
-        (m_type == MobId::Shulker && m_health * 2 < type().maxHealth && random01() < 0.25f))
+        (m_type == MobId::Shulker && m_health * 2 < maxHealth() && random01() < 0.25f))
         m_wantsTeleport = true;
 
     // Hitting one is a reason, whatever it was doing before. Burning in
@@ -1865,7 +1944,7 @@ void Mob::damage(int amount, const glm::vec3& fromDirection)
 void Mob::heal(int amount)
 {
     if (amount <= 0 || m_health <= 0) return;
-    m_health = std::min(m_health + amount, mobType(m_type).maxHealth);
+    m_health = std::min(m_health + amount, maxHealth());
 }
 
 void Mob::giveEffect(Effects::Kind kind, int amplifier, float seconds)

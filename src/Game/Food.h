@@ -31,7 +31,7 @@ namespace Food
 
     // How long the poison lasts, in seconds, and how strong. Minecraft
     // gives a pufferfish poison for a quarter of a minute.
-    constexpr float POISON_SECONDS = 15.0f;
+    constexpr float POISON_SECONDS = 60.0f;
     constexpr int POISON_LEVEL = 1;
 
     struct Bite
@@ -46,4 +46,5 @@ namespace Food
     // matters is that a bite only lands at the end of the chew, and that
     // letting go or running out of food starts it again from nothing.
     Bite chew(bool holdingUse, StackId held, bool hungry, float timer, float deltaTime);
+    float eatSeconds(StackId id);
 }

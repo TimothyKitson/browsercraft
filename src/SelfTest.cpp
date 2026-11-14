@@ -3194,8 +3194,35 @@ namespace
             check(!wild.tamed(), "but food alone never tames it");
             wild.becomeTamed();
             check(wild.tamed(), "being ridden until it accepts you does");
-            check(wild.horseSpeedFactor() >= 0.75f && wild.horseSpeedFactor() <= 1.26f, "each horse has its own pace");
-            check(wild.horseJumpFactor() >= 0.8f && wild.horseJumpFactor() <= 1.21f, "and its own spring");
+            check(wild.horseSpeedAttribute() >= 0.1125f && wild.horseSpeedAttribute() <= 0.3375f, "each horse has its own pace");
+            check(wild.horseJumpAttribute() >= 0.4f && wild.horseJumpAttribute() <= 1.0f, "and its own spring");
+            int lowest = 99, highest = 0;
+            float slow = 1.0f, fast = 0.0f;
+            for (uint32_t seed = 1; seed < 400u; ++seed)
+            {
+                const Mob foal(MobId::Horse, glm::vec3(0.0f, 70.0f, 0.0f), seed * 7919u);
+                lowest = std::min(lowest, foal.maxHealth());
+                highest = std::max(highest, foal.maxHealth());
+                slow = std::min(slow, foal.horseSpeedAttribute());
+                fast = std::max(fast, foal.horseSpeedAttribute());
+                check(foal.health() == foal.maxHealth(), "a horse starts on its own full health");
+            }
+            check(lowest >= 15 && highest <= 30 && highest - lowest >= 10, "horses have 15 to 30 health like Minecraft's");
+            check(slow < 0.18f && fast > 0.27f, "and speeds spread the way Minecraft's are");
+            const Mob donkey(MobId::Donkey, glm::vec3(0.0f, 70.0f, 0.0f), 5u);
+            check(std::abs(donkey.horseSpeedAttribute() - 0.175f) < 0.0001f && std::abs(donkey.horseJumpAttribute() - 0.5f) < 0.0001f,
+                  "a donkey has Minecraft's fixed speed and jump");
+            check(mobType(MobId::Cow).maxHealth == Mob(MobId::Cow, glm::vec3(0.0f), 3u).maxHealth(), "other mobs keep their kind's health");
+            Mob hurt(MobId::Horse, glm::vec3(0.0f, 70.0f, 0.0f), 99u);
+            hurt.setHealth(5);
+            check(hurt.feed(Items::Sugar) && hurt.health() == 6, "sugar heals a horse one point");
+            check(hurt.feed(static_cast<StackId>(Blocks::HayBale)) && hurt.health() == std::min(hurt.maxHealth(), 26), "a hay bale twenty");
+            Mob pup(MobId::Wolf, glm::vec3(0.0f, 70.0f, 0.0f), 4u);
+            check(pup.maxHealth() == 8, "a wild wolf has 8 health");
+            pup.becomeTamed();
+            check(pup.maxHealth() == 40 && pup.health() == 40, "a tamed one 40, and is healed to it");
+            pup.setHealth(2);
+            check(pup.feed(Items::Steak) && pup.health() == 18, "a tame wolf heals twice the meat's food value");
         }
 
         {

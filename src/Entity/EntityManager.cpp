@@ -681,7 +681,7 @@ void EntityManager::tickHelpers(float deltaTime, const World& world, const glm::
         else if (kind == MobId::Witch)
         {
             if (wait > 0.0f) continue;
-            if (mob.health() * 2 < mob.type().maxHealth)
+            if (mob.health() * 2 < mob.maxHealth())
             {
                 wait = 4.0f;
                 mob.setGear(Mob::MainHand, static_cast<uint16_t>(Items::Potion));

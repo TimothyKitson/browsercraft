@@ -435,7 +435,7 @@ void MobModel::renderExtras(MobId id, const MobSkin& skin, const World& world, c
 
     auto glowFor = [&](const char* path, const Mob& mob) -> float {
         const std::string p(path);
-        const float health = static_cast<float>(mob.health()) / std::max(1, mob.type().maxHealth);
+        const float health = static_cast<float>(mob.health()) / std::max(1, mob.maxHealth());
         if (p.find("exploding") != std::string::npos) return mob.alive() ? -1.0f : 1.0f;
         if (p.find("_eyes") != std::string::npos || p.find("bioluminescent") != std::string::npos)
             return mob.alive() ? 1.0f : -1.0f;

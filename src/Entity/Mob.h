@@ -396,7 +396,8 @@ public:
     void setSilent(bool on) { m_silent = on; }
     bool invulnerable() const { return m_invulnerable; }
     void setInvulnerable(bool on) { m_invulnerable = on; }
-    void setHealth(int health) { m_health = std::max(1, std::min(health, type().maxHealth)); }
+    void setHealth(int health) { m_health = std::max(1, std::min(health, maxHealth())); }
+    int maxHealth() const;
     void setDancing(bool on) { m_dancing = on; }
     bool tamed() const { return m_tamed; }
 
@@ -494,10 +495,10 @@ public:
     }
     int temper() const { return m_temper; }
     bool roosting() const { return m_roosting; }
-    float horseSpeedFactor() const { return 0.75f + static_cast<float>((birthSeed() >> 4) % 51u) / 100.0f; }
-    float horseJumpFactor() const { return 0.8f + static_cast<float>((birthSeed() >> 12) % 41u) / 100.0f; }
+    float horseSpeedAttribute() const;
+    float horseJumpAttribute() const;
     void addTemper(int amount) { m_temper = std::clamp(m_temper + amount, 0, 100); }
-    void becomeTamed() { m_tamed = true; m_panicTimer = 0.0f; }
+    void becomeTamed() { m_tamed = true; m_panicTimer = 0.0f; if (m_type == MobId::Wolf) m_health = maxHealth(); }
     void boostRide(float seconds) { m_rideBoost = seconds; m_rideBoostLength = seconds; }
     bool rideBoosted() const { return m_rideBoost > 0.0f; }
 

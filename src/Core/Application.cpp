@@ -10137,7 +10137,7 @@ void Application::updateGameplay(float deltaTime)
             else if (!jumpHeld && m_horseJumpHeld > 0.0f)
             {
                 leap = mount->onGround();
-                power = 0.5f + 0.7f * horseJumpStrength();
+                power = horseJumpStrength() >= 0.9f ? 1.0f : 0.4f + 0.4f * horseJumpStrength() / 0.9f;
                 m_horseJumpHeld = 0.0f;
                 if (leap) m_horseJumpCooldown = 0.6f;
             }
@@ -14201,7 +14201,7 @@ void Application::spawnRaidWave()
         mob.keepFromDespawning();
         mob.provoke();
         m_raid.raiders.push_back(mob.serial());
-        m_raid.totalHealth += static_cast<float>(mob.type().maxHealth);
+        m_raid.totalHealth += static_cast<float>(mob.maxHealth());
         ++placed;
     }
     ++m_raid.spawned;
@@ -17557,6 +17557,9 @@ void Application::handleEating(float deltaTime)
         case Items::RottenFlesh:
             if (chance < 80u) Effects::give(m_player.effects, Effects::Kind::Hunger, 0, 30.0f);
             break;
+        case Items::RawChicken:
+            if (chance < 30u) Effects::give(m_player.effects, Effects::Kind::Hunger, 0, 30.0f);
+            break;
         case Items::SpiderEye:
             Effects::give(m_player.effects, Effects::Kind::Poison, 0, 5.0f);
             break;
@@ -19288,7 +19291,7 @@ void Application::handlePlacement()
         const bool horseFood = food == Items::Wheat || food == Items::Sugar || food == Items::Apple || food == Items::GoldenCarrot ||
                                food == Items::GoldenApple || food == Items::EnchantedGoldenApple || food == static_cast<StackId>(Blocks::HayBale);
         const bool golden = food == Items::GoldenCarrot || food == Items::GoldenApple || food == Items::EnchantedGoldenApple;
-        if (horseFood && (!ride->tamed() || ride->health() < ride->type().maxHealth || golden)) ride = nullptr;
+        if (horseFood && (!ride->tamed() || ride->health() < ride->maxHealth() || golden)) ride = nullptr;
     }
     if (ride && isHorseKind(ride->typeId()) && !ride->tamed() &&
         (stack.id == Items::Saddle || isHorseArmour(stack.id) || m_player.sneaking))
@@ -28590,7 +28593,7 @@ void Application::renderFood(float rightX, float y)
         if (!mount->type().inanimate)
         {
             const int health = mount->health();
-            const int hearts = std::min(30, (mount->type().maxHealth + 1) / 2);
+            const int hearts = std::min(30, (mount->maxHealth() + 1) / 2);
             for (int i = 0; i < hearts; ++i)
             {
                 const float heartX = rightX - ICON_SIZE - (i % 10) * HEART_PITCH;
@@ -28860,7 +28863,7 @@ void Application::renderEatProgress(float cx, float cy)
 {
     if (m_eatTimer <= 0.0f) return;
 
-    const float fraction = std::min(1.0f, m_eatTimer / Food::EAT_SECONDS);
+    const float fraction = std::min(1.0f, m_eatTimer / Food::eatSeconds(m_inventory.selected().id));
     const float width = 48.0f;
     const float height = 3.0f;
     const float x = cx - width * 0.5f;
@@ -29591,7 +29594,7 @@ void Application::renderBossBars(float w)
         if (glm::length(mob.position() - m_player.position) > 160.0f) continue;
         const bool dragon = id == MobId::EnderDragon;
         bars.push_back({ dragon ? "Ender Dragon" : "Wither", dragon ? 0 : 5, 0,
-                         static_cast<float>(mob.health()) / static_cast<float>(mob.type().maxHealth) });
+                         static_cast<float>(mob.health()) / static_cast<float>(mob.maxHealth()) });
     }
     if (m_raid.active && glm::length(m_player.position - m_raid.centre) <= Raids::BAR_RANGE)
     {
