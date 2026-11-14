@@ -42,6 +42,23 @@ namespace
 
     // Blocks and items alike, by the name the inventory shows, with
     // spaces allowed to be underscores the way Minecraft writes them.
+    StackId lookUpBlock(const std::string& wanted)
+    {
+        std::string target = lower(wanted);
+        if (target.rfind("minecraft:", 0) == 0) target = target.substr(10);
+        for (int pass = 0; pass < 2; ++pass)
+            for (int id = 1; isBlockId(id); id = nextBlockId(id))
+            {
+                if (pass == 0 && !isObtainable(static_cast<BlockId>(id))) continue;
+                const char* shown = displayName(static_cast<StackId>(id));
+                if (!shown) continue;
+                std::string name = lower(shown);
+                std::replace(name.begin(), name.end(), ' ', '_');
+                if (name == target || lower(shown) == target) return static_cast<StackId>(id);
+            }
+        return Blocks::Air;
+    }
+
     StackId lookUp(const std::string& wanted)
     {
         std::string target = lower(wanted);
@@ -686,7 +703,8 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
             return fail("/setblock wants three numbers.");
         const std::string wanted = lower(words[4]);
         const bool air = wanted == "air" || wanted == "minecraft:air";
-        const StackId id = air ? static_cast<StackId>(Blocks::Air) : lookUp(words[4]);
+        StackId id = air ? static_cast<StackId>(Blocks::Air) : lookUpBlock(words[4]);
+        if (!air && id == Blocks::Air) id = lookUp(words[4]);
         if (id == Blocks::Air && !air) return fail("No block called " + words[4] + ".");
         if (isItem(id)) return fail(words[4] + " is not a block.");
         out.kind = Kind::SetBlock;
@@ -919,7 +937,8 @@ Chat::Command Chat::parse(const std::string& line, bool cheats, const glm::vec3&
             if (!cheats) return deny(name);
             if (words.size() < 8 || !triple(1, origin, out.position) || !triple(4, origin, out.position2))
                 return fail("/fill <x1> <y1> <z1> <x2> <y2> <z2> <block> [replace|keep|destroy|hollow|outline]");
-            out.item = lookUp(words[7]);
+            out.item = lookUpBlock(words[7]);
+            if (out.item == Blocks::Air) out.item = lookUp(words[7]);
             if (words[7] == "air" || words[7] == "minecraft:air") out.item = Blocks::Air;
             else if (out.item == Blocks::Air || isItem(out.item)) return fail("No block called " + words[7] + ".");
             out.sub = words.size() >= 9 ? lower(words[8]) : "replace";
