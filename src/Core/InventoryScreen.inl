@@ -480,6 +480,39 @@ std::string Application::itemLabel(const ItemStack& stack) const
 // tall in all, a little taller than wide. Fitting the same cube into a
 // square instead -- the sides only as tall as the top is deep -- is what
 // made every block in the game look sat on.
+void Application::drawBoxIcon(float x, float y, float size, const glm::vec3& from, const glm::vec3& to, int tile,
+                              const glm::vec4& upUV, const glm::vec4& eastUV, const glm::vec4& northUV, const glm::vec4& tint)
+{
+    const float k = size / 16.0f * 0.625f;
+    const float yaw = glm::radians(225.0f), pitch = glm::radians(30.0f);
+    auto screen = [&](float px, float py, float pz) {
+        const glm::vec3 v(px - 8.0f, py - 8.0f, pz - 8.0f);
+        const float x1 = v.x * std::cos(yaw) + v.z * std::sin(yaw);
+        const float z1 = -v.x * std::sin(yaw) + v.z * std::cos(yaw);
+        const float y2 = v.y * std::cos(pitch) - z1 * std::sin(pitch);
+        return glm::vec2(x + size * 0.5f + x1 * k, y + size * 0.5f - y2 * k);
+    };
+    const TileUV t = tileUV(tile);
+    auto at = [&](float u, float v) { return glm::vec2(t.u0 + (t.u1 - t.u0) * u / 16.0f, t.vTop + (t.vBottom - t.vTop) * v / 16.0f); };
+    const glm::vec3 sun = glm::normalize(glm::vec3(0.35f, 1.0f, 0.45f));
+    auto shaded = [&](float amount) { return glm::vec4(tint.r * amount, tint.g * amount, tint.b * amount, tint.a); };
+    auto light = [&](const glm::vec3& tangent, const glm::vec3& bitangent, const glm::vec3& normal) {
+        return glm::vec3(glm::dot(sun, tangent), glm::dot(sun, bitangent), glm::dot(sun, normal));
+    };
+
+    const glm::vec2 up[4] = { screen(from.x, to.y, from.z), screen(to.x, to.y, from.z), screen(to.x, to.y, to.z), screen(from.x, to.y, to.z) };
+    const glm::vec2 upTex[4] = { at(upUV.x, upUV.y), at(upUV.z, upUV.y), at(upUV.z, upUV.w), at(upUV.x, upUV.w) };
+    m_ui.texturedShape(m_atlas.textureId(), up, upTex, shaded(1.0f), light(glm::vec3(1, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0)));
+
+    const glm::vec2 east[4] = { screen(to.x, to.y, to.z), screen(to.x, to.y, from.z), screen(to.x, from.y, from.z), screen(to.x, from.y, to.z) };
+    const glm::vec2 eastTex[4] = { at(eastUV.x, eastUV.y), at(eastUV.z, eastUV.y), at(eastUV.z, eastUV.w), at(eastUV.x, eastUV.w) };
+    m_ui.texturedShape(m_atlas.textureId(), east, eastTex, shaded(0.78f), light(glm::vec3(0, 0, -1), glm::vec3(0, 1, 0), glm::vec3(1, 0, 0)));
+
+    const glm::vec2 north[4] = { screen(to.x, to.y, from.z), screen(from.x, to.y, from.z), screen(from.x, from.y, from.z), screen(to.x, from.y, from.z) };
+    const glm::vec2 northTex[4] = { at(northUV.x, northUV.y), at(northUV.z, northUV.y), at(northUV.z, northUV.w), at(northUV.x, northUV.w) };
+    m_ui.texturedShape(m_atlas.textureId(), north, northTex, shaded(0.60f), light(glm::vec3(-1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, -1)));
+}
+
 bool Application::drawBlockIcon(float x, float y, float size, StackId id,
                                 const glm::vec4& tint)
 {
@@ -487,6 +520,19 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
 
     const BlockId block = asBlock(id);
     const BlockInfo& info = blockInfo(block);
+    if (block == Blocks::ButtonOff || isFamilyButton(block))
+    {
+        const BlockId shown = block == Blocks::ButtonOff ? buttonOf(0, 0, 0, false) : block;
+        drawBoxIcon(x, y, size, glm::vec3(5.0f, 6.0f, 6.0f), glm::vec3(11.0f, 10.0f, 10.0f), blockInfo(shown).tileSide,
+                    glm::vec4(5.0f, 10.0f, 11.0f, 6.0f), glm::vec4(6.0f, 12.0f, 10.0f, 16.0f), glm::vec4(5.0f, 12.0f, 11.0f, 16.0f), tint);
+        return true;
+    }
+    if (isPlate(block))
+    {
+        drawBoxIcon(x, y, size, glm::vec3(1.0f, 0.0f, 1.0f), glm::vec3(15.0f, 1.0f, 15.0f), info.tileSide,
+                    glm::vec4(1.0f, 1.0f, 15.0f, 15.0f), glm::vec4(1.0f, 15.0f, 15.0f, 16.0f), glm::vec4(1.0f, 15.0f, 15.0f, 16.0f), tint);
+        return true;
+    }
     if (flatIconFor(block) >= 0) return false;
 
     // Only things that really are a box. A flower is two crossed quads

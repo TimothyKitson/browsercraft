@@ -3797,6 +3797,15 @@ bool Application::frame()
             m_inventory.add(Blocks::DiamondOre, 1);
             m_inventory.add(Blocks::Sand, 22);
             m_inventory.add(Blocks::CraftingTable, 1);
+            if (m_startupScreen == "inventory")
+            {
+                m_inventory.add(Blocks::ButtonOff, 4);
+                m_inventory.add(buttonOf(1, 0, 0, false), 4);
+                m_inventory.add(buttonOf(6, 0, 0, false), 4);
+                m_inventory.add(plateOf(0, false), 2);
+                m_inventory.add(plateOf(1, false), 2);
+                m_inventory.add(plateOf(12, false), 2);
+            }
 
             if (m_startupScreen == "creative") m_creativeTab = 7;
             if (m_startupScreen == "armour" || m_startupScreen == "armourhud")

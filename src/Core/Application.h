@@ -1278,6 +1278,8 @@ private:
     // draws one in a slot. Returns false for anything that is not a
     // block with six faces -- an item, a flower, a liquid -- which the
     // caller then draws flat as before.
+    void drawBoxIcon(float x, float y, float size, const glm::vec3& from, const glm::vec3& to, int tile, const glm::vec4& upUV,
+                     const glm::vec4& eastUV, const glm::vec4& northUV, const glm::vec4& tint);
     bool drawBlockIcon(float x, float y, float size, StackId id, const glm::vec4& tint);
 
     void drawItem(float x, float y, float size, StackId id, int count, const glm::vec4& tint,
