@@ -30594,7 +30594,7 @@ void Application::renderDebugOverlay()
             if (rightY > 2.0f) right("");
             std::snprintf(buffer, sizeof(buffer), "Targeted Block: %d, %d, %d", hit.block.x, hit.block.y, hit.block.z);
             right(buffer);
-            right(("minecraft:" + RecipeBook::idOf(static_cast<StackId>(axisBase(target)))).c_str());
+            right(("minecraft:" + RecipeBook::vanillaIdOf(static_cast<StackId>(axisBase(target)))).c_str());
             if (canWaterlog(target))
                 right(m_world->waterlogged(hit.block.x, hit.block.y, hit.block.z) ? "waterlogged: true" : "waterlogged: false");
             if (lightEmission(target) > 0)
@@ -31088,12 +31088,12 @@ void Application::runCheatAudit()
         for (const WorldGen::PlacedStart& start : m_placedStarts)
             if (start.kind == WorldGen::Placed::DesertPyramid) listed = true;
         report(listed, "a placed structure is remembered for the save", std::string());
-        const auto [village, villageSaid] = run("/place structure village_taiga ~-36 ~ ~");
+        const auto [village, villageSaid] = run("/place structure village_taiga ~-24 ~ ~");
         Village::Site site;
-        report(village && gen.placedVillageAt(static_cast<int>(m_player.position.x) - 36, static_cast<int>(m_player.position.z), site),
+        report(village && gen.placedVillageAt(static_cast<int>(m_player.position.x) - 24, static_cast<int>(m_player.position.z), site),
                "/place structure builds a village that counts as one", villageSaid);
         {
-            const int villageX = static_cast<int>(std::floor(m_player.position.x / 16.0f)) * 16 - 32 + 8;
+            const int villageX = static_cast<int>(std::floor((m_player.position.x - 24.0f) / 16.0f)) * 16 + 8;
             const int villageZ = static_cast<int>(std::floor(m_player.position.z / 16.0f)) * 16 + 8;
             run("/kill @e[type=villager]");
             const glm::vec3 keep = m_player.position;
@@ -31122,6 +31122,40 @@ void Application::runCheatAudit()
                 if (mob.alive() && mob.typeId() == MobId::Witch) ++witches;
             report(hut && witches == 1, "a placed swamp hut gets its witch", hutSaid);
             m_player.position = keep;
+        }
+        {
+            const glm::ivec3 box = glm::ivec3(glm::floor(m_player.position)) + glm::ivec3(2, 0, 0);
+            run("/setblock ~2 ~ ~ minecraft:chest");
+            const auto [filled, fillSaid] = run("/data merge block ~2 ~ ~ {Items:[{Slot:0b,id:\"minecraft:diamond\",count:5},{Slot:4b,id:\"minecraft:apple\",count:2}]}");
+            const Chests::Contents& inside = m_chests.at(box);
+            report(filled && inside[0].id == static_cast<StackId>(Items::Diamond) && inside[0].count == 5 && inside[4].id == static_cast<StackId>(Items::Apple),
+                   "/data merge block fills a chest", fillSaid);
+            const auto [read, readSaid] = run("/data get block ~2 ~ ~ Items");
+            report(read && readSaid.find("minecraft:diamond") != std::string::npos && readSaid.find("Slot: 4b") != std::string::npos,
+                   "/data get block reads a chest's items", readSaid);
+            run("/setblock ~2 ~ ~ minecraft:command_block");
+            const auto [typed, typedSaid] = run("/data modify block ~2 ~ ~ Command set value \"say hello\"");
+            const auto stored = m_commands.find(blockKey(box));
+            report(typed && stored != m_commands.end() && stored->second.command == "say hello", "/data modify block sets a command block's command", typedSaid);
+            run("/setblock ~2 ~ ~ minecraft:oak_sign");
+            const auto [signed_, signSaid] = run("/data merge block ~2 ~ ~ {front_text:{messages:['\"Hello\"','{\"text\":\"there\"}','\"\"','\"\"']}}");
+            const Signs::Text* lines = m_signs.find(box);
+            report(signed_ && lines && (*lines)[0] == "Hello" && (*lines)[1] == "there", "/data merge block writes sign text", signSaid);
+            run("/setblock ~2 ~ ~ minecraft:spawner");
+            const auto [caged, cageSaid] = run("/data merge block ~2 ~ ~ {SpawnData:{entity:{id:\"minecraft:blaze\"}}}");
+            const auto kind = m_cageKinds.find(blockKey(box));
+            report(caged && kind != m_cageKinds.end() && kind->second == static_cast<int>(MobId::Blaze), "/data merge block sets a spawner's mob", cageSaid);
+            run("/setblock ~2 ~ ~ minecraft:air");
+        }
+        {
+            const int steaks = m_inventory.countOf(static_cast<StackId>(Items::Steak));
+            const int eyes = m_inventory.countOf(static_cast<StackId>(Items::EyeOfEnder));
+            const auto [beef, beefSaid] = run("/give @s minecraft:cooked_beef 2");
+            const auto [eye, eyeSaid] = run("/give @s ender_eye");
+            report(beef && eye && m_inventory.countOf(static_cast<StackId>(Items::Steak)) == steaks + 2 &&
+                       m_inventory.countOf(static_cast<StackId>(Items::EyeOfEnder)) == eyes + 1 &&
+                       RecipeBook::vanillaIdOf(static_cast<StackId>(Items::Steak)) == "cooked_beef",
+                   "commands take Minecraft's own ids where the name differs", beefSaid + " / " + eyeSaid);
         }
         const auto [unknown, unknownSaid] = run("/place structure minecraft:nowhere");
         report(!unknown && unknownSaid.find("There is no structure") != std::string::npos, "/place structure names unknown structures", unknownSaid);

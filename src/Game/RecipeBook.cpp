@@ -1,4 +1,5 @@
 #include "RecipeBook.h"
+#include <cstring>
 #include "Crafting.h"
 #include "Smelting.h"
 #include "Food.h"
@@ -165,6 +166,136 @@ namespace
         for (StackId item = Items::FIRST; item < Items::Count; ++item) consider(item);
         return out;
     }
+}
+
+namespace
+{
+    struct VanillaName
+    {
+        const char* id;
+        const char* name;
+    };
+    const VanillaName VANILLA_NAMES[] = {
+        { "acacia_chest_boat", "Acacia Boat with Chest" },
+        { "amethyst_block", "Block of Amethyst" },
+        { "axolotl_bucket", "Bucket of Axolotl" },
+        { "bamboo_block", "Block of Bamboo" },
+        { "bamboo_chest_raft", "Bamboo Raft with Chest" },
+        { "bamboo_sapling", "Bamboo Shoot" },
+        { "beef", "Raw Beef" },
+        { "birch_chest_boat", "Birch Boat with Chest" },
+        { "black_candle_cake", "Cake with Black Candle" },
+        { "blue_candle_cake", "Cake with Blue Candle" },
+        { "brown_candle_cake", "Cake with Brown Candle" },
+        { "candle_cake", "Cake with Candle" },
+        { "cherry_chest_boat", "Cherry Boat with Chest" },
+        { "chest_minecart", "Minecart with Chest" },
+        { "chicken", "Raw Chicken" },
+        { "coal_block", "Block of Coal" },
+        { "cod", "Raw Cod" },
+        { "cod_bucket", "Bucket of Cod" },
+        { "command_block_minecart", "Minecart with Command Block" },
+        { "comparator", "Redstone Comparator" },
+        { "cooked_beef", "Steak" },
+        { "copper_block", "Block of Copper" },
+        { "cyan_candle_cake", "Cake with Cyan Candle" },
+        { "dark_oak_chest_boat", "Dark Oak Boat with Chest" },
+        { "deepslate_lapis_ore", "Deepslate Lapis Lazuli Ore" },
+        { "diamond_block", "Block of Diamond" },
+        { "disc_fragment_5", "Disc Fragment" },
+        { "dragon_breath", "Dragon's Breath" },
+        { "emerald_block", "Block of Emerald" },
+        { "ender_eye", "Eye of Ender" },
+        { "experience_bottle", "Bottle o' Enchanting" },
+        { "filled_map", "Map" },
+        { "furnace_minecart", "Minecart with Furnace" },
+        { "gold_block", "Block of Gold" },
+        { "gray_candle_cake", "Cake with Gray Candle" },
+        { "green_candle_cake", "Cake with Green Candle" },
+        { "hay_block", "Hay Bale" },
+        { "hopper_minecart", "Minecart with Hopper" },
+        { "iron_block", "Block of Iron" },
+        { "jack_o_lantern", "Jack o'Lantern" },
+        { "jigsaw", "Jigsaw Block" },
+        { "jungle_chest_boat", "Jungle Boat with Chest" },
+        { "lapis_block", "Block of Lapis Lazuli" },
+        { "lapis_ore", "Lapis Lazuli Ore" },
+        { "leather_chestplate", "Leather Tunic" },
+        { "leather_helmet", "Leather Cap" },
+        { "leather_leggings", "Leather Pants" },
+        { "light_blue_candle_cake", "Cake with Light Blue Candle" },
+        { "light_gray_candle_cake", "Cake with Light Gray Candle" },
+        { "lime_candle_cake", "Cake with Lime Candle" },
+        { "magenta_candle_cake", "Cake with Magenta Candle" },
+        { "mangrove_chest_boat", "Mangrove Boat with Chest" },
+        { "map", "Empty Map" },
+        { "mutton", "Raw Mutton" },
+        { "netherite_block", "Block of Netherite" },
+        { "oak_chest_boat", "Oak Boat with Chest" },
+        { "orange_candle_cake", "Cake with Orange Candle" },
+        { "pink_candle_cake", "Cake with Pink Candle" },
+        { "porkchop", "Raw Porkchop" },
+        { "potted_azalea_bush", "Potted Azalea" },
+        { "potted_flowering_azalea_bush", "Potted Flowering Azalea" },
+        { "pottery_shard_archer", "Archer Pottery Shard" },
+        { "pottery_shard_arms_up", "Arms Up Pottery Shard" },
+        { "pottery_shard_prize", "Prize Pottery Shard" },
+        { "pottery_shard_skull", "Skull Pottery Shard" },
+        { "pufferfish_bucket", "Bucket of Pufferfish" },
+        { "purple_candle_cake", "Cake with Purple Candle" },
+        { "quartz", "Nether Quartz" },
+        { "quartz_block", "Block of Quartz" },
+        { "rabbit", "Raw Rabbit" },
+        { "rabbit_foot", "Rabbit's Foot" },
+        { "raw_copper_block", "Block of Raw Copper" },
+        { "raw_gold_block", "Block of Raw Gold" },
+        { "raw_iron_block", "Block of Raw Iron" },
+        { "red_candle_cake", "Cake with Red Candle" },
+        { "redstone", "Redstone Dust" },
+        { "redstone_block", "Block of Redstone" },
+        { "repeater", "Redstone Repeater" },
+        { "salmon", "Raw Salmon" },
+        { "salmon_bucket", "Bucket of Salmon" },
+        { "set_spawn", "Respawn point set" },
+        { "slime_ball", "Slimeball" },
+        { "smooth_quartz", "Smooth Quartz Block" },
+        { "spawner", "Monster Spawner" },
+        { "spruce_chest_boat", "Spruce Boat with Chest" },
+        { "stripped_bamboo_block", "Block of Stripped Bamboo" },
+        { "tadpole_bucket", "Bucket of Tadpole" },
+        { "tnt_minecart", "Minecart with TNT" },
+        { "tropical_fish_bucket", "Bucket of Tropical Fish" },
+        { "turtle_helmet", "Turtle Shell" },
+        { "vine", "Vines" },
+        { "waxed_copper_block", "Waxed Block of Copper" },
+        { "wheat", "Wheat Crops" },
+        { "white_candle_cake", "Cake with White Candle" },
+        { "writable_book", "Book and Quill" },
+        { "yellow_candle_cake", "Cake with Yellow Candle" }
+    };
+}
+
+std::string RecipeBook::vanillaIdOf(StackId id)
+{
+    const char* shown = displayName(id);
+    if (shown)
+        for (const VanillaName& entry : VANILLA_NAMES)
+            if (std::strcmp(entry.name, shown) == 0) return entry.id;
+    return idOf(id);
+}
+
+StackId RecipeBook::stackForVanillaId(const std::string& id)
+{
+    for (const VanillaName& entry : VANILLA_NAMES)
+        if (id == entry.id)
+        {
+            for (int block = 1; isBlockId(block); block = nextBlockId(block))
+                if (displayName(static_cast<StackId>(block)) && std::strcmp(displayName(static_cast<StackId>(block)), entry.name) == 0)
+                    return static_cast<StackId>(block);
+            for (StackId item = Items::FIRST; item < Items::Count; ++item)
+                if (displayName(item) && std::strcmp(displayName(item), entry.name) == 0) return item;
+        }
+    return Blocks::Air;
 }
 
 std::string RecipeBook::idOf(StackId id)
@@ -395,6 +526,7 @@ StackId RecipeBook::stackNamed(const std::string& id)
     }();
     const auto found = NAMES.find(id);
     if (found != NAMES.end()) return found->second;
+    if (const StackId named = stackForVanillaId(id); named != Blocks::Air) return named;
     const std::string tail = "_smithing_template";
     if (id.size() > tail.size() && id.compare(id.size() - tail.size(), tail.size(), tail) == 0)
         return stackNamed(id.substr(0, id.size() - tail.size()));

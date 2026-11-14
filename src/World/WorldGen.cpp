@@ -370,12 +370,8 @@ int WorldGen::placedReach(Placed kind)
 {
     switch (kind)
     {
-        case Placed::Fortress: return 4;
-        case Placed::Village: return 3;
-        case Placed::WoodlandMansion:
-        case Placed::AncientCity:
+        case Placed::Fortress:
         case Placed::Bastion:
-        case Placed::Monument:
         case Placed::EndCity: return 3;
         case Placed::BuriedTreasure: return 0;
         default: return 2;

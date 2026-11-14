@@ -1,4 +1,5 @@
 #include "Chat.h"
+#include "RecipeBook.h"
 #include "World/Biomes.h"
 #include "Effects.h"
 #include "GameMode.h"
@@ -61,10 +62,11 @@ namespace
                 std::string spaced = lower(displayName(stack));
                 if (spaced == target) return stack;
             }
+        if (const StackId vanilla = RecipeBook::stackForVanillaId(target); vanilla != Blocks::Air) return vanilla;
         const std::string suffix = "_block";
         if (target.size() > suffix.size() && target.compare(target.size() - suffix.size(), suffix.size(), suffix) == 0)
-            return lookUp("block_of_" + target.substr(0, target.size() - suffix.size()));
-        return Blocks::Air;
+            if (const StackId block = lookUp("block_of_" + target.substr(0, target.size() - suffix.size())); block != Blocks::Air) return block;
+        return RecipeBook::stackNamed(target);
     }
 
     bool coordinate(const std::string& text, float base, float& out)

@@ -33,6 +33,8 @@ namespace RecipeBook
     std::vector<StackId> tabIcons(Book book, Group group);
     char mojangGroup(const std::string& id);
     std::string idOf(StackId id);
+    std::string vanillaIdOf(StackId id);
+    StackId stackForVanillaId(const std::string& id);
     StackId stackNamed(const std::string& id);
     Group craftingGroup(StackId result);
     Group cookingGroup(Book book, StackId result);

@@ -794,21 +794,267 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
         return true;
     }
 
+    if (name == "data" && arg(1) == "block" && m_world && (arg(0) == "get" || arg(0) == "merge" || arg(0) == "modify"))
+    {
+        glm::vec3 at;
+        if (args.size() < 5 || !coordinateNear(arg(2), origin.x, at.x) || !coordinateNear(arg(3), origin.y, at.y) || !coordinateNear(arg(4), origin.z, at.z))
+        {
+            output = "/data get|merge|modify block <x> <y> <z> ...";
+            return false;
+        }
+        const glm::ivec3 cell(glm::floor(at));
+        const BlockId block = m_world->getBlock(cell.x, cell.y, cell.z);
+        const std::array<int, 4> key{ static_cast<int>(m_dimension), cell.x, cell.y, cell.z };
+        const bool holds = isContainerBlock(block) || isItemHolder(block);
+        const bool sign = isSign(block);
+        const bool command = isCommandBlock(block);
+        const bool cage = isMonsterSpawner(block);
+        const std::string where = std::to_string(cell.x) + ", " + std::to_string(cell.y) + ", " + std::to_string(cell.z);
+        if (!holds && !sign && !command && !cage && arg(0) != "get")
+        {
+            output = "The target block is not a block entity";
+            return false;
+        }
+        auto quoted = [](const std::string& text) {
+            std::string out = "\"";
+            for (char c : text)
+            {
+                if (c == '"' || c == '\\') out += '\\';
+                out += c;
+            }
+            return out + "\"";
+        };
+        auto unquote = [](std::string text) {
+            while (!text.empty() && text.front() == ' ') text.erase(text.begin());
+            while (!text.empty() && text.back() == ' ') text.pop_back();
+            if (text.size() >= 2 && (text.front() == '"' || text.front() == '\'') && text.back() == text.front())
+            {
+                std::string out;
+                for (size_t k = 1; k + 1 < text.size(); ++k)
+                {
+                    if (text[k] == '\\' && k + 2 < text.size()) ++k;
+                    out += text[k];
+                }
+                return out;
+            }
+            return text;
+        };
+        auto split = [](const std::string& body, bool pairs) {
+            std::vector<std::pair<std::string, std::string>> out;
+            size_t k = 0;
+            while (k < body.size())
+            {
+                while (k < body.size() && (body[k] == ' ' || body[k] == ',')) ++k;
+                if (k >= body.size()) break;
+                std::string keyPart;
+                size_t v = k;
+                if (pairs)
+                {
+                    size_t colon = k;
+                    char quote = 0;
+                    while (colon < body.size() && (quote || body[colon] != ':'))
+                    {
+                        if (quote) { if (body[colon] == quote) quote = 0; }
+                        else if (body[colon] == '"' || body[colon] == '\'') quote = body[colon];
+                        ++colon;
+                    }
+                    if (colon >= body.size()) break;
+                    keyPart = body.substr(k, colon - k);
+                    while (!keyPart.empty() && keyPart.back() == ' ') keyPart.pop_back();
+                    if (keyPart.size() >= 2 && keyPart.front() == '"' && keyPart.back() == '"') keyPart = keyPart.substr(1, keyPart.size() - 2);
+                    v = colon + 1;
+                    while (v < body.size() && body[v] == ' ') ++v;
+                }
+                size_t end = v;
+                int depth = 0;
+                char quote = 0;
+                while (end < body.size())
+                {
+                    const char c = body[end];
+                    if (quote) { if (c == '\\') ++end; else if (c == quote) quote = 0; }
+                    else if (c == '\'' || c == '"') quote = c;
+                    else if (c == '[' || c == '{') ++depth;
+                    else if (c == ']' || c == '}') --depth;
+                    else if (c == ',' && depth == 0) break;
+                    ++end;
+                }
+                std::string value = body.substr(v, std::min(end, body.size()) - v);
+                while (!value.empty() && value.back() == ' ') value.pop_back();
+                out.push_back({ keyPart, value });
+                k = end + 1;
+            }
+            return out;
+        };
+        auto inner = [](const std::string& text, char open, char close) {
+            const size_t a = text.find(open);
+            const size_t b = text.rfind(close);
+            return a == std::string::npos || b == std::string::npos || b <= a ? std::string() : text.substr(a + 1, b - a - 1);
+        };
+        auto number = [](std::string value) {
+            while (!value.empty() && std::isalpha(static_cast<unsigned char>(value.back()))) value.pop_back();
+            try { return std::stoi(value); } catch (...) { return 0; }
+        };
+        auto fullId = [](StackId id) {
+            const std::string bare = RecipeBook::vanillaIdOf(id);
+            return bare.find(':') == std::string::npos ? "minecraft:" + bare : bare;
+        };
+        auto describe = [&]() {
+            std::string text = "{x: " + std::to_string(cell.x) + ", y: " + std::to_string(cell.y) + ", z: " + std::to_string(cell.z) +
+                               ", id: \"" + fullId(static_cast<StackId>(block)) + "\"";
+            if (holds)
+            {
+                text += ", Items: [";
+                bool first = true;
+                if (m_chests.has(cell))
+                {
+                    const Chests::Contents& inside = m_chests.at(cell);
+                    for (int slot = 0; slot < Chests::SLOTS; ++slot)
+                    {
+                        if (inside[static_cast<size_t>(slot)].empty()) continue;
+                        const ItemStack& stack = inside[static_cast<size_t>(slot)];
+                        text += std::string(first ? "" : ", ") + "{Slot: " + std::to_string(slot) + "b, id: \"" + fullId(stack.id) + "\", count: " + std::to_string(stack.count) + "}";
+                        first = false;
+                    }
+                }
+                text += "]";
+            }
+            if (sign)
+            {
+                const Signs::Text* lines = m_signs.find(cell);
+                text += ", front_text: {messages: [";
+                for (int line = 0; line < Signs::LINES; ++line)
+                    text += std::string(line ? ", " : "") + "'" + quoted(lines ? (*lines)[static_cast<size_t>(line)] : std::string()) + "'";
+                text += "], has_glowing_text: " + std::string(m_signs.look(cell).glow ? "1b" : "0b") + "}";
+            }
+            if (command)
+            {
+                const auto found = m_commands.find(key);
+                const CommandState state = found == m_commands.end() ? CommandState{} : found->second;
+                text += ", Command: " + quoted(state.command) + ", auto: " + (state.alwaysActive ? "1b" : "0b") + ", SuccessCount: " + (state.success ? "1" : "0") +
+                        ", LastOutput: '" + quoted(state.output) + "'";
+            }
+            if (cage)
+            {
+                const auto found = m_cageKinds.find(key);
+                const int kind = found == m_cageKinds.end() ? -1 : found->second;
+                text += ", SpawnData: {entity: {id: \"minecraft:" + (kind >= 0 ? entityId(static_cast<MobId>(kind)) : std::string("pig")) + "\"}}";
+            }
+            return text + "}";
+        };
+        if (arg(0) == "get")
+        {
+            const std::string all = describe();
+            const std::string path = arg(5);
+            if (path.empty())
+            {
+                output = where + " has the following block data: " + all;
+                return true;
+            }
+            for (const auto& [name, value] : split(all.substr(1, all.size() - 2), true))
+                if (name == path)
+                {
+                    output = where + " has the following block data: " + value;
+                    return true;
+                }
+            output = "Found no elements matching " + path;
+            return false;
+        }
+        std::vector<std::pair<std::string, std::string>> tags;
+        if (arg(0) == "modify")
+        {
+            if (arg(6) != "set" || arg(7) != "value")
+            {
+                output = "/data modify block <x> <y> <z> <path> set value <value>";
+                return false;
+            }
+            std::string value;
+            for (size_t k = 8; k < args.size(); ++k) value += (k > 8 ? " " : "") + args[k];
+            tags.push_back({ arg(5), value });
+        }
+        else
+        {
+            std::string body;
+            for (size_t k = 5; k < args.size(); ++k) body += (k > 5 ? " " : "") + args[k];
+            if (body.size() < 2 || body.front() != '{' || body.back() != '}')
+            {
+                output = "Expected a compound tag like {Command:\"say hi\"}";
+                return false;
+            }
+            tags = split(body.substr(1, body.size() - 2), true);
+        }
+        const std::string before = describe();
+        for (const auto& [tag, value] : tags)
+        {
+            if (tag == "Items" && holds)
+            {
+                Chests::Contents fresh{};
+                for (const auto& entry : split(inner(value, '[', ']'), false))
+                {
+                    int slot = -1, count = 1;
+                    StackId id = Blocks::Air;
+                    for (const auto& [field, fieldValue] : split(inner(entry.second, '{', '}'), true))
+                    {
+                        if (field == "Slot") slot = number(fieldValue);
+                        else if (field == "count" || field == "Count") count = number(fieldValue);
+                        else if (field == "id") id = Chat::parse("/give " + unquote(fieldValue), true).item;
+                    }
+                    if (slot < 0 || slot >= Chests::SLOTS || id == Blocks::Air || count <= 0) continue;
+                    fresh[static_cast<size_t>(slot)] = ItemStack{ id, std::min(count, maxStackOf(id)), 0, 0 };
+                }
+                m_chests.at(cell) = fresh;
+            }
+            else if (tag == "Command" && command) m_commands[key].command = unquote(value);
+            else if (tag == "auto" && command) m_commands[key].alwaysActive = !value.empty() && value[0] != '0' && value != "false";
+            else if ((tag == "front_text" || tag == "front_text.messages") && sign)
+            {
+                const std::string list = tag == "front_text" ? [&]() {
+                    for (const auto& [field, fieldValue] : split(inner(value, '{', '}'), true))
+                        if (field == "messages") return fieldValue;
+                    return std::string();
+                }() : value;
+                Signs::Text& lines = m_signs.at(cell);
+                int line = 0;
+                for (const auto& entry : split(inner(list, '[', ']'), false))
+                {
+                    if (line >= Signs::LINES) break;
+                    const std::string json = unquote(entry.second);
+                    std::string plain;
+                    lines[static_cast<size_t>(line++)] = Chat::textComponent(json, plain) ? plain : json;
+                }
+            }
+            else if ((tag == "SpawnData" || tag == "SpawnData.entity.id") && cage)
+            {
+                std::string id = value;
+                if (tag == "SpawnData")
+                {
+                    const size_t mark = value.find("id");
+                    if (mark == std::string::npos) continue;
+                    const size_t colon = value.find(':', mark);
+                    size_t end = colon + 1;
+                    while (end < value.size() && value[end] != ',' && value[end] != '}') ++end;
+                    id = value.substr(colon + 1, end - colon - 1);
+                }
+                id = unquote(id);
+                if (id.rfind("minecraft:", 0) == 0) id = id.substr(10);
+                const int mob = Chat::parse("/summon " + id, true).mob;
+                if (mob >= 0) m_cageKinds[key] = mob;
+            }
+        }
+        if (describe() == before)
+        {
+            output = "Nothing changed. The specified properties already have these values";
+            return false;
+        }
+        output = "Modified block data of " + where;
+        return true;
+    }
+
     if (name == "data")
     {
         if (arg(0) != "get")
         {
-            output = "Only /data get, and /data merge or modify on mobs, are supported: blocks keep no NBT here";
+            output = "Only /data get, and /data merge or modify on mobs and blocks, are supported";
             return false;
-        }
-        if (arg(1) == "block" && args.size() >= 5 && m_world)
-        {
-            glm::vec3 at;
-            if (!coordinateNear(arg(2), origin.x, at.x) || !coordinateNear(arg(3), origin.y, at.y) || !coordinateNear(arg(4), origin.z, at.z)) return false;
-            const BlockId block = m_world->getBlock(static_cast<int>(std::floor(at.x)), static_cast<int>(std::floor(at.y)), static_cast<int>(std::floor(at.z)));
-            output = std::to_string(static_cast<int>(std::floor(at.x))) + ", " + std::to_string(static_cast<int>(std::floor(at.y))) + ", " +
-                     std::to_string(static_cast<int>(std::floor(at.z))) + " has the following block data: {id: \"" + RecipeBook::idOf(static_cast<StackId>(block)) + "\"}";
-            return true;
         }
         if (arg(1) == "entity")
         {

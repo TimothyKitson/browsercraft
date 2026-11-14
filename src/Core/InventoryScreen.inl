@@ -2929,7 +2929,7 @@ void Application::finishInventoryScreen()
                                                  stack.id == Items::FishingRod || stack.id == Items::FlintAndSteel || stack.id == Items::Shears
                                              ? Anvil::maxDurability(stack.id) : 0;
                         if (most > 0) tip += "\nDurability: " + std::to_string(std::max(0, most - stack.damage)) + " / " + std::to_string(most);
-                        tip += "\n\u00a78minecraft:" + RecipeBook::idOf(stack.id);
+                        tip += "\n\u00a78minecraft:" + RecipeBook::vanillaIdOf(stack.id);
                     }
                 }
                 if (stack.id == Items::Bundle) tipBundle = &stack;
