@@ -36,12 +36,12 @@ namespace
 
 namespace
 {
-    constexpr float WALK_SPEED = 4.3f;
-    constexpr float SPRINT_SPEED = 5.9f;
-    constexpr float SNEAK_SPEED = 1.4f;
+    constexpr float WALK_SPEED = 4.317f;
+    constexpr float SPRINT_SPEED = 5.612f;
+    constexpr float SNEAK_SPEED = 1.295f;
     constexpr float SWIM_SPEED = 2.6f;
-    constexpr float FLY_SPEED = 11.0f;
-    constexpr float FLY_SPRINT_SPEED = 24.0f;
+    constexpr float FLY_SPEED = 10.92f;
+    constexpr float FLY_SPRINT_SPEED = 21.84f;
 
     constexpr float GRAVITY = -30.0f;
     constexpr float WATER_GRAVITY = -5.0f;
@@ -990,6 +990,11 @@ void Player::update(float deltaTime, const World& world, const Controls& control
             if (world.getBlock(static_cast<int>(std::floor(position.x)), static_cast<int>(std::floor(position.y - 0.1f)),
                                static_cast<int>(std::floor(position.z))) == Blocks::HoneyBlock)
                 velocity.y *= 0.5f;
+            if (sprinting)
+            {
+                const glm::vec3 facing(controls.look.x, 0.0f, controls.look.z);
+                if (glm::length(facing) > 0.001f) velocity += glm::normalize(facing) * 4.0f;
+            }
             m_jumped = true;
             m_falling = true;
             m_fallStartY = position.y;
