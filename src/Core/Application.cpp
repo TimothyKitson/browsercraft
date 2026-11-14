@@ -9024,7 +9024,13 @@ bool Application::frame()
     if (m_cheatAuditPending && m_world && m_worldReady)
     {
         m_readySeconds += deltaTime;
-        if (m_readySeconds > 2.0f)
+        bool loaded = true;
+        const int homeX = static_cast<int>(std::floor(m_player.position.x / 16.0f));
+        const int homeZ = static_cast<int>(std::floor(m_player.position.z / 16.0f));
+        for (int dz = -6; dz <= 6 && loaded; ++dz)
+            for (int dx = -6; dx <= 6 && loaded; ++dx)
+                if (dx * dx + dz * dz <= 36) loaded = m_world->chunkAt(homeX + dx, homeZ + dz) != nullptr;
+        if (m_readySeconds > 2.0f && (loaded || m_readySeconds > 90.0f))
         {
             m_cheatAuditPending = false;
             runCheatAudit();
@@ -30874,22 +30880,32 @@ std::string Application::deathMessageFor() const
 void Application::runCheatAudit()
 {
     int passed = 0, failed = 0;
-    for (const auto& [pos, chunk] : m_world->chunks())
+    const glm::vec3 loadedMiddle = m_player.position;
     {
-        if (chunk->state.load() != ChunkState::Lit) continue;
-        bool ringed = true;
-        for (int dx = -1; dx <= 1 && ringed; ++dx)
-            for (int dz = -1; dz <= 1 && ringed; ++dz)
-            {
-                const Chunk* near = m_world->chunkAt(pos.x + dx, pos.z + dz);
-                ringed = near && near->state.load() == ChunkState::Lit;
-            }
-        if (!ringed) continue;
-        const int x = pos.x * Chunk::SX + 8, z = pos.z * Chunk::SZ + 8;
-        m_player.position = glm::vec3(x + 0.5f, static_cast<float>(m_world->generator().surfaceHeight(x, z) + 1), z + 0.5f);
+        const glm::vec3 start = m_player.position;
+        float best = -1.0f;
+        glm::vec3 chosen = start;
+        for (const auto& [pos, chunk] : m_world->chunks())
+        {
+            if (chunk->state.load() != ChunkState::Lit) continue;
+            bool ringed = true;
+            for (int dx = -1; dx <= 1 && ringed; ++dx)
+                for (int dz = -1; dz <= 1 && ringed; ++dz)
+                {
+                    const Chunk* near = m_world->chunkAt(pos.x + dx, pos.z + dz);
+                    ringed = near && near->state.load() == ChunkState::Lit;
+                }
+            if (!ringed) continue;
+            const int x = pos.x * Chunk::SX + 8, z = pos.z * Chunk::SZ + 8;
+            const float away = glm::length(glm::vec2(static_cast<float>(x) - start.x, static_cast<float>(z) - start.z));
+            if (best >= 0.0f && away >= best) continue;
+            best = away;
+            chosen = glm::vec3(x + 0.5f, static_cast<float>(m_world->generator().surfaceHeight(x, z) + 1), z + 0.5f);
+        }
+        m_player.position = chosen;
         m_player.velocity = glm::vec3(0.0f);
-        break;
     }
+    const glm::vec3 auditHome = m_player.position;
     auto report = [&](bool ok, const std::string& what, const std::string& said) {
         std::printf("%s  %s%s%s\n", ok ? "PASS" : "FAIL", what.c_str(), said.empty() ? "" : "  -> ", said.c_str());
         ok ? ++passed : ++failed;
@@ -31093,6 +31109,8 @@ void Application::runCheatAudit()
         report(cow && !cow->alive(), "/kill still kills an invulnerable mob", std::string());
     }
     {
+        m_player.position = auditHome;
+        m_player.velocity = glm::vec3(0.0f);
         const glm::vec3 spot = m_player.position + glm::vec3(0.0f, 0.0f, 40.0f);
         const auto [placed, placeSaid] = run("/place structure minecraft:desert_pyramid ~ ~ ~40");
         const WorldGen& gen = m_world->generator();
@@ -31182,6 +31200,13 @@ void Application::runCheatAudit()
                        m_inventory.countOf(static_cast<StackId>(Items::EyeOfEnder)) == eyes + 1 &&
                        RecipeBook::vanillaIdOf(static_cast<StackId>(Items::Steak)) == "cooked_beef",
                    "commands take Minecraft's own ids where the name differs", beefSaid + " / " + eyeSaid);
+        }
+        {
+            const auto [shaft, shaftSaid] = run("/place structure mineshaft " + std::to_string(static_cast<int>(loadedMiddle.x)) + " " +
+                                                std::to_string(static_cast<int>(loadedMiddle.y)) + " " + std::to_string(static_cast<int>(loadedMiddle.z)));
+            const auto [hold, holdSaid] = run("/place structure stronghold ~ ~ ~");
+            const auto [chamber, chamberSaid] = run("/place structure trial_chambers ~ ~ ~");
+            report(shaft && hold && chamber, "/place structure builds mineshafts, strongholds and trial chambers", shaftSaid + " / " + holdSaid + " / " + chamberSaid);
         }
         const auto [unknown, unknownSaid] = run("/place structure minecraft:nowhere");
         report(!unknown && unknownSaid.find("There is no structure") != std::string::npos, "/place structure names unknown structures", unknownSaid);

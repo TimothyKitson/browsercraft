@@ -413,6 +413,9 @@ public:
         TrailRuins,
         BuriedTreasure,
         Village,
+        Mineshaft,
+        Stronghold,
+        TrialChambers,
         Count
     };
     struct PlacedStart
@@ -505,6 +508,8 @@ private:
     mutable std::shared_ptr<const std::vector<PlacedStart>> m_placedStarts;
     static thread_local const PlacedStart* s_solo;
     static Structures::Spot soloSpot(Placed kind);
+    Stronghold::Site soloStronghold() const;
+    TrialChamber::Site soloChamber() const;
     Hoard hoardIn(int x, int y, int z) const;
     bool forcedCell(Dimension dimension, int worldX, int y, int worldZ, Biomes::Kind& out) const;
     bool forcedColumn(Dimension dimension, int worldX, int worldZ, Biomes::Kind& out) const;

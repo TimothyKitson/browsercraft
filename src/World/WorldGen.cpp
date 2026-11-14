@@ -344,6 +344,10 @@ namespace
         { "village_savanna", WorldGen::Placed::Village, 2 },
         { "village_snowy", WorldGen::Placed::Village, 3 },
         { "village_taiga", WorldGen::Placed::Village, 4 },
+        { "mineshaft", WorldGen::Placed::Mineshaft, 0 },
+        { "mineshaft_mesa", WorldGen::Placed::Mineshaft, 1 },
+        { "stronghold", WorldGen::Placed::Stronghold, 0 },
+        { "trial_chambers", WorldGen::Placed::TrialChambers, 0 },
     };
 }
 
@@ -373,6 +377,7 @@ int WorldGen::placedReach(Placed kind)
         case Placed::Fortress:
         case Placed::Bastion:
         case Placed::EndCity: return 3;
+        case Placed::Mineshaft: return 5;
         case Placed::BuriedTreasure: return 0;
         default: return 2;
     }
@@ -404,6 +409,30 @@ std::vector<WorldGen::PlacedStart> WorldGen::placedNear(int blockX, int blockZ, 
         if (std::abs(midX - blockX) <= reachBlocks && std::abs(midZ - blockZ) <= reachBlocks) out.push_back(start);
     }
     return out;
+}
+
+Stronghold::Site WorldGen::soloStronghold() const
+{
+    Stronghold::Site site;
+    if (!s_solo || s_solo->kind != Placed::Stronghold) return site;
+    site = Stronghold::nearest(s_solo->chunkX * Structures::CHUNK + Structures::CHUNK / 2, s_solo->chunkZ * Structures::CHUNK + Structures::CHUNK / 2, m_seed);
+    site.exists = true;
+    site.x = s_solo->chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+    site.z = s_solo->chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+    return site;
+}
+
+TrialChamber::Site WorldGen::soloChamber() const
+{
+    TrialChamber::Site site;
+    if (!s_solo || s_solo->kind != Placed::TrialChambers) return site;
+    const int x = s_solo->chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+    const int z = s_solo->chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+    site = TrialChamber::siteFor(TrialChamber::regionOf(x), TrialChamber::regionOf(z), m_seed);
+    site.exists = true;
+    site.x = x;
+    site.z = z;
+    return site;
 }
 
 bool WorldGen::placedVillageAt(int blockX, int blockZ, Village::Site& site) const
@@ -454,6 +483,9 @@ bool WorldGen::stampPlaced(Chunk& chunk, const PlacedStart& start) const
         case Placed::TrailRuins: buildTrailRuins(chunk); return true;
         case Placed::BuriedTreasure: stampBuriedTreasure(chunk, start.chunkX, start.chunkZ); return true;
         case Placed::Village: buildVillages(chunk); return true;
+        case Placed::Mineshaft: buildMineshafts(chunk); return true;
+        case Placed::Stronghold: buildStrongholds(chunk); return true;
+        case Placed::TrialChambers: buildTrialChambers(chunk); return true;
         case Placed::Count: break;
     }
     return false;
@@ -2759,7 +2791,8 @@ void WorldGen::buildTrialChambers(Chunk& chunk) const
     for (int rz = firstZ; rz <= lastZ; ++rz)
         for (int rx = firstX; rx <= lastX; ++rx)
         {
-            const TrialChamber::Site site = TrialChamber::siteFor(rx, rz, m_seed);
+            if (s_solo && (rx != firstX || rz != firstZ)) continue;
+            const TrialChamber::Site site = s_solo ? soloChamber() : TrialChamber::siteFor(rx, rz, m_seed);
             if (!TrialChamber::reaches(site, baseX - 1, baseZ - 1, maxX + 1, maxZ + 1))
                 continue;
 
@@ -4168,13 +4201,13 @@ void WorldGen::buildTrailRuins(Chunk& chunk) const
 // first rails anybody sees come from.
 bool WorldGen::mineshaftPlan(int chunkX, int chunkZ, ShaftPlan& out) const
 {
-    if (s_solo) return false;
-    if (!Structures::spreadAt(chunkX, chunkZ, m_seed, MINESHAFT_SALT, MINESHAFT_CHANCE)) return false;
+    if (s_solo && (s_solo->kind != Placed::Mineshaft || s_solo->chunkX != chunkX || s_solo->chunkZ != chunkZ)) return false;
+    if (!s_solo && !Structures::spreadAt(chunkX, chunkZ, m_seed, MINESHAFT_SALT, MINESHAFT_CHANCE)) return false;
     out = ShaftPlan{};
     const int y = MINESHAFT_MIN +
         static_cast<int>(hashToFloat(hashCoords(chunkX, 23, chunkZ, m_seed + MINESHAFT_SALT)) * static_cast<float>(MINESHAFT_MAX - MINESHAFT_MIN));
     out.origin = glm::ivec3(chunkX * Chunk::SX + Chunk::SX / 2, y, chunkZ * Chunk::SZ + Chunk::SZ / 2);
-    out.mesa = biomeAt(out.origin.x, out.origin.z) == Biome::Badlands;
+    out.mesa = s_solo ? s_solo->style == 1 : biomeAt(out.origin.x, out.origin.z) == Biome::Badlands;
     uint32_t h = hashCoords(chunkX, 27, chunkZ, m_seed + MINESHAFT_SALT) | 1u;
     auto next = [&h]() {
         h ^= h << 13;
@@ -4564,7 +4597,7 @@ void WorldGen::buildStrongholds(Chunk& chunk) const
     const int maxZ = baseZ + Chunk::SZ - 1;
 
     const Stronghold::Site site =
-        Stronghold::touching(baseX - 1, baseZ - 1, maxX + 1, maxZ + 1, m_seed);
+        s_solo ? soloStronghold() : Stronghold::touching(baseX - 1, baseZ - 1, maxX + 1, maxZ + 1, m_seed);
     if (!site.exists) return;
 
     for (const Stronghold::Room& room : Stronghold::plan(site, m_seed))
@@ -6768,7 +6801,7 @@ WorldGen::Hoard WorldGen::hoardIn(int x, int y, int z) const
     }
 
     {
-        const Stronghold::Site site = Stronghold::touching(x, z, x, z, m_seed);
+        const Stronghold::Site site = s_solo ? soloStronghold() : Stronghold::touching(x, z, x, z, m_seed);
         if (site.exists)
             for (const Stronghold::Room& room : Stronghold::plan(site, m_seed))
             {
@@ -6781,7 +6814,7 @@ WorldGen::Hoard WorldGen::hoardIn(int x, int y, int z) const
     // A trial chamber's supply room.
     {
         const TrialChamber::Site site =
-            TrialChamber::siteFor(TrialChamber::regionOf(x), TrialChamber::regionOf(z), m_seed);
+            s_solo ? soloChamber() : TrialChamber::siteFor(TrialChamber::regionOf(x), TrialChamber::regionOf(z), m_seed);
         TrialChamber::Room room;
         if (site.exists && y == site.y && TrialChamber::roomAt(site, m_seed, x, z, room) &&
             room.kind == TrialChamber::Kind::Supply &&
