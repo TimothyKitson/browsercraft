@@ -45,6 +45,7 @@ namespace Hopper
     // whether it went. Stacks onto a matching slot first, which is
     // what stops a chest filling with single-item piles.
     bool give(ItemStack* into, int count, StackId id);
+    bool give(ItemStack* into, int count, const ItemStack& one);
 
     // Takes one item out of the first slot holding anything, and says
     // what it was. Air if there was nothing.

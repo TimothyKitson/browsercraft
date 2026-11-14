@@ -97,10 +97,7 @@ StackId Anvil::repairMaterial(StackId item)
 
 int Anvil::maxDurability(StackId item)
 {
-    if (item == Items::Shield) return Shield::MAX_DURABILITY;
-    if (Tools::isTool(item)) return Tools::maxDurability(Tools::tierOf(item));
-    if (Armour::tierOf(item) != Armour::Tier::None || item == Items::TurtleHelmet || item == Items::Elytra) return Armour::maxDurability(item);
-    return 0;
+    return itemDurability(item);
 }
 
 Anvil::Result Anvil::combine(const Input& left, const Input& right)

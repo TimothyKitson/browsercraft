@@ -1,4 +1,6 @@
 #include "Items.h"
+#include "Armour.h"
+#include "Tools.h"
 #include <algorithm>
 
 // Blocks and items share one number line: everything below
@@ -125,7 +127,7 @@ namespace
         { "Raw Copper",      Tiles::ItemRawCopper,      64 },
         { "Copper Ingot",    Tiles::ItemCopperIngot,    64 },
         { "Glow Berries",    Tiles::ItemGlowBerries,    64 },
-        { "Ominous Bottle",  Tiles::ItemOminousBottle,   1 },
+        { "Ominous Bottle",  Tiles::ItemOminousBottle,   64 },
         { "Ominous Trial Key", Tiles::ItemOminousKey,    64 },
         { "Apple",           Tiles::ItemApple,         64 },
         { "Bone Meal",       Tiles::ItemBoneMeal,      64 },
@@ -169,7 +171,7 @@ namespace
         { "Ink Sac",         Tiles::ItemInkSac,        64 },
         { "Netherite Scrap", Tiles::ItemNetheriteScrap, 64 },
         { "Netherite Ingot", Tiles::ItemNetheriteIngot, 64 },
-        { "Nether Star",     Tiles::ItemNetherStar,     1 },
+        { "Nether Star",     Tiles::ItemNetherStar,     64 },
         { "Netherite Pickaxe",  Tiles::ItemNetheriteFirst + 0, 1 },
         { "Netherite Axe",      Tiles::ItemNetheriteFirst + 1, 1 },
         { "Netherite Shovel",   Tiles::ItemNetheriteFirst + 2, 1 },
@@ -273,7 +275,7 @@ namespace
         { "Snort Pottery Sherd", Tiles::ItemSherdFirst + 22, 64 },
         { "Compass", Tiles::ItemCompass, 64 },
         { "Empty Map", Tiles::ItemEmptyMap, 64 },
-        { "Map", Tiles::ItemFilledMap, 1 },
+        { "Map", Tiles::ItemFilledMap, 64 },
         { "Flower Charge Banner Pattern", Tiles::ItemBannerPatternFirst + 0, 1 },
         { "Skull Charge Banner Pattern", Tiles::ItemBannerPatternFirst + 1, 1 },
         { "Globe Banner Pattern", Tiles::ItemBannerPatternFirst + 2, 1 },
@@ -501,8 +503,8 @@ int atlasTileFor(StackId id)
 
 int maxStackOf(StackId id)
 {
-    if (isDecoratedPot(asBlock(id)) && !isItem(id)) return 1;
     if (isShulkerBox(asBlock(id)) && !isItem(id)) return 1;
+    if ((isSign(asBlock(id)) || isHangingSign(asBlock(id)) || isCake(asBlock(id))) && !isItem(id)) return isCake(asBlock(id)) ? 1 : 16;
     if (isBed(asBlock(id)) && !isItem(id)) return 1;
     if (isBanner(asBlock(id)) && !isItem(id)) return 16;
     return isItem(id) ? itemInfo(id).maxStack : 64;
@@ -729,6 +731,14 @@ int itemDurability(StackId id)
         case Items::Crossbow: return 465;
         case Items::Trident: return 250;
         case Items::WolfArmor: return 64;
-        default: return 0;
+        case Items::Bow: return 384;
+        case Items::Shears: return 238;
+        case Items::FlintAndSteel: return 64;
+        case Items::Brush: return 64;
+        case Items::Mace: return 500;
+        case Items::Shield: return 336;
+        default: break;
     }
+    if (Tools::tierOf(id) != Tools::Tier::None) return Tools::maxDurability(Tools::tierOf(id));
+    return Armour::maxDurability(id);
 }

@@ -559,6 +559,27 @@ namespace
         return 0;
     }
 
+    int printStackAudit(const char* path)
+    {
+        std::ifstream in(path);
+        if (!in) return 1;
+        std::string id, tool, armour;
+        int count = 0, damage = 0, checked = 0, off = 0;
+        while (in >> id >> count >> damage >> tool >> armour)
+        {
+            const StackId stack = RecipeBook::stackNamed(id);
+            if (stack == Blocks::Air) continue;
+            ++checked;
+            if (maxStackOf(stack) != count)
+            {
+                ++off;
+                std::printf("stack %s %d %d\n", id.c_str(), count, maxStackOf(stack));
+            }
+        }
+        std::printf("%d checked, %d differ\n", checked, off);
+        return 0;
+    }
+
     int printIdAudit(const char* path)
     {
         std::FILE* list = std::fopen(path, "r");
@@ -1697,6 +1718,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--hardnessaudit") == 0 && i + 1 < argc)
         {
             return printHardnessAudit(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--stackaudit") == 0 && i + 1 < argc)
+        {
+            return printStackAudit(argv[++i]);
         }
         else if (std::strcmp(argv[i], "--idaudit") == 0 && i + 1 < argc)
         {

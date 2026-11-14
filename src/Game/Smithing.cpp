@@ -42,7 +42,7 @@ namespace
 
     int maxWear(StackId id)
     {
-        return Tools::kindOf(id) != Tools::Kind::None ? Tools::maxDurability(Tools::tierOf(id)) : Armour::maxDurability(id);
+        return itemDurability(id);
     }
 }
 

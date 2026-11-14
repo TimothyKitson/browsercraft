@@ -11838,7 +11838,7 @@ void Application::tickHoppers(float deltaTime)
         ItemStack* slots = m_chests.at(glm::ivec3(x, y, z)).data();
         for (ItemStack& lying : m_drops.takeNear(glm::vec3(x + 0.5f, y + 1.1f, z + 0.5f), 0.75f))
         {
-            while (lying.count > 0 && Hopper::give(slots, Hopper::HOPPER_SLOTS, lying.id)) --lying.count;
+            while (lying.count > 0 && Hopper::give(slots, Hopper::HOPPER_SLOTS, lying)) --lying.count;
             if (lying.count > 0) m_drops.spawnStack(glm::vec3(x + 0.5f, y + 1.1f, z + 0.5f), lying);
         }
 
@@ -15095,18 +15095,22 @@ void Application::wearTool(BlockId brokenBlock)
     if (m_player.creative()) return;
 
     ItemStack& stack = m_inventory.selected();
-    if (!Tools::wearsOnBlock(stack.id, brokenBlock)) return;
+    const bool shears = stack.id == Items::Shears && brokenBlock != Blocks::Air && !isFire(brokenBlock);
+    if (!shears && !Tools::wearsOnBlock(stack.id, brokenBlock)) return;
 
-    const int limit = Tools::maxDurability(Tools::tierOf(stack.id));
+    const int limit = itemDurability(stack.id);
     if (limit <= 0) return;
+    const Tools::Kind kind = Tools::kindOf(stack.id);
+    const int points = kind == Tools::Kind::Sword || kind == Tools::Kind::Mace || kind == Tools::Kind::Trident ? 2 : 1;
 
     // Unbreaking does not make the tool tougher, it skips the wear:
     // at level n a point lands about one time in n+1.
     const uint32_t roll = static_cast<uint32_t>(stack.damage * 2654435761u) ^
                           static_cast<uint32_t>(m_elapsedSeconds * 1013.0f);
-    if (!Enchanting::wearsThisTime(stack.enchantments, roll)) return;
+    for (int k = 0; k < points; ++k)
+        if (Enchanting::wearsThisTime(stack.enchantments, roll + static_cast<uint32_t>(k) * 2246822519u)) ++stack.damage;
 
-    if (++stack.damage >= limit)
+    if (stack.damage >= limit)
     {
         statBroke(stack.id);
         stack.clear();
@@ -15124,10 +15128,14 @@ void Application::wearOnSwing(StackId weapon)
     ItemStack& stack = m_inventory.selected();
     if (stack.id != weapon) return;
 
-    const int limit = Tools::maxDurability(Tools::tierOf(weapon));
+    const int limit = itemDurability(weapon);
     if (limit <= 0) return;
 
-    stack.damage += (Tools::kindOf(weapon) == Tools::Kind::Sword) ? 1 : 2;
+    const Tools::Kind kind = Tools::kindOf(weapon);
+    const int points = kind == Tools::Kind::Sword || kind == Tools::Kind::Mace || kind == Tools::Kind::Trident ? 1 : 2;
+    const uint32_t roll = static_cast<uint32_t>(stack.damage * 2654435761u) ^ static_cast<uint32_t>(m_elapsedSeconds * 1013.0f);
+    for (int k = 0; k < points; ++k)
+        if (Enchanting::wearsThisTime(stack.enchantments, roll + static_cast<uint32_t>(k) * 2246822519u)) ++stack.damage;
     if (stack.damage >= limit)
     {
         statBroke(stack.id);
@@ -17075,6 +17083,7 @@ void Application::looseArrow(float drawn)
 
     m_heldItem.swing();
     m_audio.playNamed("random/bow", Sound::Click, 0.5f, 1.0f);
+    wearHeld(Items::Bow, 1);
 }
 
 // Everything an arrow might hit that is not a block. A player's arrow
@@ -18300,7 +18309,7 @@ void Application::handlePlacement()
                 m_drops.spawn(aimed->position() + glm::vec3(0.0f, 0.8f, 0.0f), woolOfColour(aimed->woolColour()), wool);
                 aimed->setWool(aimed->woolColour(), true);
                 m_audio.playNamed("mob/sheep/shear", Sound::DigWool, 0.8f, 1.0f);
-                if (!m_player.creative()) wearOnSwing(Items::Shears);
+                wearHeld(Items::Shears, 1);
                 m_heldItem.swing();
                 return;
             }
@@ -18317,7 +18326,7 @@ void Application::handlePlacement()
                 }
                 aimed->setWool(0, true);
                 m_audio.playNamed("mob/sheep/shear", Sound::DigWool, 0.8f, 1.0f);
-                if (!m_player.creative()) wearOnSwing(Items::Shears);
+                wearHeld(Items::Shears, 1);
                 m_heldItem.swing();
                 return;
             }
@@ -23817,7 +23826,8 @@ void Application::wearHeld(StackId id, int points)
         const uint32_t roll = static_cast<uint32_t>(held.damage * 2654435761u) ^ static_cast<uint32_t>(m_elapsedSeconds * 977.0f + k * 31);
         if (Enchanting::wearsThisTime(held.enchantments, roll)) ++held.damage;
     }
-    if (held.damage >= Fishing::durabilityOf(id))
+    const int limit = itemDurability(id);
+    if (limit > 0 && held.damage >= limit)
     {
         statBroke(id);
         if (id == Items::CarrotOnAStick || id == Items::WarpedFungusOnAStick)
@@ -27198,7 +27208,7 @@ void Application::updateMobs(float deltaTime)
                 const bool sure = death.gearSure[static_cast<size_t>(slot)];
                 if (!sure && (!death.byPlayer || static_cast<float>(roll % 1000u) >= 85.0f + 10.0f * static_cast<float>(looting))) continue;
                 ItemStack stack{ static_cast<StackId>(worn), 1 };
-                const int most = Anvil::maxDurability(stack.id) > 0 ? Anvil::maxDurability(stack.id) : itemDurability(stack.id);
+                const int most = itemDurability(stack.id);
                 if (!sure && most > 1) stack.damage = static_cast<int>((roll >> 10) % static_cast<uint32_t>(most - 1));
                 m_drops.spawnStack(where, stack);
             }

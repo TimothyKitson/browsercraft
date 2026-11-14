@@ -12,12 +12,18 @@ int Hopper::slotsOf(BlockId id)
 
 bool Hopper::give(ItemStack* into, int count, StackId id)
 {
-    if (!into || count <= 0 || id == Blocks::Air) return false;
+    ItemStack one;
+    one.id = id;
+    one.count = 1;
+    return give(into, count, one);
+}
 
-    // Onto a matching stack first. Without this a chest fed by a
-    // hopper fills with twenty-seven piles of one.
+bool Hopper::give(ItemStack* into, int count, const ItemStack& one)
+{
+    if (!into || count <= 0 || one.id == Blocks::Air) return false;
+
     for (int i = 0; i < count; ++i)
-        if (into[i].id == id && into[i].count < maxStackOf(id))
+        if (!into[i].empty() && into[i].sameAs(one) && into[i].count < maxStackOf(one.id))
         {
             into[i].count += 1;
             return true;
@@ -26,7 +32,7 @@ bool Hopper::give(ItemStack* into, int count, StackId id)
     for (int i = 0; i < count; ++i)
         if (into[i].empty())
         {
-            into[i].id = id;
+            into[i] = one;
             into[i].count = 1;
             return true;
         }
@@ -78,7 +84,7 @@ bool Hopper::step(Holder& holder, int x, int y, int z)
         for (int i = 0; i < mine && !moved; ++i)
         {
             if (self[i].empty()) continue;
-            if (!give(below, belowCount, self[i].id)) continue;
+            if (!give(below, belowCount, self[i])) continue;
 
             self[i].count -= 1;
             if (self[i].count <= 0) self[i].clear();
@@ -92,7 +98,7 @@ bool Hopper::step(Holder& holder, int x, int y, int z)
         for (int i = 0; i < aboveCount; ++i)
         {
             if (above[i].empty()) continue;
-            if (!give(self, mine, above[i].id)) break;   // full: stop trying
+            if (!give(self, mine, above[i])) continue;
 
             above[i].count -= 1;
             if (above[i].count <= 0) above[i].clear();

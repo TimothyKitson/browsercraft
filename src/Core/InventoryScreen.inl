@@ -835,8 +835,7 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
         m_ui.quad(x + 2.0f * px, y + 13.0f * px, 13.0f * px, 2.0f * px, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
         m_ui.quad(x + 2.0f * px, y + 13.0f * px, std::max(1.0f, std::round(13.0f * full)) * px, px, glm::vec4(0.4f, 0.4f, 1.0f, 1.0f));
     }
-    int limit = Tools::maxDurability(Tools::tierOf(id));
-    if (limit == 0) limit = Fishing::durabilityOf(id);
+    const int limit = itemDurability(id);
     if (limit > 0 && damage > 0)
     {
         // The client's bar: a black strip 13 by 2 at 2 and 13, and the
@@ -3007,10 +3006,7 @@ void Application::finishInventoryScreen()
                     tip = rarityCode(stack) + stackName(stack) + stackLore(stack);
                     if (m_advancedTooltips)
                     {
-                        const int most = Armour::isArmour(stack.id) || Tools::isTool(stack.id) || stack.id == Items::Trident || stack.id == Items::Shield ||
-                                                 stack.id == Items::Elytra || stack.id == Items::Bow || stack.id == Items::Crossbow ||
-                                                 stack.id == Items::FishingRod || stack.id == Items::FlintAndSteel || stack.id == Items::Shears
-                                             ? Anvil::maxDurability(stack.id) : 0;
+                        const int most = itemDurability(stack.id);
                         if (most > 0) tip += "\nDurability: " + std::to_string(std::max(0, most - stack.damage)) + " / " + std::to_string(most);
                         tip += "\n\u00a78minecraft:" + RecipeBook::vanillaIdOf(stack.id);
                     }

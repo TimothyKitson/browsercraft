@@ -5095,7 +5095,7 @@ namespace
         check(potMade.valid() && potMade.id == Blocks::DecoratedPotFirst + 2 && Archaeology::potSide(potMade.enchantments, 1) == 21 &&
               Archaeology::potSide(potMade.enchantments, 3) == 1 && Archaeology::potSide(potMade.enchantments, 0) == -1,
               "four bricks or sherds in a ring make a pot carrying them");
-        check(maxStackOf(static_cast<StackId>(Blocks::DecoratedPotFirst + 2)) == 1, "and pots do not stack");
+        check(maxStackOf(static_cast<StackId>(Blocks::DecoratedPotFirst + 2)) == 64, "and pots stack like 1.21.1's, matching sherds only");
         std::filesystem::remove_all(dir, ec);
     }
 
@@ -5704,6 +5704,12 @@ namespace
               "and a dye colours it, keeping its wear");
         check(!Enchanting::glints(Items::WolfArmor, dyed.enchantments), "without making it shine");
         check(itemDurability(Items::WolfArmor) == 64, "it lasts sixty-four points");
+        check(itemDurability(Items::Bow) == 384 && itemDurability(Items::Shears) == 238 && itemDurability(Items::FlintAndSteel) == 64 &&
+                  itemDurability(Items::Mace) == 500 && itemDurability(Items::Brush) == 64 && itemDurability(Items::Shield) == 336 &&
+                  itemDurability(Items::Elytra) == 432 && itemDurability(Items::DiamondPickaxe) == 1561 && itemDurability(Items::WoodSword) == 59 &&
+                  itemDurability(Items::GoldAxe) == 32 && itemDurability(Items::NetheriteHoe) == 2031 && itemDurability(Items::TurtleHelmet) == 275,
+              "every damageable item has Minecraft's durability");
+        check(itemDurability(Items::Stick) == 0 && itemDurability(Items::Apple) == 0, "and nothing else wears");
     }
 
     void testGlowSquid()
@@ -7714,8 +7720,26 @@ namespace
         Trading::Profession job = Trading::Profession::Nitwit;
         check(Trading::jobSite(Blocks::CartographyTable, job) && job == Trading::Profession::Cartographer,
               "and the table is a cartographer's");
-        check(maxStackOf(Items::FilledMap) == 1 && maxStackOf(Items::EmptyMap) == 64,
-              "a drawn map is one of a kind and blank ones stack");
+        {
+            ItemStack chest[3];
+            ItemStack sword;
+            sword.id = Items::DiamondSword;
+            sword.count = 1;
+            sword.damage = 37;
+            sword.enchantments = 0x1234u;
+            check(Hopper::give(chest, 3, sword) && chest[0].damage == 37 && chest[0].enchantments == 0x1234u,
+                  "a hopper moves an enchanted, worn sword without losing either");
+            ItemStack mapA;
+            mapA.id = Items::FilledMap;
+            mapA.count = 1;
+            mapA.damage = 4;
+            ItemStack mapB = mapA;
+            mapB.damage = 5;
+            check(Hopper::give(chest, 3, mapA) && Hopper::give(chest, 3, mapA) && chest[1].count == 2, "copies of one map stack in a chest");
+            check(Hopper::give(chest, 3, mapB) && chest[2].damage == 5 && chest[2].count == 1, "a different map does not join them");
+        }
+        check(maxStackOf(Items::FilledMap) == 64 && maxStackOf(Items::EmptyMap) == 64,
+              "copies of one drawn map stack, as blank ones do");
         check(Inventory::belongsIn(Inventory::CARTO_MAP, Items::FilledMap) && !Inventory::belongsIn(Inventory::CARTO_MAP, Items::Paper) &&
               Inventory::belongsIn(Inventory::CARTO_EXTRA, Blocks::GlassPane) && !Inventory::belongsIn(Inventory::CARTO_EXTRA, Blocks::Stone),
               "the table's slots take maps and what goes with them");
