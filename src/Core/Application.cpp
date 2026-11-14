@@ -11865,7 +11865,24 @@ void Application::tickHoppers(float deltaTime)
         if (isCrafter(target))
             for (int i = 0; i < Hopper::HOPPER_SLOTS; ++i)
                 if (!slots[i].empty() && feedCrafter(out, slots[i])) break;
+        if (isComposter(target) && facing < 0 && compostLevel(target) < COMPOST_FULL - 1)
+            for (int i = 0; i < Hopper::HOPPER_SLOTS; ++i)
+            {
+                ItemStack& item = slots[i];
+                if (item.empty() || !Composting::composts(item.id)) continue;
+                const uint32_t roll = static_cast<uint32_t>(out.x * 73856093 ^ out.y * 19349663 ^ out.z * 83492791 ^
+                                                            static_cast<int>(m_elapsedSeconds * 1013.0f));
+                compostInto(out, item.id, roll);
+                if (--item.count <= 0) item.clear();
+                break;
+            }
         const BlockId above = m_world->getBlock(x, y + 1, z);
+        if (isComposter(above) && compostLevel(above) >= COMPOST_FULL &&
+            Hopper::give(slots, Hopper::HOPPER_SLOTS, Items::BoneMeal))
+        {
+            m_world->setBlock(x, y + 1, z, Blocks::Composter0);
+            m_net.onLocalBlockChange(x, y + 1, z, Blocks::Composter0);
+        }
         if (isFurnaceBlock(above))
         {
             Furnaces::State& furnace = m_furnaces.at(glm::ivec3(x, y + 1, z));
@@ -11910,7 +11927,19 @@ void Application::wakeObservers(const glm::ivec3& around)
 // And turns it off again. A flash that never ended would be a lever.
 void Application::tickObservers(float deltaTime)
 {
-    if (!m_world || m_observerPulse.empty()) return;
+    if (!m_world) return;
+    for (auto it = m_composterReady.begin(); it != m_composterReady.end(); )
+    {
+        it->second -= deltaTime;
+        if (it->second > 0.0f) { ++it; continue; }
+        const glm::ivec3 at(it->first[0], it->first[1], it->first[2]);
+        it = m_composterReady.erase(it);
+        if (m_world->getBlock(at.x, at.y, at.z) != composterAt(COMPOST_FULL - 1)) continue;
+        m_world->setBlock(at.x, at.y, at.z, composterAt(COMPOST_FULL));
+        m_net.onLocalBlockChange(at.x, at.y, at.z, composterAt(COMPOST_FULL));
+        namedAt("dig/gravel", glm::vec3(at) + glm::vec3(0.5f), 0.6f, 1.0f, Sound::DigGrass);
+    }
+    if (m_observerPulse.empty()) return;
 
     for (auto it = m_observerPulse.begin(); it != m_observerPulse.end(); )
     {
@@ -17847,31 +17876,42 @@ bool Application::useComposter(const glm::ivec3& at, BlockId block)
 
     ItemStack& held = m_inventory.selected();
     if (held.empty() || !Composting::composts(held.id)) return false;
+    if (level >= COMPOST_FULL - 1)
+    {
+        m_composterReady.emplace(std::array<int, 3>{ at.x, at.y, at.z }, 1.0f);
+        return true;
+    }
 
     const uint32_t roll = static_cast<uint32_t>(
         at.x * 73856093 ^ at.y * 19349663 ^ at.z * 83492791 ^
         static_cast<int>(m_elapsedSeconds * 1013.0f));
-
-    if (Composting::raises(held.id, roll))
-    {
-        if (m_sprites) m_sprites->burst(SpriteParticles::Kind::Composter, glm::vec3(at) + glm::vec3(0.5f, 0.9f, 0.5f), 8, 0.5f, 0.1f, 0.12f, 1.0f);
-        // The seventh throw fills it rather than raising it to seven:
-        // a composter at seven is one that is about to be ready, and
-        // there is no state between that and ready.
-        const BlockId now = composterAt(level + 1);
-        m_world->setBlock(at.x, at.y, at.z, now);
-        m_net.onLocalBlockChange(at.x, at.y, at.z, now);
-        m_audio.play(Sound::DigGrass, 0.5f, 1.2f);
-    }
-    else
-    {
-        m_audio.play(Sound::DigGrass, 0.3f, 0.8f);
-    }
+    compostInto(at, held.id, roll);
 
     if (!m_player.creative())
     {
         held.count -= 1;
         if (held.count <= 0) held.clear();
+    }
+    return true;
+}
+
+bool Application::compostInto(const glm::ivec3& at, StackId item, uint32_t roll)
+{
+    const BlockId block = m_world->getBlock(at.x, at.y, at.z);
+    const int level = compostLevel(block);
+    if (!isComposter(block) || level >= COMPOST_FULL - 1 || !Composting::composts(item)) return false;
+    if (level == 0 || Composting::raises(item, roll))
+    {
+        if (m_sprites) m_sprites->burst(SpriteParticles::Kind::Composter, glm::vec3(at) + glm::vec3(0.5f, 0.9f, 0.5f), 8, 0.5f, 0.1f, 0.12f, 1.0f);
+        const BlockId now = composterAt(level + 1);
+        m_world->setBlock(at.x, at.y, at.z, now);
+        m_net.onLocalBlockChange(at.x, at.y, at.z, now);
+        namedAt("dig/grass", glm::vec3(at) + glm::vec3(0.5f), 0.5f, 1.2f, Sound::DigGrass);
+        if (level + 1 == COMPOST_FULL - 1) m_composterReady[{ at.x, at.y, at.z }] = 1.0f;
+    }
+    else
+    {
+        namedAt("dig/grass", glm::vec3(at) + glm::vec3(0.5f), 0.3f, 0.8f, Sound::DigGrass);
     }
     return true;
 }

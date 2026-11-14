@@ -7893,6 +7893,12 @@ namespace
         check(!Composting::composts(Items::IronIngot), "nor iron");
         check(!Composting::composts(Items::RawBeef), "nor meat");
 
+        check(std::abs(Composting::chanceOf(static_cast<StackId>(Blocks::Bookshelf))) < 0.001f, "a bookshelf does not compost in 1.21.1");
+        check(std::abs(Composting::chanceOf(static_cast<StackId>(Blocks::FlowerRed)) - 0.65f) < 0.001f, "a poppy is 65%");
+        check(std::abs(Composting::chanceOf(Items::PumpkinPie) - 1.0f) < 0.001f, "pumpkin pie always raises it");
+        check(std::abs(Composting::chanceOf(static_cast<StackId>(Blocks::HayBale)) - 0.85f) < 0.001f, "a hay bale is 85%");
+        check(std::abs(Composting::chanceOf(Items::MelonSlice) - 0.5f) < 0.001f, "a melon slice 50%");
+        check(Composting::chanceOf(static_cast<StackId>(Blocks::DeadBush)) < 0.001f, "and a dead bush nothing");
         check(Composting::chanceOf(Items::Bread) > Composting::chanceOf(Items::Wheat),
               "bread is worth more than the wheat it was made of");
         check(Composting::chanceOf(Items::Wheat) > Composting::chanceOf(Items::WheatSeeds),

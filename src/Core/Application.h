@@ -1487,6 +1487,7 @@ private:
     // observer sends a flash rather than a level, so something has to
     // turn it off again -- and a block has nowhere to count down in.
     std::map<std::array<int, 3>, float> m_observerPulse;
+    std::map<std::array<int, 3>, float> m_composterReady;
     void wakeObservers(const glm::ivec3& around);
     void tickObservers(float deltaTime);
 
@@ -1618,6 +1619,7 @@ private:
     bool useCandleCake(const glm::ivec3& at, BlockId block);
     bool plantCocoa(const glm::ivec3& at);
     bool useComposter(const glm::ivec3& at, BlockId block);
+    bool compostInto(const glm::ivec3& at, StackId item, uint32_t roll);
     bool useCauldron(const glm::ivec3& at, BlockId block);
     bool useLectern(const glm::ivec3& at, BlockId block);
     bool useGrindstone(const glm::ivec3& at);
