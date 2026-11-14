@@ -358,10 +358,10 @@ namespace
 
         { "Scaffolding",  ScaffoldTop,   ScaffoldBottom, ScaffoldSide,   false, false, RenderType::Cube,   0,   0.2f },
 
-        { "Sign",         SignTile,      SignTile,       SignTile,       false, false, RenderType::None, 0,   1.0f },
-        { "Sign",         SignTile,      SignTile,       SignTile,       false, false, RenderType::None, 0,   1.0f },
-        { "Sign",         SignTile,      SignTile,       SignTile,       false, false, RenderType::None, 0,   1.0f },
-        { "Sign",         SignTile,      SignTile,       SignTile,       false, false, RenderType::None, 0,   1.0f },
+        { "Oak Sign",     SignTile,      SignTile,       SignTile,       false, false, RenderType::None, 0,   1.0f },
+        { "Oak Sign",     SignTile,      SignTile,       SignTile,       false, false, RenderType::None, 0,   1.0f },
+        { "Oak Sign",     SignTile,      SignTile,       SignTile,       false, false, RenderType::None, 0,   1.0f },
+        { "Oak Sign",     SignTile,      SignTile,       SignTile,       false, false, RenderType::None, 0,   1.0f },
 
         { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },
         { "Item Frame",   ItemFrameTile, ItemFrameTile,  ItemFrameTile,  false, false, RenderType::Ladder, 0,   0.3f },

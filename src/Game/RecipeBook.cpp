@@ -42,7 +42,9 @@ namespace
 
     bool woodFamily(StackId result)
     {
-        return result == Items::Boat || result == Blocks::DoorLowShutNorth || result == Blocks::OakTrapdoor || result == Items::Sign;
+        return result == Items::Boat || result == Blocks::DoorLowShutNorth || result == Blocks::OakTrapdoor || result == Items::Sign ||
+               result == Blocks::PlankSlab || result == Blocks::PlankStairsNorth || result == Blocks::OakFence ||
+               result == gateOf(0, false, 0) || result == buttonOf(2, 0, 0, false) || result == plateOf(4, false);
     }
 
     StackId inWood(StackId result, int wood)
@@ -51,6 +53,23 @@ namespace
         if (result == Blocks::DoorLowShutNorth) return doorBaseOf(wood);
         if (result == Blocks::OakTrapdoor) return trapdoorBaseOf(wood);
         if (result == Items::Sign) return signItemOfWood(wood);
+        if (wood == 0) return result;
+        if (result == Blocks::PlankSlab)
+        {
+            for (int m = 0; m < SLAB_MATERIALS; ++m)
+                if (slabMaterialWood(m) == wood) return slabOf(m, 0);
+            return static_cast<StackId>(Blocks::Air);
+        }
+        if (result == Blocks::PlankStairsNorth)
+        {
+            for (int m = 0; m < STAIRS_MATERIALS; ++m)
+                if (stairsMaterialWood(m) == wood) return stairsOf(m, false, 0);
+            return static_cast<StackId>(Blocks::Air);
+        }
+        if (result == Blocks::OakFence) return fenceOfWood(wood);
+        if (result == gateOf(0, false, 0)) return gateOf(wood, false, 0);
+        if (result == buttonOf(2, 0, 0, false)) return buttonOf(2 + wood, 0, 0, false);
+        if (result == plateOf(4, false)) return plateOf(4 + wood, false);
         return result;
     }
 
@@ -279,6 +298,14 @@ namespace
 std::string RecipeBook::vanillaIdOf(StackId id)
 {
     if (Discs::discOf(id) >= 0) return std::string("music_disc_") + Discs::song(Discs::discOf(id)).key;
+    if (id >= Items::NetheriteUpgradeTemplate && id <= Items::BoltTemplate) return idOf(id) + "_smithing_template";
+    static const std::pair<StackId, const char*> PATTERNS[] = {
+        { Items::FlowerBannerPattern, "flower_banner_pattern" }, { Items::CreeperBannerPattern, "creeper_banner_pattern" },
+        { Items::SkullBannerPattern, "skull_banner_pattern" }, { Items::MojangBannerPattern, "mojang_banner_pattern" },
+        { Items::PiglinBannerPattern, "piglin_banner_pattern" },
+    };
+    for (const auto& pattern : PATTERNS)
+        if (pattern.first == id) return pattern.second;
     const char* shown = displayName(id);
     if (shown)
         for (const VanillaName& entry : VANILLA_NAMES)

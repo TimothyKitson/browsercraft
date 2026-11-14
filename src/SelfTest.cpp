@@ -12822,8 +12822,15 @@ namespace
 
         // The recipes, end to end: a seam gives dust, dust packs into a
         // block and comes back out again.
-        check(Smelting::resultOf(Blocks::RedstoneOre) == Blocks::Air,
-              "redstone ore is not something you smelt");
+        check(Smelting::resultOf(Blocks::RedstoneOre) == Items::Redstone && Smelting::resultOf(Blocks::DeepslateRedstoneOre) == Items::Redstone,
+              "redstone ore smelts to dust, as in Minecraft");
+        check(Smelting::burnSeconds(Items::LavaBucket) == 1000.0f && Smelting::burnSeconds(Blocks::CoalBlock) == 800.0f &&
+                  Smelting::burnSeconds(Blocks::CrimsonPlanks) == 0.0f && Smelting::burnSeconds(Blocks::Leaves) == 0.0f &&
+                  Smelting::burnSeconds(woolOfColour(0)) == 5.0f && Smelting::burnSeconds(Items::BlazeRod) == 120.0f,
+              "fuel burns for Minecraft's times, and nether wood and leaves do not burn");
+        check(Smelting::suits(Smelting::Kind::BlastFurnace, Blocks::DiamondOre) && Smelting::suits(Smelting::Kind::BlastFurnace, Items::IronSword) &&
+                  !Smelting::suits(Smelting::Kind::Smoker, Items::ChorusFruit) && Smelting::suits(Smelting::Kind::Smoker, Blocks::Kelp),
+              "blast furnaces take ores and metal tools, smokers take kelp but not chorus fruit");
 
         {
             ItemStack nine[9];

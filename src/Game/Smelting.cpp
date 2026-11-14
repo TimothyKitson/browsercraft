@@ -26,6 +26,14 @@ StackId Smelting::resultOf(StackId input)
         case Blocks::PolishedBlackstoneBricks: return Blocks::CrackedPolishedBlackstoneBricks;
         case Blocks::NetherBricks: return Blocks::CrackedNetherBricks;
         case Blocks::NetherQuartzOre: return Items::NetherQuartz;
+        case Blocks::CoalOre:   return Items::Coal;
+        case Blocks::DiamondOre: return Items::Diamond;
+        case Blocks::EmeraldOre: return Items::Emerald;
+        case Blocks::LapisOre:  return Items::LapisLazuli;
+        case Blocks::RedstoneOre: return Items::Redstone;
+        case Blocks::NetherGoldOre: return Items::GoldNugget;
+        case Blocks::Basalt:    return Blocks::SmoothBasalt;
+        case Blocks::SeaPickle: return Items::DyeLime;
         case Blocks::RedSand: return Blocks::Glass;
         case Blocks::Sandstone: return Blocks::SmoothSandstone;
         case Blocks::QuartzBlock: return Blocks::SmoothQuartz;
@@ -74,41 +82,94 @@ StackId Smelting::resultOf(StackId input)
         // is worth as much as bread.
         case Items::Potato:     return Items::BakedPotato;
 
+        default: break;
+    }
+    switch (input)
+    {
+        case Items::IronPickaxe: case Items::IronAxe: case Items::IronShovel: case Items::IronSword: case Items::IronHoe:
+        case Items::IronHelmet: case Items::IronChestplate: case Items::IronLeggings: case Items::IronBoots:
+        case Items::ChainmailHelmet: case Items::ChainmailChestplate: case Items::ChainmailLeggings: case Items::ChainmailBoots:
+        case Items::IronHorseArmor:
+            return Items::IronNugget;
+        case Items::GoldPickaxe: case Items::GoldAxe: case Items::GoldShovel: case Items::GoldSword: case Items::GoldHoe:
+        case Items::GoldHelmet: case Items::GoldChestplate: case Items::GoldLeggings: case Items::GoldBoots:
+        case Items::GoldHorseArmor:
+            return Items::GoldNugget;
         default: return Blocks::Air;
     }
 }
 
 float Smelting::burnSeconds(StackId fuel)
 {
-    // Asked of the whole family rather than of two named blocks: with
-    // more than one kind of tree in the world, spruce would not have
-    // burned.
+    auto netherWood = [](int wood) { return wood == 9 || wood == 10; };
     if (isBlockStack(fuel))
     {
         const BlockId block = asBlock(fuel);
-        if (isLog(block) || isPlanks(block)) return 15.0f;
-        if (shapeWood(block) >= 0) return isSlabBlock(block) ? 7.5f : 15.0f;
-        if (isCarpet(block)) return 3.35f;
-        if (isLeaves(block)) return 5.0f;
+        if (isPlanks(block)) return block == Blocks::CrimsonPlanks || block == Blocks::WarpedPlanks ? 0.0f : 15.0f;
+        if (isLog(block))
+        {
+            const BlockId planks = planksFromLog(block);
+            return planks == Blocks::CrimsonPlanks || planks == Blocks::WarpedPlanks ? 0.0f : 15.0f;
+        }
+        if (const int wood = shapeWood(block); wood >= 0)
+        {
+            if (netherWood(wood)) return 0.0f;
+            if (isFamilyButton(block)) return 5.0f;
+            return slabMaterial(block) >= 0 ? 7.5f : 15.0f;
+        }
+        if (isDoor(block)) { const int wood = doorWood(block); return wood >= 0 && !netherWood(wood) ? 10.0f : 0.0f; }
+        if (isTrapdoor(block)) { const int wood = trapdoorWood(block); return wood >= 0 && !netherWood(wood) ? 15.0f : 0.0f; }
+        if (isHangingSign(block)) return netherWood(signWood(block)) ? 0.0f : 40.0f;
+        if (isSign(block)) return netherWood(signWood(block)) ? 0.0f : 10.0f;
+        if (isWool(block)) return 5.0f;
+        if (isCarpet(block)) return block == Blocks::MossCarpet ? 0.0f : 3.35f;
+        if (isBanner(block)) return 15.0f;
+        if (isSapling(block)) return 5.0f;
+        if (isChestFamily(block) || isChiseledBookshelf(block) || isLectern(block) || isNoteBlock(block) || isLadder(block) ||
+            isBarrel(block) || isComposter(block) || isDaylightDetector(block) || isLoom(block))
+            return 15.0f;
+        switch (block)
+        {
+            case Blocks::CoalBlock: return 800.0f;
+            case Blocks::DriedKelpBlock: return 200.05f;
+            case Blocks::BambooMosaic: return 15.0f;
+            case Blocks::Bookshelf:
+            case Blocks::Jukebox:
+            case Blocks::CraftingTable:
+            case Blocks::CartographyTable:
+            case Blocks::FletchingTable:
+            case Blocks::SmithingTable:
+            case Blocks::MangroveRoots: return 15.0f;
+            case Blocks::Azalea:
+            case Blocks::FloweringAzalea:
+            case Blocks::DeadBush: return 5.0f;
+            case Blocks::Bamboo:
+            case Blocks::Scaffolding: return 2.5f;
+            default: return 0.0f;
+        }
     }
 
     switch (fuel)
     {
-        case Items::Coal:        return 80.0f;   // eight items
+        case Items::LavaBucket:  return 1000.0f;
+        case Items::BlazeRod:    return 120.0f;
+        case Items::Coal:        return 80.0f;
         case Items::Charcoal:    return 80.0f;
-        case Blocks::CoalOre:    return 80.0f;
-        case Items::Stick:       return 5.0f;
-        case Blocks::CraftingTable: return 15.0f;
-
-        // A wooden tool is firewood once it is of no further use.
+        case Items::Bow:
+        case Items::FishingRod:
+        case Items::Crossbow:    return 15.0f;
         case Items::WoodPickaxe:
         case Items::WoodAxe:
         case Items::WoodShovel:
         case Items::WoodSword:
         case Items::WoodHoe:     return 10.0f;
-
-        default: return 0.0f;
+        case Items::Stick:
+        case Items::Bowl:        return 5.0f;
+        default: break;
     }
+    for (int wood = 0; wood < BOAT_WOODS; ++wood)
+        if (fuel == boatOfWood(wood, false) || fuel == boatOfWood(wood, true)) return 60.0f;
+    return 0.0f;
 }
 
 bool Smelting::suits(Kind kind, StackId input)
@@ -125,16 +186,22 @@ bool Smelting::suits(Kind kind, StackId input)
         // without anybody having to remember this function -- which
         // is the mistake the block table has caught five times.
         case Kind::Smoker:
-            return Food::isEdible(input);
+            return (Food::isEdible(input) && input != Items::ChorusFruit) || input == Blocks::Kelp;
 
         // A blast furnace smelts metal: what comes out of the ground
         // with a metal in it, and the raw metal itself.
         case Kind::BlastFurnace:
+        {
             if (isBlockStack(input)) input = oreBase(static_cast<BlockId>(input));
+            const StackId made = resultOf(input);
             return input == Blocks::IronOre || input == Blocks::GoldOre ||
                    input == Blocks::CopperOre || input == Items::RawCopper ||
                    input == Items::RawIron || input == Items::RawGold ||
-                   input == Blocks::AncientDebris;
+                   input == Blocks::AncientDebris || input == Blocks::CoalOre || input == Blocks::DiamondOre ||
+                   input == Blocks::EmeraldOre || input == Blocks::LapisOre || input == Blocks::RedstoneOre ||
+                   input == Blocks::NetherQuartzOre || input == Blocks::NetherGoldOre ||
+                   (!isBlockStack(input) && (made == Items::IronNugget || made == Items::GoldNugget));
+        }
     }
     return false;
 }
@@ -182,8 +249,16 @@ void Furnace::tick(float deltaTime)
         burnTotal = Smelting::burnSeconds(fuel->id);
         burnLeft = burnTotal;
 
-        fuel->count -= 1;
-        if (fuel->count <= 0) fuel->clear();
+        if (fuel->id == Items::LavaBucket)
+        {
+            fuel->id = Items::Bucket;
+            fuel->count = 1;
+        }
+        else
+        {
+            fuel->count -= 1;
+            if (fuel->count <= 0) fuel->clear();
+        }
     }
 
     if (!lit() || !roomForIt)

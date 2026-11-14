@@ -551,6 +551,10 @@ namespace
                 std::printf("name block %d %s\n", block, displayName(static_cast<StackId>(block)));
         for (StackId item = Items::FIRST; item < Items::Count; ++item)
             if (displayName(item)) std::printf("name item %d %s\n", static_cast<int>(item), displayName(item));
+        static const char* BOOKS[4] = { "crafting", "smelting", "blasting", "smoking" };
+        for (int book = 0; book < 4; ++book)
+            for (const RecipeBook::Recipe& recipe : RecipeBook::recipes(static_cast<RecipeBook::Book>(book)))
+                std::printf("recipe %s %s\n", BOOKS[book], RecipeBook::vanillaIdOf(recipe.result).c_str());
         std::printf("ids known %d, missing %d\n", known, missing);
         return 0;
     }

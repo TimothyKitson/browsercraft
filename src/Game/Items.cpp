@@ -143,7 +143,7 @@ namespace
         { "Cake",            Tiles::ItemCake,           1 },
         { "Cookie",          Tiles::ItemCookie,        64 },
         { "Cocoa Beans",     Tiles::ItemCocoaBeans,    64 },
-        { "Sign",            Tiles::ItemSign,          16 },
+        { "Oak Sign",        Tiles::ItemSign,          16 },
         { "Item Frame",      Tiles::ItemItemFrame,     64 },
         { "Elytra",          Tiles::ItemElytra,         1 },
         { "Ghast Tear",      Tiles::ItemGhastTear,     64 },

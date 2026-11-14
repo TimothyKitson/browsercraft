@@ -65,6 +65,7 @@ namespace
         { false, 2, 2, { Blocks::EndStone, Blocks::EndStone, Blocks::EndStone, Blocks::EndStone }, 0, Blocks::EndStoneBricks, 4 },
         { false, 2, 2, { Items::GlowstoneDust, Items::GlowstoneDust, Items::GlowstoneDust, Items::GlowstoneDust }, 0, Blocks::Glowstone, 1 },
         { false, 2, 2, { Items::PoppedChorusFruit, Items::PoppedChorusFruit, Items::PoppedChorusFruit, Items::PoppedChorusFruit }, 0, Blocks::PurpurBlock, 4 },
+        { false, 1, 2, { slabOf(38, 0), slabOf(38, 0) }, 0, Blocks::PurpurPillar, 1 },
         { false, 3, 3, { Items::IronNugget, Items::IronNugget, Items::IronNugget, Items::IronNugget, Blocks::SoulTorch, Items::IronNugget,
                          Items::IronNugget, Items::IronNugget, Items::IronNugget }, 0, Blocks::SoulLantern, 1 },
         { false, 2, 2, { Blocks::Granite, Blocks::Granite, Blocks::Granite, Blocks::Granite },
