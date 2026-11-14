@@ -20,6 +20,7 @@ class Mob;
 class MobModel
 {
 public:
+    static int parrotColour(uint32_t birthSeed, int variant);
     void render(Shader& chunkShader, const World& world, const EntityManager& entities);
 
     // The geometry for one mob, in world space, with no GL involved --

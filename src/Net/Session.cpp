@@ -125,6 +125,7 @@ void Session::leave()
     m_shots.clear();
     m_loot.clear();
     m_chatIn.clear();
+    m_fangs.clear();
 }
 
 // ------------------------------------------------------------- update ---
@@ -237,7 +238,8 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
         std::abs(pitch - m_lastSentPitch) < LOOK_EPSILON &&
         m_localSneaking == m_lastSentSneak &&
         m_localMain == m_lastSentMain && m_localOff == m_lastSentOff &&
-        m_localSwings == m_lastSentSwings && m_localLeftHanded == m_lastSentLeft)
+        m_localSwings == m_lastSentSwings && m_localLeftHanded == m_lastSentLeft &&
+        m_localShoulders[0] == m_lastSentShoulders[0] && m_localShoulders[1] == m_lastSentShoulders[1])
         return;
 
     m_forceMove = false;
@@ -250,6 +252,8 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
     m_lastSentOff = m_localOff;
     m_lastSentSwings = m_localSwings;
     m_lastSentLeft = m_localLeftHanded;
+    m_lastSentShoulders[0] = m_localShoulders[0];
+    m_lastSentShoulders[1] = m_localShoulders[1];
 
     const uint8_t flags = static_cast<uint8_t>((m_localSneaking ? MoveSneaking : 0) | (m_localLeftHanded ? MoveLeftHanded : 0) |
                                                (m_localSwingOff ? MoveSwingOff : 0));
@@ -265,6 +269,8 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
         move.u16(m_localMain);
         move.u16(m_localOff);
         move.u8(m_localSwings);
+        move.u8(m_localShoulders[0]);
+        move.u8(m_localShoulders[1]);
         m_transport->broadcast(move.bytes());
     }
     else
@@ -277,6 +283,8 @@ void Session::sendMovement(float deltaTime, const glm::vec3& position, float yaw
         move.u16(m_localMain);
         move.u16(m_localOff);
         move.u8(m_localSwings);
+        move.u8(m_localShoulders[0]);
+        move.u8(m_localShoulders[1]);
         m_transport->send(HOST_PEER, move.bytes());
     }
 }
@@ -495,6 +503,8 @@ void Session::handleAsHost(const Packet& packet, World* world)
                 where.u16(entry.second.mainHand);
                 where.u16(entry.second.offHand);
                 where.u8(entry.second.swingCount);
+                where.u8(entry.second.shoulders[0]);
+                where.u8(entry.second.shoulders[1]);
                 m_transport->send(packet.peer, where.bytes());
             }
 
@@ -554,6 +564,8 @@ void Session::handleAsHost(const Packet& packet, World* world)
             const uint16_t mainHand = reader.u16();
             const uint16_t offHand = reader.u16();
             const uint8_t swings = reader.u8();
+            const uint8_t leftRider = reader.u8();
+            const uint8_t rightRider = reader.u8();
             if (!reader.ok()) return;
 
             auto it = m_players.find(packet.peer);
@@ -564,6 +576,8 @@ void Session::handleAsHost(const Packet& packet, World* world)
             it->second.leftHanded = (flags & MoveLeftHanded) != 0;
             it->second.mainHand = mainHand;
             it->second.offHand = offHand;
+            it->second.shoulders[0] = leftRider;
+            it->second.shoulders[1] = rightRider;
 
             // A first position, or one after a long silence, is where
             // they are rather than somewhere to glide towards.
@@ -586,6 +600,8 @@ void Session::handleAsHost(const Packet& packet, World* world)
             move.u16(mainHand);
             move.u16(offHand);
             move.u8(swings);
+            move.u8(leftRider);
+            move.u8(rightRider);
             m_transport->broadcast(move.bytes(), packet.peer);
             break;
         }
@@ -742,6 +758,8 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             const uint16_t mainHand = reader.u16();
             const uint16_t offHand = reader.u16();
             const uint8_t swings = reader.u8();
+            const uint8_t leftRider = reader.u8();
+            const uint8_t rightRider = reader.u8();
             if (!reader.ok() || who == m_localId) return;
 
             RemotePlayer& player = m_players[who];
@@ -752,6 +770,8 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             player.leftHanded = (flags & MoveLeftHanded) != 0;
             player.mainHand = mainHand;
             player.offHand = offHand;
+            player.shoulders[0] = leftRider;
+            player.shoulders[1] = rightRider;
             player.previous = (!player.positioned || player.silence > 2.0f)
                                   ? position : player.smoothed();
             player.position = position;
@@ -817,6 +837,16 @@ void Session::handleAsGuest(const Packet& packet, World* world)
         {
             const std::string line = reader.str();
             if (reader.ok() && !line.empty() && m_chatIn.size() < 64) m_chatIn.push_back(line);
+            break;
+        }
+
+        case MessageId::FangsCast:
+        {
+            FangsEvent fangs;
+            fangs.from = reader.vec3();
+            fangs.target = reader.vec3();
+            fangs.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            if (reader.ok() && m_fangs.size() < 64) m_fangs.push_back(fangs);
             break;
         }
 
@@ -963,6 +993,16 @@ void Session::say(const std::string& line)
     Writer out(MessageId::ChatSay);
     out.str(line);
     m_transport->send(HOST_PEER, out.bytes());
+}
+
+void Session::broadcastFangs(const FangsEvent& fangs)
+{
+    if (m_role != Role::Host || !m_transport || m_players.empty()) return;
+    Writer out(MessageId::FangsCast);
+    out.vec3(fangs.from);
+    out.vec3(fangs.target);
+    out.i32(fangs.damage);
+    m_transport->broadcast(out.bytes());
 }
 
 void Session::broadcastBlast(const BlastEvent& blast)

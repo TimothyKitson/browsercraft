@@ -49,6 +49,7 @@ namespace Net
         bool swingOff = false;
         bool leftHanded = false;
         float swingTimer = 0.0f;
+        uint8_t shoulders[2] = { 0, 0 };
 
         // False until they have told us where they are. Someone who has
         // joined but not yet moved would otherwise be drawn standing at
@@ -139,6 +140,13 @@ namespace Net
         int shooter = -1;
     };
 
+    struct FangsEvent
+    {
+        glm::vec3 from{ 0.0f };
+        glm::vec3 target{ 0.0f };
+        int damage = 0;
+    };
+
     struct LootItem
     {
         glm::vec3 at{ 0.0f };
@@ -199,6 +207,11 @@ namespace Net
             m_localOff = offHand;
             m_localLeftHanded = leftHanded;
         }
+        void setLocalShoulders(uint8_t left, uint8_t right)
+        {
+            m_localShoulders[0] = left;
+            m_localShoulders[1] = right;
+        }
         void noteSwing(bool offHand)
         {
             ++m_localSwings;
@@ -217,6 +230,8 @@ namespace Net
         std::vector<ShotEvent> takeShots() { std::vector<ShotEvent> all; all.swap(m_shots); return all; }
         std::vector<LootEvent> takeLoot() { std::vector<LootEvent> all; all.swap(m_loot); return all; }
         void say(const std::string& line);
+        void broadcastFangs(const FangsEvent& fangs);
+        std::vector<FangsEvent> takeFangs() { std::vector<FangsEvent> all; all.swap(m_fangs); return all; }
         std::vector<std::string> takeChat() { std::vector<std::string> all; all.swap(m_chatIn); return all; }
         bool takeMobStates(std::vector<MobSnap>& out);
         std::vector<MobNoise> takeMobNoises() { std::vector<MobNoise> all; all.swap(m_mobNoises); return all; }
@@ -270,6 +285,7 @@ namespace Net
         std::vector<ShotEvent> m_shots;
         std::vector<LootEvent> m_loot;
         std::vector<std::string> m_chatIn;
+        std::vector<FangsEvent> m_fangs;
         uint16_t m_localMain = 0;
         uint16_t m_localOff = 0;
         bool m_localLeftHanded = false;
@@ -279,6 +295,8 @@ namespace Net
         uint16_t m_lastSentOff = 0;
         uint8_t m_lastSentSwings = 0;
         bool m_lastSentLeft = false;
+        uint8_t m_localShoulders[2] = { 0, 0 };
+        uint8_t m_lastSentShoulders[2] = { 0, 0 };
 
         // Host-side copy of what every guest was told, so a late joiner
         // can be introduced to everyone already here.

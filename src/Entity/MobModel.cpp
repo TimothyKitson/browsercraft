@@ -554,6 +554,12 @@ MobModel::~MobModel()
         if (entry.second) glDeleteTextures(1, &entry.second);
 }
 
+int MobModel::parrotColour(uint32_t birthSeed, int variant)
+{
+    if (variant >= 1 && variant <= 5) return variant - 1;
+    return static_cast<int>(((birthSeed * 2654435761u) >> 8) % 1000u % 5u);
+}
+
 std::string MobModel::variantOf(const Mob& mob) const
 {
     const uint32_t seed = mob.birthSeed() * 2654435761u;
@@ -601,7 +607,7 @@ std::string MobModel::variantOf(const Mob& mob) const
         case MobId::Parrot:
         {
             static const char* COLOURS[] = { "red_blue", "blue", "green", "yellow_blue", "grey" };
-            return root + "parrot/parrot_" + COLOURS[pick % 5u] + ".png";
+            return root + "parrot/parrot_" + COLOURS[parrotColour(mob.birthSeed(), mob.variant())] + ".png";
         }
         case MobId::Axolotl:
         {

@@ -1115,6 +1115,7 @@ private:
     int m_lanStage = 0;
     float m_lanClock = 0.0f;
     uint32_t m_lanStart = 0;
+    int m_lanHealthMark = 0;
     glm::vec3 m_lanBase{ 0.0f };
     std::set<std::string> m_lanTaken;
     float m_lastMainSwing = 0.0f;

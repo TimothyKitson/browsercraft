@@ -2489,6 +2489,8 @@ bool Application::frame()
     // somebody on screen wearing the wrong character.
     m_net.setLocalAppearance(localAppearance());
     m_net.setLocalSneaking(m_player.sneaking);
+    m_net.setLocalShoulders(m_shoulders[0].on ? static_cast<uint8_t>(1 + MobModel::parrotColour(m_shoulders[0].seed, m_shoulders[0].variant)) : uint8_t{ 0 },
+                            m_shoulders[1].on ? static_cast<uint8_t>(1 + MobModel::parrotColour(m_shoulders[1].seed, m_shoulders[1].variant)) : uint8_t{ 0 });
     m_net.setLocalHands(m_inventory.selected().empty() ? 0 : m_inventory.selected().id,
                         m_inventory.slot(Inventory::OFFHAND).empty() ? 0 : m_inventory.slot(Inventory::OFFHAND).id, m_leftHanded);
     {
@@ -2519,7 +2521,11 @@ bool Application::frame()
     // Limbs keep moving while you are in a menu: everyone else is still
     // playing, and freezing them mid-stride is worse than not drawing
     // them at all.
-    if (m_world && !m_menuWorld) updatePlayerAnimation(deltaTime);
+    if (m_world && !m_menuWorld)
+    {
+        updatePlayerAnimation(deltaTime);
+        buildShoulderParrots();
+    }
 
 #ifndef __EMSCRIPTEN__
     if (m_net.role() == Net::Role::Host) m_discovery.announce(deltaTime);
@@ -16404,6 +16410,7 @@ void Application::tickFangs(float deltaTime)
                     m_audio.play(Sound::Hurt, 0.8f);
                 for (Mob& mob : m_entities.mobs())
                 {
+                    if (m_net.role() == Net::Role::Guest) break;
                     if (!mob.alive() || mob.typeId() == MobId::Evoker || mob.typeId() == MobId::Vex || mob.type().inanimate) continue;
                     if (Fangs::bites(fang, mob.position(), mob.type().width * 0.5f, mob.type().height))
                         mob.damage(fang.damage, glm::vec3(0.0f));
@@ -21216,7 +21223,7 @@ void Application::renderWorldShaded()
         prepareMobModel();
         m_mobModel.hiddenSerial = m_spectatingMob;
         m_mobModel.render(world, *m_world, m_entities);
-        if (m_perspective != Perspective::FirstPerson && !m_shoulderMobs.mobs().empty()) m_mobModel.render(world, *m_world, m_shoulderMobs);
+        if (!m_shoulderMobs.mobs().empty()) m_mobModel.render(world, *m_world, m_shoulderMobs);
         renderMobGear(world);
     }
     m_atlas.bind(0, 1, 2);
@@ -21375,8 +21382,7 @@ void Application::renderWorld()
         prepareMobModel();
         m_mobModel.hiddenSerial = m_spectatingMob;
         m_mobModel.render(m_chunkShader, *m_world, m_entities);
-        if (m_perspective != Perspective::FirstPerson && !m_shoulderMobs.mobs().empty())
-            m_mobModel.render(m_chunkShader, *m_world, m_shoulderMobs);
+        if (!m_shoulderMobs.mobs().empty()) m_mobModel.render(m_chunkShader, *m_world, m_shoulderMobs);
         renderMobGear(m_chunkShader);
     }
     m_atlas.bind(0, 1, 2);
@@ -25239,21 +25245,30 @@ void Application::buildShoulderParrots()
 {
     m_shoulderMobs.mobs().clear();
     static const float SIDE[2] = { -0.4f, 0.4f };
-    const float bodyYaw = m_animation[LOCAL_ANIM].started ? m_animation[LOCAL_ANIM].bodyYaw : m_camera.yaw;
-    const float yaw = glm::radians(bodyYaw);
-    const glm::vec3 ahead(std::cos(yaw), 0.0f, std::sin(yaw));
-    const glm::vec3 right(-ahead.z, 0.0f, ahead.x);
-    const float lift = m_player.sneaking ? 1.3f : 1.5f;
-    for (int k = 0; k < 2; ++k)
-    {
-        const ShoulderParrot& rider = m_shoulders[k];
-        if (!rider.on) continue;
-        m_shoulderMobs.mobs().emplace_back(MobId::Parrot, m_player.position + right * SIDE[k] + glm::vec3(0.0f, lift, 0.0f), rider.seed);
+    auto seat = [&](const glm::vec3& feet, float bodyYaw, bool sneaking, int side, int variant, uint32_t seed, const std::string& name) {
+        const float yaw = glm::radians(bodyYaw);
+        const glm::vec3 ahead(std::cos(yaw), 0.0f, std::sin(yaw));
+        const glm::vec3 right(-ahead.z, 0.0f, ahead.x);
+        m_shoulderMobs.mobs().emplace_back(MobId::Parrot, feet + right * SIDE[side] + glm::vec3(0.0f, sneaking ? 1.3f : 1.5f, 0.0f), seed);
         Mob& parrot = m_shoulderMobs.mobs().back();
-        parrot.setVariant(rider.variant);
+        parrot.setVariant(variant);
         parrot.setYaw(bodyYaw);
         parrot.setSitting(true);
-        if (!rider.name.empty()) parrot.setCustomName(rider.name);
+        if (!name.empty()) parrot.setCustomName(name);
+    };
+    if (m_perspective != Perspective::FirstPerson)
+    {
+        const float bodyYaw = m_animation[LOCAL_ANIM].started ? m_animation[LOCAL_ANIM].bodyYaw : m_camera.yaw;
+        for (int k = 0; k < 2; ++k)
+            if (m_shoulders[k].on) seat(m_player.position, bodyYaw, m_player.sneaking, k, m_shoulders[k].variant, m_shoulders[k].seed, m_shoulders[k].name);
+    }
+    for (const auto& entry : m_net.players())
+    {
+        const Net::RemotePlayer& player = entry.second;
+        if (!player.positioned) continue;
+        const PlayerPose pose = remotePose(entry.first, player);
+        for (int k = 0; k < 2; ++k)
+            if (player.shoulders[k] > 0) seat(pose.feet, pose.bodyYaw, player.sneaking, k, std::min<int>(player.shoulders[k], 5), entry.first * 31u + static_cast<uint32_t>(k), std::string());
     }
 }
 
@@ -25434,7 +25449,6 @@ void Application::tickPets(float deltaTime)
             if (mob.serial() == it->first && mob.alive()) alive = true;
         it = alive ? std::next(it) : m_catPerches.erase(it);
     }
-    buildShoulderParrots();
 }
 
 void Application::tickBees(float deltaTime)
@@ -25957,7 +25971,7 @@ void Application::saveMobs()
         {
             if (!mob.alive() || mob.type().inanimate || written >= 512) continue;
             const bool keep = mob.type().spawnClass == SpawnClass::Passive || mob.tamed() || mob.persistent() ||
-                              !mob.customName().empty() || mob.leashed();
+                              !mob.customName().empty() || mob.leashed() || mob.noAI() || mob.silent() || mob.invulnerable();
             if (!keep || mob.typeId() == MobId::EnderDragon || mob.typeId() == MobId::Wither) continue;
             const glm::vec3 at = mob.position();
             std::string name = mob.customName();
@@ -25968,6 +25982,8 @@ void Application::saveMobs()
                  << mob.horseArmour() << ' ' << (mob.charged() ? 1 : 0) << ' ' << (name.empty() ? "-" : name);
             for (int slot = 0; slot < Mob::GearSlots; ++slot) mobs << ' ' << mob.gear(slot) << ' ' << (mob.gearSure(slot) ? 1 : 0);
             mobs << ' ' << (mob.canPickUp() ? 1 : 0);
+            const int flags = (mob.noAI() ? 1 : 0) | (mob.silent() ? 2 : 0) | (mob.invulnerable() ? 4 : 0);
+            if (flags) mobs << " F " << flags;
             const auto packed = m_vehicleChests.find(mob.serial());
             if (packed != m_vehicleChests.end())
             {
@@ -26032,7 +26048,19 @@ void Application::placePendingMobs()
         int picks = 0;
         if (in >> picks) mob.setCanPickUp(picks != 0);
         std::string marker;
-        if (in >> marker && marker == "C")
+        bool more = static_cast<bool>(in >> marker);
+        if (more && marker == "F")
+        {
+            int flags = 0;
+            if (in >> flags)
+            {
+                mob.setNoAI((flags & 1) != 0);
+                mob.setSilent((flags & 2) != 0);
+                mob.setInvulnerable((flags & 4) != 0);
+            }
+            more = static_cast<bool>(in >> marker);
+        }
+        if (more && marker == "C")
         {
             Chests::Contents inside{};
             for (ItemStack& one : inside)
@@ -26319,6 +26347,7 @@ void Application::followHostMobs(float deltaTime)
         blastPlayer(blast.at, blast.radius, blast.damage);
         m_blastSource = -1;
     }
+    for (const Net::FangsEvent& cast : m_net.takeFangs()) conjureFangs(cast.from, cast.target, cast.damage);
     for (const Net::ShotEvent& shot : m_net.takeShots())
         m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, static_cast<Arrows::Kind>(shot.kind), shot.effect, shot.shooter);
     for (const Net::LootEvent& loot : m_net.takeLoot())
@@ -26603,7 +26632,15 @@ void Application::updateMobs(float deltaTime)
     // thrown by anything that does not.
     for (const MobShot& shot : m_entities.drainShots())
     {
-        if (shot.fangs) conjureFangs(shot.from, shot.target, shot.damage);
+        if (shot.fangs)
+        {
+            conjureFangs(shot.from, shot.target, shot.damage);
+            Net::FangsEvent cast;
+            cast.from = shot.from;
+            cast.target = shot.target;
+            cast.damage = shot.damage;
+            m_net.broadcastFangs(cast);
+        }
         else m_arrows.spawn(shot.from, shot.velocity, shot.damage, false, shot.kind, shot.effect, shot.shooter);
         if (!shot.fangs && shot.victim >= 0 && shot.victim < static_cast<int>(m_otherPeers.size()))
         {
@@ -27201,6 +27238,10 @@ void Application::tickLanTest(float deltaTime)
         {
             m_timeOfDay = 0.3f;
             m_freezeMobs = true;
+            m_shoulders[0].on = true;
+            m_shoulders[0].variant = 1;
+            m_shoulders[1].on = true;
+            m_shoulders[1].variant = 2;
             if (m_entities.summonAt(MobId::Pig, m_lanBase + glm::vec3(0.0f, 0.0f, 4.0f))) m_entities.mobs().back().setYaw(180.0f);
             if (m_entities.summonAt(MobId::Sheep, m_lanBase + glm::vec3(-2.0f, 0.0f, 5.0f))) m_entities.mobs().back().setWool(14, false);
             if (m_entities.summonAt(MobId::Villager, m_lanBase + glm::vec3(2.0f, 0.0f, 5.5f))) m_entities.mobs().back().setYaw(270.0f);
@@ -27324,7 +27365,46 @@ void Application::tickLanTest(float deltaTime)
         std::printf("[lantest] guest health after skeleton %d\n", m_player.health);
         std::fflush(stdout);
     }
-    if (t >= 44.0f)
+    if (host && at(43.6f))
+    {
+        for (Mob& mob : m_entities.mobs())
+            if (mob.typeId() == MobId::Skeleton) mob.damage(1000, glm::vec3(0.0f));
+        const int bx = static_cast<int>(std::floor(m_lanBase.x));
+        const int by = static_cast<int>(std::floor(m_lanBase.y));
+        const int bz = static_cast<int>(std::floor(m_lanBase.z));
+        for (int x = -6; x <= 6; ++x)
+            for (int z = -6; z <= 6; ++z)
+            {
+                m_world->setBlock(bx + x, by - 1, bz + z, Blocks::Stone);
+                m_net.onLocalBlockChange(bx + x, by - 1, bz + z, Blocks::Stone);
+            }
+    }
+    if (!host && at(44.0f))
+    {
+        int riders = 0;
+        for (const auto& entry : m_net.players()) riders += (entry.second.shoulders[0] > 0) + (entry.second.shoulders[1] > 0);
+        m_lanHealthMark = m_player.health;
+        std::printf("[lantest] guest sees %d shoulder parrots, health before fangs %d\n", riders, m_player.health);
+        std::fflush(stdout);
+    }
+    if (host && at(44.2f))
+        for (const auto& entry : m_net.players())
+        {
+            const glm::vec3 victim = entry.second.smoothed();
+            const glm::vec3 from = victim + glm::vec3(0.0f, 0.0f, 6.0f);
+            conjureFangs(from, victim, Fangs::DAMAGE);
+            Net::FangsEvent cast;
+            cast.from = from;
+            cast.target = victim;
+            cast.damage = Fangs::DAMAGE;
+            m_net.broadcastFangs(cast);
+        }
+    if (!host && at(46.5f))
+    {
+        std::printf("[lantest] guest health after fangs %d (was %d)\n", m_player.health, m_lanHealthMark);
+        std::fflush(stdout);
+    }
+    if (t >= 47.0f)
     {
         std::printf("[lantest] done, %zu shots\n", m_lanTaken.size());
         std::fflush(stdout);
