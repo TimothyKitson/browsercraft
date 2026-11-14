@@ -1305,6 +1305,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         {
             MobStrike strike;
             strike.damage = baseAttack;
+            if (m_type == MobId::IronGolem) strike.damage = baseAttack / 2 + static_cast<int>(random01() * static_cast<float>(std::max(1, baseAttack)));
             if (m_gear[MainHand] != 0 && Tools::isTool(m_gear[MainHand]))
                 strike.damage += std::max(0, Tools::attackDamage(m_gear[MainHand]) - 1);
             strike.from = m_position;

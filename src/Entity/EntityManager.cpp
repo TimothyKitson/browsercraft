@@ -1415,7 +1415,8 @@ void EntityManager::setWolvesOnHostiles(float deltaTime, const glm::vec3& player
         // reaches further: it is twice the height of a wolf.
         const MobType& t = mobType(kind);
         const float reach = golem ? t.attackReach + t.width * 0.5f : Mob::BITE_REACH;
-        const int damage = golem ? t.attackDamage : Mob::BITE_DAMAGE;
+        const int damage = golem ? t.attackDamage / 2 + static_cast<int>((m_rng = m_rng * 1664525u + 1013904223u) >> 8) % std::max(1, t.attackDamage)
+                                 : Mob::BITE_DAMAGE;
 
         if (nearest <= reach && m_mobs[i].tryBite(deltaTime))
         {

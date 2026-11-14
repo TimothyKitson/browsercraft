@@ -649,7 +649,7 @@ namespace
             t.width = 0.6f;
             t.height = 2.9f;
             t.walkSpeed = 2.6f;
-            t.attackDamage = 5;
+            t.attackDamage = 7;
             t.attackInterval = 1.1f;
             // An ender pearl, which is what one is actually for.
             // Gunpowder was a stand-in from before there was a pearl,
@@ -696,7 +696,7 @@ namespace
             t.walkSpeed = 2.0f;
             // Already dead and already burning; the sun is nothing to it.
             t.burnsInSunlight = false;
-            t.attackDamage = 4;
+            t.attackDamage = 5;
             t.drop = Items::RawPorkchop;
             t.dropCount = 1;
             t.bodyColour = rgb(78, 148, 140);
@@ -936,7 +936,7 @@ namespace
             // given a reason: a golem that started fights would be a
             // village nobody could walk into.
             t.neutral = true;
-            t.attackDamage = 11;
+            t.attackDamage = 15;
             t.attackReach = 1.4f;
 
             t.drop = Items::IronIngot;
@@ -1038,7 +1038,7 @@ namespace
 
             // It swings a sword instead of shooting, which is the whole
             // difference in a fight: there is no keeping away from it.
-            t.attackDamage = 8;
+            t.attackDamage = 4;
             t.attackReach = 1.3f;
 
             t.drop = Items::Coal;
@@ -1592,7 +1592,7 @@ namespace
             // The hardest hand in the game short of a ravager: an axe
             // in Minecraft's hands does thirteen, and that is a death
             // in two swings to anybody in iron.
-            t.attackDamage = 7;
+            t.attackDamage = 5;
             t.attackInterval = 1.1f;
 
             t.drop = Items::Emerald;
@@ -2052,7 +2052,7 @@ namespace
             t.maxHealth = 50;
             t.walkSpeed = 2.4f;
             t.limbSwing = 0.5f;
-            t.attackDamage = 9;
+            t.attackDamage = 7;
             t.attackInterval = 1.1f;
 
             t.drop = Items::GoldNugget;
@@ -2872,7 +2872,7 @@ namespace
             t.burnsInSunlight = true;
             t.voicePitch = 0.9f;
 
-            t.arrowDamage = 4;
+            t.arrowDamage = 3;
             t.arrowRange = 17.0f;
             t.arrowInterval = 2.0f;
 
@@ -2920,7 +2920,7 @@ namespace
             t.walkSpeed = 1.9f;
             t.burnsInSunlight = false;
             t.voicePitch = 0.85f;
-            t.attackDamage = 4;
+            t.attackDamage = 3;
 
             t.bodyColour = rgb(132, 116, 78);
             t.headColour = rgb(156, 138, 94);
@@ -3011,7 +3011,7 @@ namespace
             t.maxHealth = 20;
             t.walkSpeed = 3.8f;
             t.limbSwing = 0.0f;
-            t.attackDamage = 4;
+            t.attackDamage = 6;
             t.attackReach = 1.2f;
 
             // High up, which is where it comes from and the reason you
@@ -3144,7 +3144,7 @@ namespace
             t.walkSpeed = 4.0f;
             t.limbSwing = 0.3f;
             t.voicePitch = 1.4f;
-            t.attackDamage = 5;
+            t.attackDamage = 4;
             t.attackReach = 1.0f;
             t.hoverHeight = 2.2f;
 

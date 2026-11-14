@@ -17026,14 +17026,14 @@ namespace
         const MobType& zombie = mobType(MobId::Zombie);
 
         // A stray is a skeleton with the cold in it.
-        check(stray.arrowDamage > skeleton.arrowDamage, "a stray shoots harder");
+        check(stray.arrowDamage == skeleton.arrowDamage, "a stray shoots as hard as a skeleton, its arrows slowing instead");
         check(stray.drop == Items::Bone, "and still leaves bones");
         check(stray.burnsInSunlight, "and still burns at dawn");
 
         // A husk is a zombie that does not.
         check(!husk.burnsInSunlight, "a husk does not burn in daylight");
         check(zombie.burnsInSunlight, "where a zombie does");
-        check(husk.attackDamage > zombie.attackDamage, "and it hits harder");
+        check(husk.attackDamage == zombie.attackDamage, "and it hits as hard as a zombie, leaving hunger behind");
 
         // A bogged is softer and faster with the bow, which is 1.21's.
         check(bogged.maxHealth < skeleton.maxHealth, "a bogged is softer than a skeleton");
