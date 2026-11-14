@@ -2504,6 +2504,7 @@ bool Application::frame()
     m_net.update(deltaTime, m_world && !m_menuWorld ? m_world.get() : nullptr,
                  m_player.position, m_camera.yaw, m_camera.pitch, m_timeOfDay);
     notePeers();
+    if (m_world && !m_menuWorld) shareItems(deltaTime);
     for (const std::string& heard : m_net.takeChat()) m_chatInbox.push_back({ heard, m_chatDelay });
     for (auto& waiting : m_chatInbox) waiting.second -= deltaTime;
     while (!m_chatInbox.empty() && m_chatInbox.front().second <= 0.0f)
@@ -16071,10 +16072,12 @@ void Application::tickSigns(float deltaTime)
     m_signClock += deltaTime;
     if (m_signClock < 0.5f || !m_world) return;
     m_signClock = 0.0f;
+    const auto host = m_net.role() == Net::Role::Guest ? m_net.players().find(Net::HOST_PEER) : m_net.players().end();
     for (const glm::ivec3& at : m_world->signsNear(m_player.position, 32.0f))
     {
         const BlockId block = m_world->getBlock(at.x, at.y, at.z);
         if (!isSign(block)) continue;
+        if (host != m_net.players().end() && host->second.positioned && glm::length(host->second.position - glm::vec3(at)) < 32.0f) continue;
         bool held = true;
         if (isStandingSign(block)) held = isSolid(m_world->getBlock(at.x, at.y - 1, at.z));
         else if (isCeilingHangingSign(block))
@@ -26258,6 +26261,104 @@ void Application::shareMobs(float deltaTime)
     m_net.broadcastMobs(snaps);
 }
 
+void Application::shareItems(float deltaTime)
+{
+    if (m_net.role() == Net::Role::Host)
+    {
+        for (const Net::ItemDrop& drop : m_net.takeDrops())
+        {
+            if (!m_net.players().count(drop.peer)) continue;
+            ItemStack stack;
+            stack.id = static_cast<StackId>(drop.id);
+            stack.count = drop.count;
+            stack.damage = drop.damage;
+            stack.enchantments = drop.enchantments;
+            const size_t before = m_drops.itemCount();
+            m_drops.spawnStack(drop.at, stack);
+            if (m_drops.itemCount() > before) m_drops.flingLast(drop.velocity);
+        }
+        for (const Net::ItemTake& take : m_net.takeTakes())
+        {
+            const auto who = m_net.players().find(take.peer);
+            if (who == m_net.players().end()) continue;
+            ItemStack given;
+            if (!m_drops.grant(take.serial, who->second.position, take.room, given)) continue;
+            Net::ItemGift gift;
+            gift.id = static_cast<uint16_t>(given.id);
+            gift.count = given.count;
+            gift.damage = given.damage;
+            gift.enchantments = given.enchantments;
+            m_net.giveItem(take.peer, gift);
+        }
+        m_itemShareClock -= deltaTime;
+        if (m_itemShareClock > 0.0f) return;
+        m_itemShareClock = 0.1f;
+        std::vector<glm::vec3> near;
+        for (const auto& entry : m_net.players())
+            if (entry.second.positioned) near.push_back(entry.second.position);
+        if (near.empty()) return;
+        std::vector<DroppedItems::Snap> snaps;
+        m_drops.snapshot(snaps, near, 96.0f);
+        std::vector<Net::ItemSnap> items;
+        items.reserve(snaps.size());
+        for (const DroppedItems::Snap& snap : snaps)
+            items.push_back({ snap.serial, snap.position, static_cast<uint16_t>(snap.id), snap.count, snap.ready });
+        m_net.broadcastItems(items);
+        return;
+    }
+    if (m_net.role() != Net::Role::Guest || m_net.status() != Net::Status::Playing) return;
+    std::vector<Net::ItemSnap> items;
+    if (m_net.takeItemStates(items))
+    {
+        std::vector<DroppedItems::Snap> snaps;
+        snaps.reserve(items.size());
+        for (const Net::ItemSnap& item : items)
+        {
+            DroppedItems::Snap snap;
+            snap.serial = item.serial;
+            snap.position = item.position;
+            snap.id = static_cast<StackId>(item.id);
+            snap.count = item.count;
+            snap.ready = item.ready;
+            snaps.push_back(snap);
+        }
+        m_drops.mirror(snaps);
+    }
+    for (const DroppedItems::Taken& local : m_drops.takeLocal())
+    {
+        Net::ItemDrop drop;
+        drop.at = local.position;
+        drop.velocity = local.velocity;
+        drop.id = static_cast<uint16_t>(local.id);
+        drop.count = local.count;
+        drop.damage = local.damage;
+        drop.enchantments = local.enchantments;
+        m_net.sendDrop(drop);
+    }
+    for (const auto& wanted : m_drops.takeWanted()) m_net.sendTake(wanted.first, wanted.second);
+    bool popped = false;
+    for (const Net::ItemGift& gift : m_net.takeGifts())
+    {
+        ItemStack stack;
+        stack.id = static_cast<StackId>(gift.id);
+        stack.count = gift.count;
+        stack.damage = gift.damage;
+        stack.enchantments = gift.enchantments;
+        const int leftOver = m_inventory.addStack(stack);
+        if (leftOver < gift.count)
+        {
+            m_drops.notePicked(stack.id, gift.count - leftOver);
+            if (!popped) m_audio.play(Sound::Pickup, 0.45f, 1.0f);
+            popped = true;
+        }
+        if (leftOver > 0)
+        {
+            stack.count = leftOver;
+            m_drops.spawnStack(m_player.position + glm::vec3(0.0f, 0.5f, 0.0f), stack);
+        }
+    }
+}
+
 void Application::followHostMobs(float deltaTime)
 {
     std::vector<Net::MobSnap> snaps;
@@ -26701,7 +26802,6 @@ void Application::updateMobs(float deltaTime)
 
     for (const EntityManager::Death& death : m_entities.drainDeaths())
     {
-        const size_t dropMark = m_drops.itemCount();
         const int orbMark = m_orbs.count();
         vibrate(death.position, 15);
         if (m_rules.on(GameRules::Rule::DoMobLoot))
@@ -26923,10 +27023,8 @@ void Application::updateMobs(float deltaTime)
         if (killer != m_guestKills.end() && death.byPlayer && m_elapsedSeconds - killer->second.second < 5.0f && m_net.role() == Net::Role::Host)
         {
             Net::LootEvent loot;
-            for (const DroppedItems::Taken& item : m_drops.takeFrom(dropMark))
-                loot.items.push_back({ item.position, static_cast<uint16_t>(item.id), item.count, item.damage, item.enchantments });
             loot.experience = m_orbs.takeFrom(orbMark, loot.orbsAt);
-            m_net.sendLoot(killer->second.first, loot);
+            if (loot.experience > 0) m_net.sendLoot(killer->second.first, loot);
         }
         if (killer != m_guestKills.end()) m_guestKills.erase(killer);
     }
@@ -27360,6 +27458,37 @@ void Application::tickLanTest(float deltaTime)
     }
     if (host && at(37.0f) && m_entities.summonAt(MobId::Skeleton, m_lanBase + glm::vec3(4.0f, 0.0f, 8.0f)))
         m_entities.mobs().back().setGear(Mob::MainHand, Items::Bow, true);
+    if (t >= 37.5f) m_drops.update(deltaTime, *m_world, m_player, m_inventory, m_audio);
+    if (t >= 38.6f && t < 39.6f)
+    {
+        m_camera.setOrientation(host ? 0.0f : 180.0f, -32.0f);
+        if (t >= 39.1f) shot("see-items");
+    }
+    if (host && at(38.0f))
+        for (const auto& entry : m_net.players())
+        {
+            m_drops.spawnStack(entry.second.position + glm::vec3(-0.7f, 0.4f, 0.0f), ItemStack{ static_cast<StackId>(Items::Diamond), 2, 0, 0 });
+            m_drops.flingLast(glm::vec3(0.0f));
+        }
+    if (!host && at(38.0f))
+    {
+        m_drops.spawnStack(remoteAt + glm::vec3(0.7f, 0.4f, 0.0f), ItemStack{ static_cast<StackId>(Items::Emerald), 3, 0, 0 });
+        m_drops.flingLast(glm::vec3(0.0f));
+    }
+    if (at(39.0f))
+    {
+        int diamonds = 0, emeralds = 0;
+        for (const DroppedItems::Snap& snap : [&] { std::vector<DroppedItems::Snap> all; m_drops.snapshot(all, { m_player.position }, 8.0f); return all; }())
+            (snap.id == static_cast<StackId>(Items::Diamond) ? diamonds : snap.id == static_cast<StackId>(Items::Emerald) ? emeralds : diamonds) += snap.id == static_cast<StackId>(Items::Diamond) || snap.id == static_cast<StackId>(Items::Emerald) ? snap.count : 0;
+        std::printf("[lantest] %s own drops near: diamonds %d emeralds %d, all drops %zu\n", host ? "host" : "guest", diamonds, emeralds, m_drops.itemCount());
+        std::fflush(stdout);
+    }
+    if (at(43.0f))
+    {
+        std::printf("[lantest] %s holds diamonds %d emeralds %d, drops left %zu\n", host ? "host" : "guest",
+                    m_inventory.countOf(static_cast<StackId>(Items::Diamond)), m_inventory.countOf(static_cast<StackId>(Items::Emerald)), m_drops.itemCount());
+        std::fflush(stdout);
+    }
     if (!host && at(43.5f))
     {
         std::printf("[lantest] guest health after skeleton %d\n", m_player.health);

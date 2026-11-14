@@ -1102,6 +1102,8 @@ private:
     void sufferStrike(const MobStrike& strike);
     void shareMobs(float deltaTime);
     void followHostMobs(float deltaTime);
+    void shareItems(float deltaTime);
+    float m_itemShareClock = 0.0f;
     void forwardHit(const Mob& target, int damage, const glm::vec3& push, float fireSeconds);
     void blastPlayer(const glm::vec3& at, float radius, int damage);
     std::map<uint32_t, std::pair<uint32_t, float>> m_guestKills;

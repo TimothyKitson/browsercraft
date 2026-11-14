@@ -126,6 +126,11 @@ void Session::leave()
     m_loot.clear();
     m_chatIn.clear();
     m_fangs.clear();
+    m_itemStates.clear();
+    m_itemStatesFresh = false;
+    m_drops.clear();
+    m_takes.clear();
+    m_gifts.clear();
 }
 
 // ------------------------------------------------------------- update ---
@@ -618,6 +623,30 @@ void Session::handleAsHost(const Packet& packet, World* world)
             break;
         }
 
+        case MessageId::DropItem:
+        {
+            ItemDrop drop;
+            drop.peer = packet.peer;
+            drop.at = reader.vec3();
+            drop.velocity = reader.vec3();
+            drop.id = reader.u16();
+            drop.count = static_cast<int>(reader.u16());
+            drop.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            drop.enchantments = reader.u32();
+            if (reader.ok() && drop.count > 0 && m_drops.size() < 512) m_drops.push_back(drop);
+            break;
+        }
+
+        case MessageId::TakeItem:
+        {
+            ItemTake take;
+            take.peer = packet.peer;
+            take.serial = reader.u32();
+            take.room = static_cast<int>(reader.u16());
+            if (reader.ok() && m_takes.size() < 256) m_takes.push_back(take);
+            break;
+        }
+
         case MessageId::ChatSay:
         {
             std::string line = reader.str();
@@ -840,6 +869,39 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             break;
         }
 
+        case MessageId::ItemStates:
+        {
+            const uint32_t count = reader.u16();
+            std::vector<ItemSnap> items;
+            for (uint32_t k = 0; k < count && reader.ok() && k < 2048; ++k)
+            {
+                ItemSnap item;
+                item.serial = reader.u32();
+                item.position = reader.vec3();
+                item.id = reader.u16();
+                item.count = static_cast<int>(reader.u8());
+                item.ready = reader.u8() != 0;
+                items.push_back(item);
+            }
+            if (reader.ok())
+            {
+                m_itemStates.swap(items);
+                m_itemStatesFresh = true;
+            }
+            break;
+        }
+
+        case MessageId::ItemGiven:
+        {
+            ItemGift gift;
+            gift.id = reader.u16();
+            gift.count = static_cast<int>(reader.u16());
+            gift.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
+            gift.enchantments = reader.u32();
+            if (reader.ok() && gift.count > 0 && m_gifts.size() < 256) m_gifts.push_back(gift);
+            break;
+        }
+
         case MessageId::FangsCast:
         {
             FangsEvent fangs;
@@ -1046,6 +1108,65 @@ void Session::sendLoot(uint32_t peer, const LootEvent& loot)
     }
     out.vec3(loot.orbsAt);
     out.i32(loot.experience);
+    m_transport->send(peer, out.bytes());
+}
+
+void Session::broadcastItems(const std::vector<ItemSnap>& items)
+{
+    if (m_role != Role::Host || !m_transport || m_players.empty()) return;
+    Writer out(MessageId::ItemStates);
+    const size_t count = std::min<size_t>(items.size(), 2048);
+    out.u16(static_cast<uint16_t>(count));
+    for (size_t k = 0; k < count; ++k)
+    {
+        out.u32(items[k].serial);
+        out.vec3(items[k].position);
+        out.u16(items[k].id);
+        out.u8(static_cast<uint8_t>(std::clamp(items[k].count, 1, 255)));
+        out.u8(items[k].ready ? 1 : 0);
+    }
+    m_transport->broadcast(out.bytes());
+}
+
+bool Session::takeItemStates(std::vector<ItemSnap>& out)
+{
+    if (!m_itemStatesFresh) return false;
+    m_itemStatesFresh = false;
+    out.swap(m_itemStates);
+    m_itemStates.clear();
+    return true;
+}
+
+void Session::sendDrop(const ItemDrop& drop)
+{
+    if (m_role != Role::Guest || !m_transport) return;
+    Writer out(MessageId::DropItem);
+    out.vec3(drop.at);
+    out.vec3(drop.velocity);
+    out.u16(drop.id);
+    out.u16(static_cast<uint16_t>(std::clamp(drop.count, 1, 65535)));
+    out.i32(drop.damage);
+    out.u32(drop.enchantments);
+    m_transport->send(HOST_PEER, out.bytes());
+}
+
+void Session::sendTake(uint32_t serial, int room)
+{
+    if (m_role != Role::Guest || !m_transport) return;
+    Writer out(MessageId::TakeItem);
+    out.u32(serial);
+    out.u16(static_cast<uint16_t>(std::clamp(room, 0, 65535)));
+    m_transport->send(HOST_PEER, out.bytes());
+}
+
+void Session::giveItem(uint32_t peer, const ItemGift& gift)
+{
+    if (m_role != Role::Host || !m_transport || !m_players.count(peer)) return;
+    Writer out(MessageId::ItemGiven);
+    out.u16(gift.id);
+    out.u16(static_cast<uint16_t>(std::clamp(gift.count, 1, 65535)));
+    out.i32(gift.damage);
+    out.u32(gift.enchantments);
     m_transport->send(peer, out.bytes());
 }
 

@@ -156,6 +156,41 @@ namespace Net
         uint32_t enchantments = 0;
     };
 
+    struct ItemSnap
+    {
+        uint32_t serial = 0;
+        glm::vec3 position{ 0.0f };
+        uint16_t id = 0;
+        int count = 1;
+        bool ready = false;
+    };
+
+    struct ItemDrop
+    {
+        uint32_t peer = 0;
+        glm::vec3 at{ 0.0f };
+        glm::vec3 velocity{ 0.0f };
+        uint16_t id = 0;
+        int count = 1;
+        int damage = 0;
+        uint32_t enchantments = 0;
+    };
+
+    struct ItemTake
+    {
+        uint32_t peer = 0;
+        uint32_t serial = 0;
+        int room = 0;
+    };
+
+    struct ItemGift
+    {
+        uint16_t id = 0;
+        int count = 1;
+        int damage = 0;
+        uint32_t enchantments = 0;
+    };
+
     struct LootEvent
     {
         std::vector<LootItem> items;
@@ -233,6 +268,14 @@ namespace Net
         void broadcastFangs(const FangsEvent& fangs);
         std::vector<FangsEvent> takeFangs() { std::vector<FangsEvent> all; all.swap(m_fangs); return all; }
         std::vector<std::string> takeChat() { std::vector<std::string> all; all.swap(m_chatIn); return all; }
+        void broadcastItems(const std::vector<ItemSnap>& items);
+        bool takeItemStates(std::vector<ItemSnap>& out);
+        void sendDrop(const ItemDrop& drop);
+        std::vector<ItemDrop> takeDrops() { std::vector<ItemDrop> all; all.swap(m_drops); return all; }
+        void sendTake(uint32_t serial, int room);
+        std::vector<ItemTake> takeTakes() { std::vector<ItemTake> all; all.swap(m_takes); return all; }
+        void giveItem(uint32_t peer, const ItemGift& gift);
+        std::vector<ItemGift> takeGifts() { std::vector<ItemGift> all; all.swap(m_gifts); return all; }
         bool takeMobStates(std::vector<MobSnap>& out);
         std::vector<MobNoise> takeMobNoises() { std::vector<MobNoise> all; all.swap(m_mobNoises); return all; }
         std::vector<StrikeOnYou> takeStrikesOnMe() { std::vector<StrikeOnYou> all; all.swap(m_strikesOnMe); return all; }
@@ -286,6 +329,11 @@ namespace Net
         std::vector<LootEvent> m_loot;
         std::vector<std::string> m_chatIn;
         std::vector<FangsEvent> m_fangs;
+        std::vector<ItemSnap> m_itemStates;
+        bool m_itemStatesFresh = false;
+        std::vector<ItemDrop> m_drops;
+        std::vector<ItemTake> m_takes;
+        std::vector<ItemGift> m_gifts;
         uint16_t m_localMain = 0;
         uint16_t m_localOff = 0;
         bool m_localLeftHanded = false;

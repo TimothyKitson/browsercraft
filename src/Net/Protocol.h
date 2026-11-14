@@ -18,7 +18,7 @@ namespace Net
     // new host with a clear error instead of garbled blocks.
     //   2: players carry an appearance, and a move says whether they are
     //      sneaking, so everyone can be drawn rather than inferred.
-    constexpr uint32_t PROTOCOL_VERSION = 8;
+    constexpr uint32_t PROTOCOL_VERSION = 9;
     constexpr uint16_t DEFAULT_PORT = 25585;
     constexpr uint16_t DISCOVERY_PORT = 25586;
     constexpr int MAX_PLAYERS = 8;
@@ -32,6 +32,8 @@ namespace Net
         StatusQuery,
         MobHit,
         ChatSay,
+        DropItem,
+        TakeItem,
 
         // host -> guest
         Welcome = 64,    // seed, game mode, time, your id, spawn point
@@ -52,7 +54,9 @@ namespace Net
         MobShotYou,
         LootForYou,
         FangsCast,
-        ShoulderRiders
+        ShoulderRiders,
+        ItemStates,
+        ItemGiven
     };
 
     // Which character someone picked, small enough to ride along with the

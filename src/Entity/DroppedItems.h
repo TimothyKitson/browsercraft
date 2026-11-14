@@ -47,15 +47,36 @@ public:
         int count = 1;
         int damage = 0;
         uint32_t enchantments = 0;
+        glm::vec3 velocity{ 0.0f };
     };
     std::vector<Taken> takeFrom(size_t first)
     {
         std::vector<Taken> out;
         for (size_t k = first; k < m_items.size(); ++k)
-            out.push_back({ m_items[k].position, m_items[k].block, m_items[k].count, m_items[k].damage, m_items[k].enchantments });
+            out.push_back({ m_items[k].position, m_items[k].block, m_items[k].count, m_items[k].damage, m_items[k].enchantments, m_items[k].velocity });
         if (first < m_items.size()) m_items.erase(m_items.begin() + static_cast<long>(first), m_items.end());
         return out;
     }
+
+    struct Snap
+    {
+        uint32_t serial = 0;
+        glm::vec3 position{ 0.0f };
+        StackId id = Blocks::Air;
+        int count = 1;
+        bool ready = false;
+    };
+    void snapshot(std::vector<Snap>& out, const std::vector<glm::vec3>& near, float range) const;
+    void mirror(const std::vector<Snap>& snaps);
+    std::vector<Taken> takeLocal();
+    bool grant(uint32_t serial, const glm::vec3& feet, int room, ItemStack& out);
+    std::vector<std::pair<uint32_t, int>> takeWanted()
+    {
+        std::vector<std::pair<uint32_t, int>> out;
+        out.swap(m_wanted);
+        return out;
+    }
+    void notePicked(StackId id, int count) { m_picked.emplace_back(id, count); }
     void flingLast(const glm::vec3& velocity)
     {
         if (!m_items.empty()) m_items.back().velocity = velocity;
@@ -158,9 +179,16 @@ private:
         float age = 0.0f;
         float spin = 0.0f;
         bool resting = false;
+        uint32_t serial = 0;
+        bool mirrored = false;
+        bool ready = false;
+        float asked = 0.0f;
+        glm::vec3 target{ 0.0f };
     };
 
     std::vector<Item> m_items;
+    uint32_t m_nextSerial = 1;
+    std::vector<std::pair<uint32_t, int>> m_wanted;
     struct Falling
     {
         glm::vec3 position{ 0.0f };

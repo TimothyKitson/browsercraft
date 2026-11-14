@@ -80,8 +80,102 @@ void DroppedItems::spawn(const glm::vec3& position, StackId block, int count)
                               2.0f + hashToFloat(h >> 8) * 0.8f,
                               (hashToFloat(h >> 16) - 0.5f) * 1.8f);
     item.spin = hashToFloat(h >> 4) * 6.2831853f;
+    item.serial = m_nextSerial++;
 
     m_items.push_back(item);
+}
+
+void DroppedItems::snapshot(std::vector<Snap>& out, const std::vector<glm::vec3>& near, float range) const
+{
+    for (const Item& item : m_items)
+    {
+        if (item.mirrored) continue;
+        bool close = false;
+        for (const glm::vec3& spot : near)
+            if (glm::length(glm::vec2(item.position.x - spot.x, item.position.z - spot.z)) <= range)
+            {
+                close = true;
+                break;
+            }
+        if (!close) continue;
+        Snap snap;
+        snap.serial = item.serial;
+        snap.position = item.position;
+        snap.id = item.block;
+        snap.count = item.count;
+        snap.ready = item.age > PICKUP_DELAY;
+        out.push_back(snap);
+    }
+}
+
+void DroppedItems::mirror(const std::vector<Snap>& snaps)
+{
+    std::vector<Item> kept;
+    kept.reserve(snaps.size());
+    for (const Snap& snap : snaps)
+    {
+        Item item;
+        bool known = false;
+        for (const Item& old : m_items)
+            if (old.mirrored && old.serial == snap.serial)
+            {
+                item = old;
+                known = true;
+                break;
+            }
+        if (!known)
+        {
+            item.mirrored = true;
+            item.serial = snap.serial;
+            item.position = snap.position;
+            item.spin = static_cast<float>(snap.serial % 628u) / 100.0f;
+        }
+        item.target = snap.position;
+        item.block = snap.id;
+        item.count = snap.count;
+        item.ready = snap.ready;
+        kept.push_back(item);
+    }
+    for (const Item& old : m_items)
+        if (!old.mirrored) kept.push_back(old);
+    m_items.swap(kept);
+}
+
+std::vector<DroppedItems::Taken> DroppedItems::takeLocal()
+{
+    std::vector<Taken> out;
+    for (size_t i = 0; i < m_items.size();)
+    {
+        const Item& item = m_items[i];
+        if (item.mirrored)
+        {
+            ++i;
+            continue;
+        }
+        out.push_back({ item.position, item.block, item.count, item.damage, item.enchantments, item.velocity });
+        m_items.erase(m_items.begin() + static_cast<long>(i));
+    }
+    return out;
+}
+
+bool DroppedItems::grant(uint32_t serial, const glm::vec3& feet, int room, ItemStack& out)
+{
+    for (size_t i = 0; i < m_items.size(); ++i)
+    {
+        Item& item = m_items[i];
+        if (item.serial != serial || item.mirrored) continue;
+        if (item.age <= PICKUP_DELAY || room <= 0) return false;
+        const glm::vec3 apart = item.position - feet;
+        if (glm::length(glm::vec2(apart.x, apart.z)) > COLLECT_RADIUS + 1.5f || apart.y < -2.5f || apart.y > Player::HEIGHT + 2.0f) return false;
+        out.id = item.block;
+        out.count = std::min(item.count, room);
+        out.damage = item.damage;
+        out.enchantments = item.enchantments;
+        item.count -= out.count;
+        if (item.count <= 0) m_items.erase(m_items.begin() + static_cast<long>(i));
+        return true;
+    }
+    return false;
 }
 
 void DroppedItems::spawnStack(const glm::vec3& position, const ItemStack& stack)
@@ -173,6 +267,30 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
         Item& item = m_items[i];
         item.age += deltaTime;
         item.spin += SPIN_SPEED * deltaTime;
+
+        if (item.mirrored)
+        {
+            item.position += (item.target - item.position) * std::clamp(deltaTime * 12.0f, 0.0f, 1.0f);
+            if (glm::length(item.target - item.position) > 4.0f) item.position = item.target;
+            item.asked = std::max(0.0f, item.asked - deltaTime);
+            const glm::vec3 apart = item.position - feet;
+            const bool near = glm::length(glm::vec2(apart.x, apart.z)) < COLLECT_RADIUS && apart.y > -1.0f && apart.y < Player::HEIGHT + 0.5f;
+            if (near && item.ready && item.asked <= 0.0f && !player.spectator())
+            {
+                Inventory probe = inventory;
+                ItemStack picking;
+                picking.id = item.block;
+                picking.count = item.count;
+                const int room = item.count - probe.addStack(picking);
+                if (room > 0)
+                {
+                    m_wanted.emplace_back(item.serial, room);
+                    item.asked = 0.6f;
+                }
+            }
+            ++i;
+            continue;
+        }
 
         bool collected = false;
 
@@ -279,6 +397,11 @@ void DroppedItems::mergeNearby()
         {
             Item& keep = m_items[a];
             Item& other = m_items[b];
+            if (keep.mirrored || other.mirrored)
+            {
+                ++b;
+                continue;
+            }
 
             const int limit = maxStackOf(keep.block);
             // Two tools are never the same tool: one is worn and
@@ -599,7 +722,7 @@ std::vector<ItemStack> DroppedItems::takeNear(const glm::vec3& at, float radius)
     for (size_t i = 0; i < m_items.size();)
     {
         const Item& item = m_items[i];
-        if (item.age > 0.5f && glm::length(item.position - at) <= radius)
+        if (!item.mirrored && item.age > 0.5f && glm::length(item.position - at) <= radius)
         {
             ItemStack stack;
             stack.id = item.block;
@@ -622,7 +745,7 @@ bool DroppedItems::nearestOf(StackId id, const glm::vec3& from, float range, glm
     bool found = false;
     for (const Item& item : m_items)
     {
-        if (item.block != id || item.age < 0.5f) continue;
+        if (item.mirrored || item.block != id || item.age < 0.5f) continue;
         const float away = glm::length(item.position - from);
         if (away > best) continue;
         best = away;
@@ -638,7 +761,7 @@ int DroppedItems::takeOf(StackId id, const glm::vec3& at, float radius, int most
     for (size_t i = 0; i < m_items.size() && taken < most;)
     {
         Item& item = m_items[i];
-        if (item.block == id && item.age > 0.5f && glm::length(item.position - at) <= radius)
+        if (!item.mirrored && item.block == id && item.age > 0.5f && glm::length(item.position - at) <= radius)
         {
             const int part = std::min(item.count, most - taken);
             taken += part;
