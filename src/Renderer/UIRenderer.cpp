@@ -144,6 +144,36 @@ void UIRenderer::endGlint()
     else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+void UIRenderer::beginWorld(const glm::mat4& matrix)
+{
+    m_scale = 1.0f;
+    m_invert = false;
+    m_vertices.clear();
+    m_currentTexture = 0;
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(-1.0f, -4.0f);
+    m_shader.bind();
+    m_shader.setMat4("uProjection", matrix);
+    m_shader.setInt("uTexture", 0);
+    m_shader.setInt("uNormalAtlas", 1);
+    m_shader.setInt("uGlint", 0);
+}
+
+void UIRenderer::endWorld()
+{
+    flush();
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+}
+
 void UIRenderer::end()
 {
     flush();

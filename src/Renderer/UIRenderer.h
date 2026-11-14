@@ -42,6 +42,8 @@ public:
 
     void begin(int screenWidth, int screenHeight);
     void end();
+    void beginWorld(const glm::mat4& matrix);
+    void endWorld();
 
     // How many screen pixels one interface pixel is. Everything drawn
     // after this is multiplied by it.

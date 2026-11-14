@@ -21259,6 +21259,8 @@ void Application::renderWorldShaded()
     m_paintingRenderer.render(world, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(world, *m_world, standsHere(96.0f));
     m_signRenderer.render(world, *m_world, m_world->signsNear(m_camera.position, 64.0f));
+    renderWorldText(projection * view);
+    world.bind();
     renderFramedMaps(world);
     m_bannerRenderer.render(world, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
@@ -21413,6 +21415,8 @@ void Application::renderWorld()
     m_paintingRenderer.render(m_chunkShader, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(m_chunkShader, *m_world, standsHere(96.0f));
     m_signRenderer.render(m_chunkShader, *m_world, m_world->signsNear(m_camera.position, 64.0f));
+    renderWorldText(projection * view);
+    m_chunkShader.bind();
     renderFramedMaps(m_chunkShader);
     m_bannerRenderer.render(m_chunkShader, *m_world, nearbyBanners(), m_elapsedSeconds);
     m_fireworkRenderer.render(view, projection, camera.right, camera.up);
@@ -24216,7 +24220,6 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
     const float screenHeight = static_cast<float>(m_window.height());
     const glm::vec3 cameraPosition = viewCamera().position;
 
-    collectSignPlates(viewProjection, screenWidth, screenHeight);
 
     auto draw = [&](const PlayerSkin& skin, const PlayerPose& pose, const std::string& name) {
         m_playerModel.render(m_activeShader ? *m_activeShader : m_chunkShader, *m_world, skin, pose);
@@ -24253,26 +24256,7 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
     for (const Mob& mob : m_entities.mobs())
     {
         if (!mob.alive() || mob.customName().empty()) continue;
-        if (isTechnicalMob(mob.typeId()) && mob.typeId() != MobId::TextDisplay) continue;
-        if (mob.typeId() == MobId::TextDisplay)
-        {
-            const float size = mob.variant() > 0 ? static_cast<float>(mob.variant()) / 100.0f : 1.0f;
-            const glm::vec3 at = mob.position() + glm::vec3(0.0f, 0.12f * size, 0.0f);
-            const float distance = glm::length(at - cameraPosition);
-            if (distance > 64.0f || distance < 0.05f) continue;
-            const glm::vec4 clip = viewProjection * glm::vec4(at, 1.0f);
-            if (clip.w <= 0.05f) continue;
-            const glm::vec3 ndc = glm::vec3(clip) / clip.w;
-            if (ndc.x < -1.3f || ndc.x > 1.3f || ndc.y < -1.3f || ndc.y > 1.3f) continue;
-            Nameplate plate;
-            plate.name = mob.customName();
-            plate.x = (ndc.x * 0.5f + 0.5f) * screenWidth;
-            plate.y = (1.0f - (ndc.y * 0.5f + 0.5f)) * screenHeight;
-            const float pixelsPerBlock = projection[1][1] * screenHeight / (2.0f * clip.w);
-            plate.scale = std::clamp(0.025f * size * pixelsPerBlock, 0.2f, 12.0f);
-            m_nameplates.push_back(plate);
-            continue;
-        }
+        if (isTechnicalMob(mob.typeId())) continue;
         const glm::vec3 above = mob.position() + glm::vec3(0.0f, mob.type().height + 0.35f, 0.0f);
         const float distance = glm::length(above - cameraPosition);
         if (distance > 16.0f) continue;
@@ -28029,76 +28013,109 @@ void Application::updateSignInput()
 // way a nameplate is rather than built into the chunk mesh: a sign
 // changes when somebody writes on it, and remeshing a chunk for a
 // word is more than a word is worth.
-void Application::collectSignPlates(const glm::mat4& viewProjection,
-                                    float screenWidth, float screenHeight)
+void Application::renderWorldText(const glm::mat4& viewProjection)
 {
-    constexpr float READABLE = 14.0f;
+    if (!m_world) return;
+    auto rgbOf = [](unsigned int rgb) {
+        return glm::vec3(static_cast<float>((rgb >> 16) & 0xFFu), static_cast<float>((rgb >> 8) & 0xFFu), static_cast<float>(rgb & 0xFFu)) / 255.0f;
+    };
+    auto frame = [&](const glm::vec3& origin, const glm::vec3& forward, float k) {
+        const glm::vec3 right(forward.z, 0.0f, -forward.x);
+        glm::mat4 model(1.0f);
+        model[0] = glm::vec4(right * k, 0.0f);
+        model[1] = glm::vec4(0.0f, -k, 0.0f, 0.0f);
+        model[2] = glm::vec4(forward, 0.0f);
+        model[3] = glm::vec4(origin, 1.0f);
+        return viewProjection * model;
+    };
 
-    for (const Signs::Near& sign : m_signs.near(m_camera.position, READABLE))
+    for (const Signs::Near& sign : m_signs.near(m_camera.position, 32.0f))
     {
         const BlockId block = m_world->getBlock(sign.block.x, sign.block.y, sign.block.z);
         if (!isSign(block)) continue;
-
+        bool any = false;
+        for (const std::string& line : *sign.text) any = any || !line.empty();
+        if (!any) continue;
+        const glm::vec3 forward = SignRenderer::facingVector(block);
         const glm::vec3 middle = SignRenderer::textAnchor(sign.block, block);
-        if (glm::dot(m_camera.position - middle, SignRenderer::facingVector(block)) <= 0.0f)
-            continue;
-
-        const float distance = glm::length(middle - m_camera.position);
-        const float scale = std::clamp(2.0f - distance * 0.06f, 0.9f, 1.6f) * (isHangingSign(block) ? 0.8f : 1.0f);
-
-        // Projected once and stacked in pixels, not in world units. A
-        // world-space offset shrinks with distance while the letters
-        // do not, so the four lines ran into one another the moment
-        // you stepped back from the board.
-        const glm::vec4 clip = viewProjection * glm::vec4(middle, 1.0f);
-        if (clip.w <= 0.05f) continue;
-
-        const glm::vec3 ndc = glm::vec3(clip) / clip.w;
-        if (ndc.x < -1.2f || ndc.x > 1.2f || ndc.y < -1.2f || ndc.y > 1.2f) continue;
-
-        const float step = UIRenderer::textHeight(scale) + 4.0f;
-        const float x = (ndc.x * 0.5f + 0.5f) * screenWidth;
-        const float y = (1.0f - (ndc.y * 0.5f + 0.5f)) * screenHeight;
-
-        // Centred on the board: four lines sit two above the middle
-        // and two below, which is where the words are on the board.
-        int written = 0;
-        for (const std::string& line : *sign.text)
-            if (!line.empty()) ++written;
-        if (written == 0) continue;
-
+        if (glm::dot(m_camera.position - middle, forward) <= 0.0f) continue;
+        const bool hanging = isHangingSign(block);
+        const float k = 0.015625f * (hanging ? 1.0f : 0.6666667f);
+        const int lineHeight = hanging ? 9 : 10;
         const Signs::Look look = m_signs.look(sign.block);
-        auto rgbOf = [](unsigned int rgb) {
-            return glm::vec3(static_cast<float>((rgb >> 16) & 0xFFu), static_cast<float>((rgb >> 8) & 0xFFu),
-                             static_cast<float>(rgb & 0xFFu)) / 255.0f;
-        };
         const glm::ivec3& at = sign.block;
         const float light = std::max(static_cast<float>(m_world->blockLightAt(at.x, at.y, at.z)),
                                      static_cast<float>(m_world->skyLight(at.x, at.y, at.z)) * viewDaylight()) / 15.0f;
-
-        int drawn = 0;
+        const glm::vec3 fill = look.glow ? rgbOf(Signs::textRgb(look.colour)) : rgbOf(Signs::shadedRgb(look)) * (0.25f + 0.75f * light);
+        const glm::vec3 edge = rgbOf(Signs::shadedRgb(look));
+        m_ui.beginWorld(frame(middle + forward * 0.002f, forward, k));
         for (int i = 0; i < Signs::LINES; ++i)
         {
-            if ((*sign.text)[static_cast<size_t>(i)].empty()) continue;
-
-            Nameplate plate;
-            plate.name = (*sign.text)[static_cast<size_t>(i)];
-            plate.x = x;
-            plate.y = y + (static_cast<float>(drawn) -
-                           static_cast<float>(written - 1) * 0.5f) * step;
-            plate.scale = scale;
-            plate.sign = true;
-            plate.glow = look.glow;
+            const std::string& line = (*sign.text)[static_cast<size_t>(i)];
+            if (line.empty()) continue;
+            const float width = UIRenderer::textWidth(line, 1.0f);
+            const float x = -width * 0.5f;
+            const float y = static_cast<float>(i * lineHeight - 2 * lineHeight);
             if (look.glow)
-            {
-                plate.fill = rgbOf(Signs::textRgb(look.colour));
-                plate.edge = rgbOf(Signs::shadedRgb(look));
-            }
-            else
-                plate.fill = rgbOf(Signs::shadedRgb(look)) * (0.25f + 0.75f * light);
-            m_nameplates.push_back(plate);
-            ++drawn;
+                for (int dx = -1; dx <= 1; ++dx)
+                    for (int dy = -1; dy <= 1; ++dy)
+                        if (dx != 0 || dy != 0) m_ui.text(line, x + static_cast<float>(dx), y + static_cast<float>(dy), 1.0f, glm::vec4(edge, 1.0f));
+            m_ui.text(line, x, y, 1.0f, glm::vec4(fill, 1.0f));
         }
+        m_ui.endWorld();
+    }
+
+    for (const Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive() || mob.typeId() != MobId::TextDisplay || mob.customName().empty()) continue;
+        if (glm::length(mob.position() - m_camera.position) > 64.0f) continue;
+        const float size = mob.variant() > 0 ? static_cast<float>(mob.variant()) / 100.0f : 1.0f;
+        std::vector<std::string> lines;
+        {
+            std::string current;
+            std::string word;
+            auto place = [&](const std::string& piece) {
+                const std::string joined = current.empty() ? piece : current + " " + piece;
+                if (!current.empty() && UIRenderer::textWidth(joined, 1.0f) > 200.0f)
+                {
+                    lines.push_back(current);
+                    current = piece;
+                }
+                else current = joined;
+            };
+            for (char c : mob.customName() + "\n")
+            {
+                if (c == ' ' || c == '\n')
+                {
+                    if (!word.empty()) place(word);
+                    word.clear();
+                    if (c == '\n')
+                    {
+                        lines.push_back(current);
+                        current.clear();
+                    }
+                }
+                else word += c;
+            }
+        }
+        float widest = 0.0f;
+        for (const std::string& line : lines) widest = std::max(widest, UIRenderer::textWidth(line, 1.0f));
+        const float tall = static_cast<float>(lines.size()) * 10.0f;
+        const float yaw = glm::radians(mob.yaw() - 90.0f);
+        const glm::vec3 forward(-std::sin(yaw), 0.0f, std::cos(yaw));
+        const glm::ivec3 cell(glm::floor(mob.position()));
+        const float light = std::max(static_cast<float>(m_world->blockLightAt(cell.x, cell.y, cell.z)),
+                                     static_cast<float>(m_world->skyLight(cell.x, cell.y, cell.z)) * viewDaylight()) / 15.0f;
+        const float shade = 0.25f + 0.75f * light;
+        const float left = 1.0f - widest * 0.5f;
+        m_ui.beginWorld(frame(mob.position(), forward, 0.025f * size));
+        m_ui.quad(left - 1.0f, -tall - 1.0f, widest + 1.0f, tall + 1.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
+        for (size_t i = 0; i < lines.size(); ++i)
+        {
+            const float width = UIRenderer::textWidth(lines[i], 1.0f);
+            m_ui.text(lines[i], left + widest * 0.5f - width * 0.5f, -tall + static_cast<float>(i) * 10.0f, 1.0f, glm::vec4(shade, shade, shade, 1.0f));
+        }
+        m_ui.endWorld();
     }
 }
 
@@ -31176,6 +31193,10 @@ void Application::runCheatAudit()
         m_player.flying = true;
         m_showDebug = false;
         m_camera.setOrientation(76.0f, -40.0f);
+        const glm::vec3 sign = m_player.position + glm::vec3(0.0f, 1.0f, 3.0f);
+        const auto [shown, shownSaid] = run("/summon text_display " + std::to_string(sign.x) + " " + std::to_string(sign.y) + " " + std::to_string(sign.z) +
+                                            " {text:'\"A placed desert pyramid\"',Rotation:[180f,0f]}");
+        report(shown, "/summon text_display", shownSaid);
     }
     std::printf("Cheat audit: %d passed, %d failed\n", passed, failed);
     std::fflush(stdout);

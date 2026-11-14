@@ -1598,8 +1598,7 @@ private:
     void closeSign();
     void updateSignInput();
     void renderSignEditor();
-    void collectSignPlates(const glm::mat4& viewProjection,
-                           float screenWidth, float screenHeight);
+    void renderWorldText(const glm::mat4& viewProjection);
 
     // An item frame takes one thing and gives it back.
     bool useFrame(const glm::ivec3& at, BlockId block);
