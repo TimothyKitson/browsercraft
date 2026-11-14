@@ -1,4 +1,6 @@
 #include "Experience.h"
+#include "RecipeBook.h"
+#include <map>
 #include "Items.h"
 #include "Food.h"
 #include <algorithm>
@@ -81,8 +83,18 @@ namespace Experience
     Range forMining(StackId block)
     {
         if (isBlockStack(block)) block = oreBase(static_cast<BlockId>(block));
+        if (isBlockStack(block))
+        {
+            const BlockId b = static_cast<BlockId>(block);
+            if (isSculkSensor(b) || isCalibratedSensor(b)) return { 1, 1 };
+            if (b == Blocks::SculkCatalystBloom) return { 5, 5 };
+        }
         switch (block)
         {
+        case Blocks::MonsterSpawner: return { 15, 43 };
+        case Blocks::Sculk: return { 1, 1 };
+        case Blocks::SculkCatalyst: return { 5, 5 };
+        case Blocks::SculkShrieker: return { 5, 5 };
         case Blocks::CoalOre:    return { 0, 2 };
         case Blocks::DiamondOre: return { 3, 7 };
         case Blocks::EmeraldOre: return { 3, 7 };
@@ -97,20 +109,28 @@ namespace Experience
 
     int smeltingHundredths(StackId result)
     {
-        switch (result)
-        {
-        case Items::IronIngot:    return 70;
-        case Items::GoldIngot:    return 100;
-        case Items::Diamond:      return 100;
-        case Items::Coal:         return 10;
-        case Blocks::Glass:       return 10;
-        case Blocks::Stone:       return 10;
-        default: break;
-        }
-
-        // Anything else worth smelting is food, and all cooked food
-        // pays the same in Minecraft.
-        if (Food::valueOf(result).hunger > 0) return 35;
+        static const std::pair<const char*, int> TABLE[] = {
+            { "baked_potato", 35 }, { "brick", 30 }, { "charcoal", 15 }, { "coal", 10 }, { "cooked_beef", 35 },
+            { "cooked_chicken", 35 }, { "cooked_cod", 35 }, { "cooked_mutton", 35 }, { "cooked_porkchop", 35 },
+            { "cooked_rabbit", 35 }, { "cooked_salmon", 35 }, { "copper_ingot", 70 }, { "cracked_deepslate_bricks", 10 },
+            { "cracked_deepslate_tiles", 10 }, { "cracked_nether_bricks", 10 }, { "cracked_polished_blackstone_bricks", 10 },
+            { "cracked_stone_bricks", 10 }, { "deepslate", 10 }, { "diamond", 100 }, { "dried_kelp", 10 }, { "emerald", 100 },
+            { "glass", 10 }, { "gold_ingot", 100 }, { "gold_nugget", 10 }, { "green_dye", 100 }, { "iron_ingot", 70 },
+            { "iron_nugget", 10 }, { "lapis_lazuli", 20 }, { "lime_dye", 10 }, { "nether_brick", 10 }, { "netherite_scrap", 200 },
+            { "popped_chorus_fruit", 10 }, { "quartz", 20 }, { "redstone", 70 }, { "smooth_basalt", 10 }, { "smooth_quartz", 10 },
+            { "smooth_red_sandstone", 10 }, { "smooth_sandstone", 10 }, { "smooth_stone", 10 }, { "sponge", 15 }, { "stone", 10 },
+            { "terracotta", 35 },
+        };
+        static std::map<StackId, int> byStack;
+        if (byStack.empty())
+            for (const auto& entry : TABLE)
+            {
+                const StackId id = RecipeBook::stackNamed(entry.first);
+                if (id != Blocks::Air) byStack[id] = entry.second;
+            }
+        const auto found = byStack.find(result);
+        if (found != byStack.end()) return found->second;
+        if (isBlockStack(result) && isGlazedTerracotta(asBlock(result))) return 10;
         return 0;
     }
 }
