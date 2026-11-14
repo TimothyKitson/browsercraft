@@ -8835,7 +8835,12 @@ namespace
         check(attackDamage(Items::WoodSword) > attackDamage(Blocks::Air), "a sword does more");
         check(attackDamage(Items::DiamondSword) > attackDamage(Items::WoodSword),
               "a diamond sword more again");
-        check(attackDamage(Items::IronSword) > attackDamage(Items::IronAxe), "a sword beats its own axe");
+        check(attackDamage(Items::IronAxe) == 9 && attackDamage(Items::IronSword) == 6 && attackSpeed(Items::IronAxe) < attackSpeed(Items::IronSword),
+              "an iron axe hits for nine to the sword's six but swings slower, as in Java Edition");
+        check(attackDamageExact(Items::DiamondShovel) == 5.5f && attackDamage(Items::Mace) == 6, "a diamond shovel hits for five and a half, a mace for six");
+        check(Armour::maxDurability(Items::NetheriteChestplate) == 592 && Armour::maxDurability(Items::LeatherBoots) == 65 &&
+                  Armour::maxDurability(Items::DiamondBoots) == 429 && Armour::maxDurability(Items::GoldBoots) == 91,
+              "armour lasts as long as Minecraft's, piece by piece");
         check(attackDamage(Items::IronAxe) > attackDamage(Items::IronPickaxe), "which beats its pickaxe");
         check(attackDamage(Items::DiamondHoe) == 1, "and a hoe is no weapon at all");
     }

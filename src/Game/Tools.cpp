@@ -234,6 +234,30 @@ float Tools::attackSpeed(StackId tool)
     }
 }
 
+float Tools::attackDamageExact(StackId tool)
+{
+    const Tier tier = tierOf(tool);
+    const float sword = static_cast<float>(TIERS[static_cast<int>(tier)].swordDamage);
+    switch (kindOf(tool))
+    {
+        case Kind::Sword:   return sword;
+        case Kind::Axe:
+            switch (tier)
+            {
+                case Tier::Wood: case Tier::Gold: return 7.0f;
+                case Tier::Netherite: return 10.0f;
+                case Tier::None: return 1.0f;
+                default: return 9.0f;
+            }
+        case Kind::Pickaxe: return std::max(1.0f, sword - 2.0f);
+        case Kind::Shovel:  return std::max(1.0f, sword - 1.5f);
+        case Kind::Hoe:     return 1.0f;
+        case Kind::Mace:    return 6.0f;
+        case Kind::Trident: return 9.0f;
+        default:            return 1.0f;
+    }
+}
+
 int Tools::attackDamage(StackId tool)
 {
     const Tier tier = tierOf(tool);
@@ -242,11 +266,11 @@ int Tools::attackDamage(StackId tool)
     switch (kindOf(tool))
     {
         case Kind::Sword:   return sword;
-        case Kind::Axe:     return std::max(1, sword - 1);
+        case Kind::Axe:     return static_cast<int>(attackDamageExact(tool));
         case Kind::Pickaxe: return std::max(1, sword - 2);
-        case Kind::Shovel:  return std::max(1, sword - 3);
+        case Kind::Shovel:  return static_cast<int>(attackDamageExact(tool));
         case Kind::Hoe:     return 1;
-        case Kind::Mace:    return 7;
+        case Kind::Mace:    return 6;
         // Minecraft's, and the hardest swing in the game short of a
         // mace coming down off a fall. Thrown there, held here: the
         // projectiles in this engine cannot drop what threw them.

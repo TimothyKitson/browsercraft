@@ -10493,7 +10493,7 @@ void Application::updateMining(float deltaTime)
                 const MobId struck = target->typeId();
                 const bool arthropod = struck == MobId::Spider || struck == MobId::CaveSpider || struck == MobId::Silverfish ||
                                        struck == MobId::Endermite || struck == MobId::Bee;
-                float base = static_cast<float>(Tools::attackDamage(weapon) + Effects::attackBonus(m_player.effects)) +
+                float base = Tools::attackDamageExact(weapon) + static_cast<float>(Effects::attackBonus(m_player.effects)) +
                              static_cast<float>(m_player.attributes.value(Attributes::Kind::AttackDamage) - 1.0);
                 base *= 0.2f + strength * strength * 0.8f;
                 if (critical) base *= 1.5f;

@@ -37,11 +37,8 @@ namespace
         { 2, 5, 4, 1 },   // chainmail: 12
     };
 
-    // How many hits each tier takes, as a multiplier on the piece's own
-    // base. Minecraft gives each piece a different figure; these are
-    // close enough that the ordering a player actually feels is right.
-    const int DURABILITY[6] = { 80, 112, 240, 528, 666, 240 };
-    const float PIECE_SHARE[PIECES_PER_TIER] = { 0.69f, 1.0f, 0.94f, 0.81f };
+    const int DURABILITY[6] = { 5, 7, 15, 33, 37, 15 };
+    const int PIECE_BASE[PIECES_PER_TIER] = { 11, 16, 15, 13 };
 }
 
 Armour::Piece Armour::pieceOf(StackId id)
@@ -103,7 +100,7 @@ int Armour::maxDurability(StackId id)
     if (!inArmourRange(id)) return 0;
     const int tier = static_cast<int>(tierOf(id)) - 1;
     const int piece = static_cast<int>(pieceOf(id)) - 1;
-    return static_cast<int>(static_cast<float>(DURABILITY[tier]) * PIECE_SHARE[piece]);
+    return DURABILITY[tier] * PIECE_BASE[piece];
 }
 
 int Armour::toughnessOf(StackId id)

@@ -466,7 +466,7 @@ namespace
         {
             line("");
             line("When in Main Hand:");
-            line("\u00a72 " + std::to_string(Tools::attackDamage(stack.id)) + " Attack Damage");
+            line("\u00a72 " + tidy(Tools::attackDamageExact(stack.id)) + " Attack Damage");
             line("\u00a72 " + tidy(Tools::attackSpeed(stack.id)) + " Attack Speed");
         }
         else if (Armour::isArmour(stack.id))
