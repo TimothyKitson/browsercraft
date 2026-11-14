@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "Game/EntityLoot.h"
+#include "Game/BlockDrops.h"
 #include <cstdlib>
 #include "BuildTag.h"
 #include "Utf8.h"
@@ -10695,31 +10696,23 @@ void Application::updateMining(float deltaTime)
             {
                 const Farming::Harvest crop = Farming::harvestOf(
                     id, static_cast<uint32_t>(hit.block.x * 31 + hit.block.z * 17 +
-                                              static_cast<int>(m_elapsedSeconds * 60.0f)));
+                                              static_cast<int>(m_elapsedSeconds * 60.0f)),
+                    Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::Fortune));
                 for (int i = 0; i < crop.firstCount; ++i)
                     m_drops.spawnFromBrokenBlock(hit.block, crop.first);
                 for (int i = 0; i < crop.secondCount; ++i)
                     m_drops.spawnFromBrokenBlock(hit.block, crop.second);
             }
-            else if (isLeaves(id))
+            else if (isLeaves(id) || id == Blocks::FloweringAzaleaLeaves)
             {
-                // Oak gives up an apple about one time in sixteen,
-                // which is Minecraft's rate and the only food you get
-                // out of a tree. The other woods give nothing, as
-                // there too.
-                if (id == Blocks::Leaves)
-                {
-                    const uint32_t roll = static_cast<uint32_t>(
-                        hit.block.x * 73856093 ^ hit.block.y * 19349663 ^
-                        hit.block.z * 83492791);
-                    if (roll % 16 == 0)
-                        m_drops.spawnFromBrokenBlock(hit.block, Items::Apple);
-                }
-                const uint32_t saplingRoll = static_cast<uint32_t>(
-                    hit.block.x * 19349663 ^ hit.block.y * 83492791 ^ hit.block.z * 73856093 ^
-                    static_cast<int>(m_elapsedSeconds * 613.0f));
-                const BlockId sapling = Saplings::leafDrop(id, saplingRoll);
-                if (sapling != Blocks::Air) m_drops.spawnFromBrokenBlock(hit.block, sapling);
+                BlockDrops::Breaker breaker;
+                breaker.tool = m_inventory.selected().id;
+                breaker.silk = Enchanting::has(m_inventory.selected().enchantments, Enchanting::Kind::SilkTouch);
+                breaker.fortune = Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::Fortune);
+                const uint32_t roll = static_cast<uint32_t>(hit.block.x * 19349663 ^ hit.block.y * 83492791 ^ hit.block.z * 73856093 ^
+                                                            static_cast<int>(m_elapsedSeconds * 613.0f));
+                for (const BlockDrops::Drop& fell : BlockDrops::roll(id, breaker, roll))
+                    m_drops.spawnFromBrokenBlock(hit.block, fell.id, fell.count);
             }
             else if (Tools::canHarvest(tool, id))
             {
@@ -10823,7 +10816,18 @@ void Application::updateMining(float deltaTime)
                          : layers == 8 ? static_cast<StackId>(Blocks::Snow) : static_cast<StackId>(Blocks::SnowLayerFirst);
                     dropped = silk && layers == 8 ? 1 : layers;
                 }
-                if (drop != Blocks::Air)
+                if (BlockDrops::handles(id))
+                {
+                    BlockDrops::Breaker breaker;
+                    breaker.tool = tool;
+                    breaker.silk = silk;
+                    breaker.fortune = Enchanting::levelOf(onTool, Enchanting::Kind::Fortune);
+                    const uint32_t roll = static_cast<uint32_t>(hit.block.x * 83492791 ^ hit.block.y * 73856093 ^ hit.block.z * 19349663 ^
+                                                                static_cast<int>(m_elapsedSeconds * 389.0f));
+                    for (const BlockDrops::Drop& fell : BlockDrops::roll(id, breaker, roll))
+                        m_drops.spawnFromBrokenBlock(hit.block, fell.id, fell.count);
+                }
+                else if (drop != Blocks::Air)
                     m_drops.spawnFromBrokenBlock(hit.block, drop, dropped);
 
                 // Ore you can use straight away pays out at the seam.

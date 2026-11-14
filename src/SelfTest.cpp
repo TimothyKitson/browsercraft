@@ -7,6 +7,7 @@
 
 #include "Player/Inventory.h"
 #include "Game/Crafting.h"
+#include "Game/BlockDrops.h"
 #include "Game/GameRules.h"
 #include "Game/Chat.h"
 #include "Entity/DroppedItems.h"
@@ -279,6 +280,55 @@ namespace
         bool same = one.size() == 27 && again.size() == 27;
         for (size_t i = 0; same && i < one.size(); ++i) same = one[i].id == again[i].id && one[i].count == again[i].count;
         check(same, "the same chest always rolls the same contents");
+
+        section("block drops by Minecraft's loot tables");
+        {
+            BlockDrops::Breaker hand;
+            int apples = 0, saplings = 0, sticks = 0;
+            for (uint32_t seed = 1; seed <= 20000; ++seed)
+                for (const BlockDrops::Drop& d : BlockDrops::roll(Blocks::Leaves, hand, seed * 2654435761u))
+                {
+                    if (d.id == Items::Apple) ++apples;
+                    if (d.id == Blocks::OakSapling) ++saplings;
+                    if (d.id == Items::Stick) ++sticks;
+                }
+            check(apples > 50 && apples < 170, "oak leaves drop an apple one time in two hundred");
+            check(saplings > 800 && saplings < 1200, "a sapling one time in twenty");
+            check(sticks > 280 && sticks < 560, "and a stick or two one time in fifty");
+            BlockDrops::Breaker shears;
+            shears.tool = Items::Shears;
+            const std::vector<BlockDrops::Drop> clipped = BlockDrops::roll(Blocks::Leaves, shears, 7u);
+            check(clipped.size() == 1 && clipped[0].id == Blocks::Leaves, "shears take the leaves themselves");
+            int flint = 0;
+            for (uint32_t seed = 1; seed <= 4000; ++seed)
+                for (const BlockDrops::Drop& d : BlockDrops::roll(Blocks::Gravel, hand, seed * 2654435761u))
+                    if (d.id == Items::Flint) ++flint;
+            check(flint > 300 && flint < 500, "gravel gives flint one time in ten");
+            BlockDrops::Breaker lucky;
+            lucky.fortune = 3;
+            bool always = true;
+            for (uint32_t seed = 1; seed <= 200; ++seed)
+            {
+                const std::vector<BlockDrops::Drop> d = BlockDrops::roll(Blocks::Gravel, lucky, seed * 2654435761u);
+                if (d.size() != 1 || d[0].id != Items::Flint) always = false;
+            }
+            check(always, "and always with Fortune III");
+            bool capped = true;
+            for (uint32_t seed = 1; seed <= 500; ++seed)
+                for (const BlockDrops::Drop& d : BlockDrops::roll(Blocks::Glowstone, lucky, seed * 2654435761u))
+                    if (d.count < 1 || d.count > 4) capped = false;
+            check(capped, "glowstone never gives more than four dust, Fortune or not");
+            int seeds = 0;
+            for (uint32_t seed = 1; seed <= 8000; ++seed)
+                for (const BlockDrops::Drop& d : BlockDrops::roll(Blocks::TallGrass, hand, seed * 2654435761u))
+                    if (d.id == Items::WheatSeeds) seeds += d.count;
+            check(seeds > 800 && seeds < 1200, "grass gives a seed one time in eight");
+            int diamonds = 0;
+            for (uint32_t seed = 1; seed <= 5000; ++seed)
+                for (const BlockDrops::Drop& d : BlockDrops::roll(Blocks::DiamondOre, lucky, seed * 2654435761u))
+                    if (d.id == Items::Diamond) diamonds += d.count;
+            check(diamonds > 10200 && diamonds < 11800, "Fortune III averages 2.2 diamonds a block, as Minecraft's ore formula does");
+        }
 
         section("dyeing leather");
         ItemStack dyeGrid[9]{};
@@ -4379,9 +4429,9 @@ namespace
             const Farming::Harvest ripe = Farming::harvestOf(WHEAT_RIPE, roll);
             if (ripe.first != Items::Wheat || ripe.firstCount != 1) alwaysResows = false;
             if (ripe.second != Items::WheatSeeds) alwaysResows = false;
-            if (ripe.secondCount < 1 || ripe.secondCount > 3) alwaysResows = false;
+            if (ripe.secondCount < 1 || ripe.secondCount > 4) alwaysResows = false;
         }
-        check(alwaysResows, "a ripe one gives a wheat and one to three seeds");
+        check(alwaysResows, "a ripe one gives a wheat and one to four seeds, as Minecraft's binomial roll does");
 
         check(Farming::harvestOf(Blocks::Grass, 0).firstCount == 0,
               "harvesting something that is not a crop gives nothing");
@@ -4513,9 +4563,9 @@ namespace
             const Farming::Harvest ripe = Farming::harvestOf(Blocks::Beetroot7, roll);
             if (ripe.first != Items::Beetroot || ripe.firstCount != 1) beetPays = false;
             if (ripe.second != Items::BeetrootSeeds) beetPays = false;
-            if (ripe.secondCount < 1 || ripe.secondCount > 3) beetPays = false;
+            if (ripe.secondCount < 1 || ripe.secondCount > 4) beetPays = false;
         }
-        check(beetPays, "a ripe beet gives a beetroot and one to three seeds");
+        check(beetPays, "a ripe beet gives a beetroot and one to four seeds");
 
         // A stem is the odd one: what it ripens into stands beside it,
         // so breaking the stem at any stage gives back only the seed.

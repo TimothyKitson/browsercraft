@@ -45,7 +45,7 @@ namespace Farming
         StackId second = Blocks::Air;
         int secondCount = 0;
     };
-    Harvest harvestOf(BlockId crop, uint32_t roll);
+    Harvest harvestOf(BlockId crop, uint32_t roll, int fortune = 0);
 
     // What a held item sows, or Air if it sows nothing. A carrot and a
     // potato are both the seed and the food, which is Minecraft's.

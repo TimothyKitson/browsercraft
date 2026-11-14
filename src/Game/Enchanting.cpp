@@ -563,7 +563,7 @@ namespace Enchanting
         if (level <= 0) return 1;
         // Minecraft rolls a bonus of 0..level and discards the worst,
         // which averages a little under doubling at level three.
-        const int bonus = static_cast<int>(stir(roll, 4u) % static_cast<uint32_t>(level + 1));
+        const int bonus = static_cast<int>(stir(roll, 4u) % static_cast<uint32_t>(level + 2)) - 1;
         return 1 + std::max(0, bonus);
     }
 

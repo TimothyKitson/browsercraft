@@ -1,5 +1,6 @@
 #include "Saplings.h"
 #include "Farming.h"
+#include "BlockDrops.h"
 #include "Cane.h"
 #include "World/World.h"
 #include <cmath>
@@ -47,7 +48,7 @@ namespace
     };
 }
 
-Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
+Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll, int fortune)
 {
     Harvest out;
     if (!isCrop(crop)) return out;
@@ -84,7 +85,8 @@ Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
         out.first = Items::Wheat;
         out.firstCount = 1;
         out.second = Items::WheatSeeds;
-        out.secondCount = 1 + static_cast<int>(roll % 3u);   // one to three
+        uint32_t state = roll | 1u;
+        out.secondCount = BlockDrops::binomialBonus(1, fortune, 3, 0.5714286f, state);
         return out;
     }
 
@@ -94,7 +96,8 @@ Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
         out.first = Items::Beetroot;
         out.firstCount = 1;
         out.second = Items::BeetrootSeeds;
-        out.secondCount = 1 + static_cast<int>(roll % 3u);
+        uint32_t state = roll | 1u;
+        out.secondCount = BlockDrops::binomialBonus(1, fortune, 3, 0.5714286f, state);
         return out;
     }
 
@@ -102,7 +105,8 @@ Farming::Harvest Farming::harvestOf(BlockId crop, uint32_t roll)
     // thing: two to five, which is Minecraft's and is what makes a
     // field grow from one carrot.
     out.first = seed;
-    out.firstCount = 2 + static_cast<int>(roll % 4u);
+    uint32_t state = roll | 1u;
+    out.firstCount = 1 + BlockDrops::binomialBonus(1, fortune, 3, 0.5714286f, state);
     if (isPotato(crop) && ((roll * 2654435761u) >> 20) % 50u == 0u)
     {
         out.second = Items::PoisonousPotato;
