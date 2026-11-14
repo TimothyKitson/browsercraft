@@ -69,7 +69,7 @@ namespace
     // A stick of TNT burns for four seconds, as in Minecraft, and goes
     // off harder and wider than a creeper.
     constexpr float TNT_FUSE_SECONDS = 4.0f;
-    constexpr float TNT_RADIUS = 4.5f;
+    constexpr float TNT_RADIUS = 4.0f;
     constexpr int TNT_DAMAGE = 34;
     // Long enough that walking across a portal does not take you
     // through it, short enough not to feel like waiting.
@@ -16738,10 +16738,17 @@ void Application::updateFuses(float deltaTime)
 
 void Application::blastPlayer(const glm::vec3& at, float radius, int damage)
 {
+    (void)damage;
     const glm::vec3 chest = m_player.position + glm::vec3(0.0f, m_player.height() * 0.5f, 0.0f);
-    const float toPlayer = glm::length(chest - at);
-    const int onPlayer = m_blastSource >= 0 ? Player::scaledByDifficulty(Explosion::damageAt(toPlayer, radius, damage), m_player.difficulty)
-                                            : Explosion::damageAt(toPlayer, radius, damage);
+    const float toPlayer = glm::length(m_player.position - at);
+    const Explosion::BlockAt blockAt = [this](int x, int y, int z) { return m_world->getBlock(x, y, z); };
+    const float half = 0.3f;
+    const float exposed = toPlayer > radius * 2.0f || m_player.spectator() || m_player.creative()
+                              ? 0.0f
+                              : Explosion::exposure(at, m_player.position - glm::vec3(half, 0.0f, half),
+                                                    m_player.position + glm::vec3(half, m_player.height(), half), blockAt);
+    const int raw = Explosion::entityDamage(toPlayer, radius, exposed);
+    const int onPlayer = m_blastSource >= 0 ? Player::scaledByDifficulty(raw, m_player.difficulty) : raw;
 
     if (onPlayer > 0) m_player.cause = m_blastCause;
     m_blastCause = "explosion";
@@ -16758,7 +16765,7 @@ void Application::blastPlayer(const glm::vec3& at, float radius, int damage)
 
         const glm::vec3 away = chest - at;
         if (glm::length(away) > 0.001f)
-            m_player.velocity += glm::normalize(away) * 8.0f *
+            m_player.velocity += glm::normalize(away) * 20.0f * Explosion::impact(toPlayer, radius, exposed) *
                                  (1.0f - std::clamp(static_cast<float>(m_player.attributes.value(Attributes::Kind::ExplosionKnockbackResistance)) +
                                                         static_cast<float>(Enchanting::levelOf(m_inventory.slot(Inventory::ARMOR_FIRST + 1).enchantments, Enchanting::Kind::BlastProtection)) * 0.15f, 0.0f, 1.0f));
     }
@@ -16796,33 +16803,24 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
         if (glm::length(nearest - at) < radius) dropPainting(painting, true);
     }
 
-    // Blocks first, so anything the blast opens up is already gone when
-    // the drops are thrown out into it.
-    const int reach = static_cast<int>(std::ceil(radius));
-    const glm::ivec3 middle = glm::ivec3(glm::floor(at));
+    const Explosion::BlockAt blockAt = [this](int x, int y, int z) { return m_world->getBlock(x, y, z); };
+    const uint32_t blastSeed = hashCoords(static_cast<int>(std::floor(at.x * 16.0f)), static_cast<int>(std::floor(at.y * 16.0f)),
+                                          static_cast<int>(std::floor(at.z * 16.0f)), static_cast<uint32_t>(m_elapsedSeconds * 20.0f)) | 1u;
+    const std::vector<glm::ivec3> struck = Explosion::rays(at, radius, blastSeed, blockAt);
 
-    for (int dx = -reach; dx <= reach; ++dx)
-        for (int dy = -reach; dy <= reach; ++dy)
-            for (int dz = -reach; dz <= reach; ++dz)
+    for (const glm::ivec3& where : struck)
             {
-                const glm::ivec3 where = middle + glm::ivec3(dx, dy, dz);
                 const BlockId block = m_world->getBlock(where.x, where.y, where.z);
+                if (block == Blocks::Air) continue;
 
-                const glm::vec3 centre = glm::vec3(where) + glm::vec3(0.5f);
-                const float distance = glm::length(centre - at);
-
-                // A stick caught in a blast is lit rather than broken,
-                // which is what makes a stack of it go up together.
-                if (block == Blocks::Tnt && distance < radius)
+                if (block == Blocks::Tnt)
                 {
                     primeTnt(where);
-                    // A short fuse, so a chain goes off in a run rather
-                    // than all at once.
-                    if (!m_fuses.empty()) m_fuses.back().second = 0.3f + distance * 0.1f;
+                    if (!m_fuses.empty())
+                        m_fuses.back().second = 0.5f + static_cast<float>(hashCoords(where.x, where.y, where.z, blastSeed) % 20u) / 20.0f;
                     continue;
                 }
 
-                if (!Explosion::destroys(block, distance, radius)) continue;
                 if (m_blastSource >= 0 && !m_rules.on(GameRules::Rule::MobGriefing)) continue;
 
                 // A chest or a furnace gives up what was in it rather
@@ -16848,11 +16846,8 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
                 if (isLog(block)) m_logsGone.push_back(where);
                 if (isLeaves(block)) m_placedLeaves.erase({ static_cast<int>(m_dimension), where.x, where.y, where.z });
 
-                // Most of what a blast breaks is destroyed outright;
-                // about a third of it survives to be picked up.
-                const uint32_t roll = static_cast<uint32_t>(
-                    where.x * 73856093 ^ where.y * 19349663 ^ where.z * 83492791);
-                if (roll % 3 == 0)
+                const uint32_t roll = hashCoords(where.x, where.y, where.z, blastSeed + 77u);
+                if (radius <= 1.0f || static_cast<float>(roll % 10000u) / 10000.0f < 1.0f / radius)
                 {
                     const StackId drop = blockDrop(block);
                     if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(where, drop);
@@ -16865,12 +16860,16 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
     {
         if (!mob.alive()) continue;
 
-        const glm::vec3 body = mob.position() + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f);
-        const int hurt = Explosion::damageAt(glm::length(body - at), radius, damage);
+        const glm::vec3 feet = mob.position();
+        const float distance = glm::length(feet - at);
+        if (distance > radius * 2.0f) continue;
+        const float half = mob.width() * 0.5f;
+        const float exposed = Explosion::exposure(at, feet - glm::vec3(half, 0.0f, half), feet + glm::vec3(half, mob.height(), half), blockAt);
+        const int hurt = Explosion::entityDamage(distance, radius, exposed);
         if (hurt > 0)
         {
             if (m_blastCharged) mob.markChargedBlast();
-            mob.damage(hurt, body - at);
+            mob.damage(hurt, feet + glm::vec3(0.0f, mob.height() * 0.5f, 0.0f) - at);
         }
     }
 }
@@ -17342,7 +17341,7 @@ void Application::updateArrows(float deltaTime)
     for (const auto& [at, fiery] : targets.blasts)
     {
         m_blastSource = fiery ? static_cast<int>(MobId::Ghast) : static_cast<int>(MobId::Wither);
-        applyBlast(at, fiery ? 2.0f : 2.0f, fiery ? 6 : 8);
+        applyBlast(at, 1.0f, fiery ? 6 : 8);
         m_blastSource = -1;
         if (fiery && m_world && m_rules.on(GameRules::Rule::MobGriefing))
             for (int dx = -1; dx <= 1; ++dx)

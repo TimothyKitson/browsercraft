@@ -330,6 +330,33 @@ namespace
             check(diamonds > 10200 && diamonds < 11800, "Fortune III averages 2.2 diamonds a block, as Minecraft's ore formula does");
         }
 
+        section("explosions by Minecraft's rays");
+        {
+            check(Explosion::resistance(Blocks::Stone) == 6.0f && Explosion::resistance(Blocks::Obsidian) == 1200.0f &&
+                      Explosion::resistance(Blocks::Water) == 100.0f && Explosion::resistance(Blocks::Planks) == 3.0f,
+                  "blocks resist a blast as much as Minecraft's do");
+            const Explosion::BlockAt allStone = [](int x, int y, int z) {
+                return x == 0 && y == 60 && z == 0 ? static_cast<BlockId>(Blocks::Air) : static_cast<BlockId>(Blocks::Stone);
+            };
+            const std::vector<glm::ivec3> crater = Explosion::rays(glm::vec3(0.5f, 60.0625f, 0.5f), 4.0f, 99u, allStone);
+            check(crater.size() >= 6 && crater.size() < 60, "buried TNT clears a pocket in stone (" + std::to_string(crater.size()) + " blocks)");
+            const Explosion::BlockAt dirt = [](int x, int y, int z) {
+                return x == 0 && y == 60 && z == 0 ? static_cast<BlockId>(Blocks::Air) : static_cast<BlockId>(Blocks::Dirt);
+            };
+            check(Explosion::rays(glm::vec3(0.5f, 60.0625f, 0.5f), 4.0f, 99u, dirt).size() > crater.size() * 2,
+                  "and a far bigger one in soft dirt");
+            const Explosion::BlockAt allObsidian = [](int, int y, int) { return y < 64 ? static_cast<BlockId>(Blocks::Obsidian) : static_cast<BlockId>(Blocks::Air); };
+            check(Explosion::rays(glm::vec3(0.5f, 64.0f, 0.5f), 4.0f, 99u, allObsidian).empty(), "and leaves obsidian standing");
+            check(Explosion::entityDamage(0.0f, 3.0f, 1.0f) == 43 && Explosion::entityDamage(3.0f, 3.0f, 1.0f) == 16 &&
+                      Explosion::entityDamage(7.0f, 3.0f, 1.0f) == 0,
+                  "a creeper hurts for 43 at its heart, 16 three blocks off and nothing past six");
+            const Explosion::BlockAt open = [](int, int, int) { return static_cast<BlockId>(Blocks::Air); };
+            const Explosion::BlockAt walled = [](int x, int, int) { return x == 2 ? static_cast<BlockId>(Blocks::Stone) : static_cast<BlockId>(Blocks::Air); };
+            check(Explosion::exposure(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(3.7f, 0.0f, -0.3f), glm::vec3(4.3f, 1.8f, 0.3f), open) == 1.0f &&
+                      Explosion::exposure(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(3.7f, 0.0f, -0.3f), glm::vec3(4.3f, 1.8f, 0.3f), walled) == 0.0f,
+                  "a wall between you and the blast shelters you from it");
+        }
+
         section("dyeing leather");
         ItemStack dyeGrid[9]{};
         dyeGrid[0] = ItemStack{ static_cast<StackId>(Items::LeatherHelmet), 1 };
