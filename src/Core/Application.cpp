@@ -6556,6 +6556,9 @@ bool Application::frame()
                 m_entities.spawnAt(MobId::Zombie,
                                    glm::vec3(px + 8.5f, static_cast<float>(py), pz - 3.5f),
                                    *m_world);
+                m_entities.spawnAt(MobId::SnowGolem,
+                                   glm::vec3(px + 5.5f, static_cast<float>(py), pz + 2.0f),
+                                   *m_world);
 
                 m_world->setBlock(px + 10, py, pz - 5, Blocks::Bookshelf);
                 m_world->setBlock(px + 10, py, pz - 1, Blocks::DiamondOre);
@@ -12837,9 +12840,9 @@ void Application::lairsAround(const WorldGen& gen, int px, int py, int pz)
                 if (already == 0)
                 {
                     const int ground = gen.surfaceHeight(midX, midZ);
-                    const int floorY = std::max(ground, WorldGen::SEA_LEVEL) + 4;
-                    const glm::vec3 feet(midX + 0.5f, static_cast<float>(floorY + 1),
-                                         midZ + 0.5f);
+                    const int floorY = std::max(ground, WorldGen::SEA_LEVEL) + 2;
+                    const glm::vec3 feet(midX - 0.5f, static_cast<float>(floorY + 1),
+                                         midZ + 1.5f);
                     if (m_entities.spawnAt(MobId::Witch, feet, *m_world)) return;
                 }
                 bool cat = false;
@@ -12851,8 +12854,8 @@ void Application::lairsAround(const WorldGen& gen, int px, int py, int pz)
                 if (!cat && !m_hutCats.count(hut))
                 {
                     const int ground = gen.surfaceHeight(midX, midZ);
-                    const int floorY = std::max(ground, WorldGen::SEA_LEVEL) + 4;
-                    if (m_entities.spawnAt(MobId::Cat, glm::vec3(midX + 1.5f, static_cast<float>(floorY + 1), midZ + 0.5f), *m_world))
+                    const int floorY = std::max(ground, WorldGen::SEA_LEVEL) + 2;
+                    if (m_entities.spawnAt(MobId::Cat, glm::vec3(midX - 0.5f, static_cast<float>(floorY + 1), midZ + 1.5f), *m_world))
                     {
                         m_entities.mobs().back().setVariant(11);
                         m_hutCats.insert(hut);
@@ -13788,9 +13791,15 @@ void Application::tickTrialSpawners(float deltaTime)
                     trial.ominous ? Blocks::TrialSpawnerEjectingOminous : Blocks::TrialSpawnerEjecting,
                     trial.ominous ? Blocks::TrialSpawnerSpentOminous : Blocks::TrialSpawnerSpent, 1.6f);
 
-        for (int k = 0; k < Trial::KEYS_PER_SPAWNER; ++k)
-            m_drops.spawn(middle + glm::vec3(0.0f, 1.0f, 0.0f),
-                          Trial::keyFor(trial.ominous), 1);
+        {
+            const uint32_t roll = hashCoords(trial.at.x, trial.at.y, trial.at.z, m_world->seed() + static_cast<uint32_t>(m_elapsedSeconds * 20.0f));
+            const bool key = trial.ominous ? roll % 10u < 3u : roll % 2u == 0u;
+            const std::string table = std::string(trial.ominous ? "spawners/ominous/trial_chamber/" : "spawners/trial_chamber/") + (key ? "key" : "consumables");
+            EntityLoot::Context context;
+            context.seed = (roll >> 4) | 1u;
+            for (const ItemStack& stack : EntityLoot::roll(table, context))
+                m_drops.spawnStack(middle + glm::vec3(0.0f, 1.0f, 0.0f), stack);
+        }
 
         m_audio.play(Sound::Pickup, 0.8f, trial.ominous ? 1.1f : 1.4f);
 
@@ -13827,12 +13836,10 @@ void Application::openVault(const glm::ivec3& block)
     award(ominous ? "adventure/revaulting" : "adventure/under_lock_and_key", ominous ? "revaulting" : "under_lock_and_key");
 
     const glm::vec3 out = glm::vec3(block) + glm::vec3(0.5f, 1.2f, 0.5f);
-    const std::vector<Trial::Stack> loot =
-        ominous ? Trial::ominousVaultLoot(block.x, block.y, block.z, m_world->seed())
-                : Trial::vaultLoot(block.x, block.y, block.z, m_world->seed());
-    for (const Trial::Stack& stack : loot)
-        for (int i = 0; i < stack.count; ++i)
-            m_drops.spawn(out, stack.id, 1);
+    EntityLoot::Context context;
+    context.seed = hashCoords(block.x, block.y, block.z, m_world->seed() + (ominous ? 4101u : 4100u)) | 1u;
+    for (const ItemStack& stack : EntityLoot::roll(ominous ? "chests/trial_chambers/reward_ominous" : "chests/trial_chambers/reward", context))
+        m_drops.spawnStack(out, stack);
 
     m_audio.play(Sound::Pickup, 0.9f, 0.8f);
 }
@@ -18166,6 +18173,23 @@ void Application::handlePlacement()
                 const int wool = 1 + static_cast<int>((m_growthSeed = m_growthSeed * 1664525u + 1013904223u) >> 8) % 3;
                 m_drops.spawn(aimed->position() + glm::vec3(0.0f, 0.8f, 0.0f), woolOfColour(aimed->woolColour()), wool);
                 aimed->setWool(aimed->woolColour(), true);
+                m_audio.playNamed("mob/sheep/shear", Sound::DigWool, 0.8f, 1.0f);
+                if (!m_player.creative()) wearOnSwing(Items::Shears);
+                m_heldItem.swing();
+                return;
+            }
+            if ((aimed->typeId() == MobId::SnowGolem || aimed->typeId() == MobId::Bogged) && held.id == Items::Shears && !aimed->sheared())
+            {
+                const glm::vec3 top = aimed->position() + glm::vec3(0.0f, aimed->height(), 0.0f);
+                if (aimed->typeId() == MobId::SnowGolem)
+                    m_drops.spawn(top, static_cast<StackId>(Blocks::CarvedPumpkinFirst), 1);
+                else
+                {
+                    EntityLoot::Context context;
+                    context.seed = hashCoords(static_cast<int>(aimed->serial()), static_cast<int>(m_elapsedSeconds * 20.0f), 0, 0xB066u) | 1u;
+                    for (const ItemStack& stack : EntityLoot::roll("shearing/bogged", context)) m_drops.spawnStack(top, stack);
+                }
+                aimed->setWool(0, true);
                 m_audio.playNamed("mob/sheep/shear", Sound::DigWool, 0.8f, 1.0f);
                 if (!m_player.creative()) wearOnSwing(Items::Shears);
                 m_heldItem.swing();
@@ -22581,32 +22605,88 @@ void Application::tickMobGriefing()
 
 void Application::barterWith(Mob& piglin)
 {
-    struct Barter { StackId item; int weight; int lo; int hi; };
-    static const Barter TABLE[] = {
-        { Items::EnchantedBook, 5, 1, 1 }, { Items::IronBoots, 8, 1, 1 }, { Items::Potion, 8, 1, 1 }, { Items::SplashPotion, 8, 1, 1 },
-        { Items::Potion, 10, 1, 1 }, { Items::IronNugget, 10, 10, 36 }, { Items::EnderPearl, 10, 2, 4 }, { Items::StringItem, 20, 3, 9 },
-        { Items::NetherQuartz, 20, 5, 12 }, { Blocks::Obsidian, 40, 1, 1 }, { Blocks::CryingObsidian, 40, 1, 3 },
-        { Items::FireCharge, 40, 1, 1 }, { Items::Leather, 40, 2, 4 }, { Blocks::SoulSand, 40, 2, 8 }, { Items::NetherBrick, 40, 2, 8 },
-        { Items::SpectralArrow, 40, 6, 12 }, { Blocks::Gravel, 40, 8, 16 }, { Blocks::Blackstone, 40, 8, 16 },
-    };
-    int total = 0;
-    for (const Barter& b : TABLE) total += b.weight;
-    uint32_t roll = hashCoords(static_cast<int>(piglin.position().x * 8.0f), static_cast<int>(m_elapsedSeconds * 20.0f),
-                               static_cast<int>(piglin.position().z * 8.0f), 0xBA27u);
-    int pick = static_cast<int>(roll % static_cast<uint32_t>(total));
-    const Barter* chosen = &TABLE[0];
-    for (const Barter& b : TABLE)
-    {
-        if (pick < b.weight) { chosen = &b; break; }
-        pick -= b.weight;
-    }
-    ItemStack loot{ chosen->item, chosen->lo + static_cast<int>((roll >> 12) % static_cast<uint32_t>(chosen->hi - chosen->lo + 1)) };
-    const size_t index = static_cast<size_t>(chosen - TABLE);
-    if (index == 0) loot.enchantments = Enchanting::withLevel(0u, Enchanting::Kind::SoulSpeed, 1 + static_cast<int>((roll >> 20) % 3u));
-    if (index == 1) loot.enchantments = Enchanting::withLevel(0u, Enchanting::Kind::SoulSpeed, 1 + static_cast<int>((roll >> 20) % 3u));
-    if (index == 2 || index == 3) loot.damage = static_cast<int>(Effects::Kind::FireResistance);
-    m_drops.spawnStack(piglin.position() + glm::vec3(0.0f, 0.8f, 0.0f), loot);
+    EntityLoot::Context context;
+    context.seed = hashCoords(static_cast<int>(piglin.position().x * 8.0f), static_cast<int>(m_elapsedSeconds * 20.0f),
+                              static_cast<int>(piglin.position().z * 8.0f), 0xBA27u) | 1u;
+    for (const ItemStack& loot : EntityLoot::roll("gameplay/piglin_bartering", context))
+        m_drops.spawnStack(piglin.position() + glm::vec3(0.0f, 0.8f, 0.0f), loot);
     award("nether/distract_piglin", "distract_piglin");
+}
+
+void Application::tickHeroGifts(float deltaTime)
+{
+    if (!m_world || m_player.spectator() || !m_player.effects.has(Effects::Kind::HeroOfTheVillage))
+    {
+        m_heroGiftClock.clear();
+        return;
+    }
+    static const char* const GIFTS[] = {
+        "farmer", "librarian", "toolsmith", "fletcher", "armorer", "butcher", "cartographer",
+        "cleric", "fisherman", "leatherworker", "mason", "", "shepherd", "weaponsmith"
+    };
+    auto delay = [&](uint32_t salt) {
+        return 30.0f + 300.0f * static_cast<float>(hashCoords(static_cast<int>(salt), static_cast<int>(m_elapsedSeconds * 20.0f), 0, 0x6E1Fu) % 10000u) / 10000.0f;
+    };
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive() || mob.typeId() != MobId::Villager) continue;
+        const glm::vec3 gap = m_player.position - mob.position();
+        const float distance = glm::length(gap);
+        if (distance > 16.0f) continue;
+        const auto clock = m_heroGiftClock.find(mob.serial());
+        if (clock == m_heroGiftClock.end())
+        {
+            m_heroGiftClock[mob.serial()] = delay(mob.serial());
+            continue;
+        }
+        clock->second -= deltaTime;
+        if (clock->second > 0.0f || distance > 5.0f) continue;
+        clock->second = delay(mob.serial() ^ 0x9E37u);
+
+        std::vector<ItemStack> gifts;
+        if (mob.baby())
+            gifts.push_back(ItemStack{ static_cast<StackId>(Blocks::FlowerRed), 1 });
+        else
+        {
+            const int job = villagerJob(mob);
+            if (job >= 0 && job < static_cast<int>(sizeof(GIFTS) / sizeof(GIFTS[0])) && GIFTS[job][0] != '\0')
+            {
+                EntityLoot::Context context;
+                context.seed = hashCoords(static_cast<int>(mob.serial()), static_cast<int>(m_elapsedSeconds * 20.0f), job, 0x61F7u) | 1u;
+                gifts = EntityLoot::roll(std::string("gameplay/hero_of_the_village/") + GIFTS[job] + "_gift", context);
+            }
+        }
+        const glm::vec3 from = mob.position() + glm::vec3(0.0f, mob.type().height * 0.8f, 0.0f);
+        const glm::vec3 toward = glm::normalize(glm::vec3(gap.x, 0.0f, gap.z) + glm::vec3(0.0001f, 0.0f, 0.0f));
+        for (const ItemStack& gift : gifts)
+        {
+            m_drops.spawnStack(from, gift);
+            m_drops.flingLast(toward * 6.0f + glm::vec3(0.0f, 2.0f, 0.0f));
+        }
+    }
+}
+
+void Application::tickPandaSneezes(float deltaTime)
+{
+    m_sneezeClock += deltaTime;
+    if (m_sneezeClock < 0.1f || !m_world) return;
+    m_sneezeClock -= 0.1f;
+    const int tick = static_cast<int>(m_elapsedSeconds * 10.0f);
+    for (Mob& mob : m_entities.mobs())
+    {
+        if (!mob.alive() || mob.typeId() != MobId::Panda || !mob.baby()) continue;
+        const bool weak = ((mob.birthSeed() * 2654435761u) >> 8) % 1000u % 100u >= 26u &&
+                          ((mob.birthSeed() * 2654435761u) >> 8) % 1000u % 100u < 34u;
+        const uint32_t roll = hashCoords(static_cast<int>(mob.serial()), tick, 0, 0x5EE2u);
+        const bool sneezes = (weak && roll % 250u == 1u) || (roll >> 12) % 3000u == 1u;
+        if (!sneezes) continue;
+        m_audio.playNamed("entity/panda/sneeze", Sound::MobPandaSay, 1.0f, 1.0f);
+        if (!m_rules.on(GameRules::Rule::DoMobLoot)) continue;
+        EntityLoot::Context context;
+        context.seed = roll | 1u;
+        for (const ItemStack& stack : EntityLoot::roll("gameplay/panda_sneeze", context))
+            m_drops.spawnStack(mob.position() + glm::vec3(0.0f, 0.5f, 0.0f), stack);
+    }
 }
 
 void Application::tickPiglins()
@@ -26691,6 +26771,8 @@ void Application::updateMobs(float deltaTime)
     tickAllays(mobTime);
     m_entities.noticeStares(*m_world, m_camera.position, m_camera.front);
     tickPiglins();
+    tickHeroGifts(mobTime);
+    tickPandaSneezes(mobTime);
     m_gearPickupClock += mobTime;
     if (m_gearPickupClock >= 0.5f)
     {
@@ -27771,6 +27853,17 @@ void Application::pinFramedItems()
             continue;
         }
         if (isTechnicalMob(mob.typeId())) continue;
+        if (mob.alive() && mob.typeId() == MobId::SnowGolem && !mob.sheared() && !mob.invisible() &&
+            glm::length(mob.position() - m_camera.position) < 64.0f)
+        {
+            const float s = mob.type().modelScale / 16.0f;
+            DroppedItems::Cargo pumpkin;
+            pumpkin.block = static_cast<StackId>(Blocks::CarvedPumpkinFirst + 1);
+            pumpkin.centre = mob.position() + glm::vec3(0.0f, 25.5f * s, 0.0f);
+            pumpkin.yaw = glm::radians(-mob.yaw());
+            pumpkin.size = 10.0f * s;
+            m_drops.carry(pumpkin);
+        }
         if (mob.alive() && mob.captain() && glm::length(mob.position() - m_camera.position) < 48.0f)
         {
             DroppedItems::Held flag;

@@ -424,6 +424,7 @@ namespace
             case WorldGen::Hoard::Dungeon:
                 return { DUNGEON, static_cast<int>(std::size(DUNGEON)) };
             case WorldGen::Hoard::Stronghold:
+            case WorldGen::Hoard::StrongholdCorridor:
                 return { STRONGHOLD, static_cast<int>(std::size(STRONGHOLD)) };
             case WorldGen::Hoard::SwampHut:
                 return { HUT, static_cast<int>(std::size(HUT)) };
@@ -477,7 +478,8 @@ StructureLoot::Stack StructureLoot::centrepiece(WorldGen::Hoard hoard,
         case WorldGen::Hoard::Monument:        out.id = Items::GoldIngot; out.count = 8; break;
         case WorldGen::Hoard::Mineshaft:       out.id = Blocks::RailEastWest; out.count = 6; break;
         case WorldGen::Hoard::Dungeon:         out.id = static_cast<StackId>(Items::MusicDiscFirst + static_cast<int>(hashCoords(x, y, z, seed) % 3u)); out.count = 1; break;
-        case WorldGen::Hoard::Stronghold:      out.id = Items::Book;      out.count = 2; break;
+        case WorldGen::Hoard::Stronghold:
+        case WorldGen::Hoard::StrongholdCorridor: out.id = Items::Book; out.count = 2; break;
         case WorldGen::Hoard::SwampHut:        out.id = Items::GlassBottle; out.count = 3; break;
         case WorldGen::Hoard::EndCity:         out.id = Items::Diamond;   out.count = 2; break;
         case WorldGen::Hoard::Bastion:         out.id = Items::GoldIngot; out.count = 8; break;

@@ -1,4 +1,5 @@
 #include "Archaeology.h"
+#include "EntityLoot.h"
 #include "World/Noise.h"
 #include <vector>
 
@@ -71,6 +72,23 @@ const char* Archaeology::sherdPattern(int index)
 
 Archaeology::Find Archaeology::roll(int table, int x, int y, int z, uint32_t seed)
 {
+    static const char* const NAMES[TableCount] = {
+        "archaeology/desert_pyramid", "archaeology/desert_well", "archaeology/ocean_ruin_warm",
+        "archaeology/trail_ruins_common", "archaeology/trail_ruins_rare", "archaeology/ocean_ruin_cold"
+    };
+    if (table >= 0 && table < TableCount)
+    {
+        EntityLoot::Context context;
+        context.seed = hashCoords(x, y, z, seed + 0xA4C7u) | 1u;
+        const std::vector<ItemStack> found = EntityLoot::roll(NAMES[table], context);
+        if (!found.empty())
+        {
+            Find out;
+            out.id = found.front().id;
+            out.count = found.front().count;
+            return out;
+        }
+    }
     std::vector<Entry> entries;
     switch (table)
     {

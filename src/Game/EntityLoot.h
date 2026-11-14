@@ -24,6 +24,8 @@ namespace EntityLoot
             FrogCold,
             FrogTemperate,
             NotFrog,
+            OpenWater,
+            Jungle,
             Never
         };
         Kind kind;
@@ -37,6 +39,7 @@ namespace EntityLoot
         const char* item;
         const char* table;
         int weight;
+        int quality;
         float countMin;
         float countMax;
         float lootingMin;
@@ -44,9 +47,32 @@ namespace EntityLoot
         int lootingLimit;
         bool smelt;
         const char* potion;
-        bool ominousAmplifier;
+        float ampMin;
+        float ampMax;
+        float damageMin;
+        float damageMax;
+        float levelsMin;
+        float levelsMax;
+        const char* enchantOptions;
+        const char* fixedEnchant;
+        const char* stew;
+        bool map;
+        bool instrument;
         Rule rules[3];
         int ruleCount;
+    };
+
+    struct Enchant
+    {
+        const char* id;
+        int weight;
+        int minBase;
+        int minPer;
+        int maxBase;
+        int maxPer;
+        int maxLevel;
+        bool nonTreasure;
+        bool randomLoot;
     };
 
     struct Pool
@@ -77,9 +103,17 @@ namespace EntityLoot
         int size = 1;
         bool captain = false;
         bool lightning = false;
+        float luck = 0.0f;
+        bool openWater = true;
+        bool jungle = false;
         uint32_t seed = 1u;
     };
 
     bool has(const std::string& table);
+    int tableCount();
+    std::vector<std::string> unknownItems();
+    const char* tableName(int index);
     std::vector<ItemStack> roll(const std::string& table, Context context);
+    std::vector<ItemStack> fillChest(const std::string& table, uint32_t seed, int slots);
+    ItemStack enchantWithLevels(ItemStack stack, int levels, uint32_t seed, bool treasure);
 }

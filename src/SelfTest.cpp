@@ -202,6 +202,83 @@ namespace
         check(piglins.count(static_cast<StackId>(Items::RottenFlesh)) && piglins.count(static_cast<StackId>(Items::GoldNugget)) &&
                   !piglins.count(static_cast<StackId>(Items::RawPorkchop)),
               "a zombified piglin drops rotten flesh and gold, not pork");
+
+        section("chest loot from Minecraft's loot tables");
+        const std::vector<std::string> unknown = EntityLoot::unknownItems();
+        std::string missing;
+        for (const std::string& id : unknown) missing += " " + id;
+        check(unknown.empty(), "every item and table a loot table names exists in the game" + missing);
+        auto chests = [](const std::string& table, int rolls) {
+            std::map<StackId, int> totals;
+            std::vector<ItemStack> all;
+            for (int i = 0; i < rolls; ++i)
+                for (const ItemStack& stack : EntityLoot::fillChest(table, static_cast<uint32_t>(i * 7919 + 13), 27))
+                    if (!stack.empty())
+                    {
+                        totals[stack.id] += stack.count;
+                        all.push_back(stack);
+                    }
+            return std::make_pair(totals, all);
+        };
+        const auto treasure = chests("chests/buried_treasure", 50);
+        check(treasure.first.count(static_cast<StackId>(Items::HeartOfTheSea)) && treasure.first.at(static_cast<StackId>(Items::HeartOfTheSea)) == 50,
+              "every buried treasure chest holds a heart of the sea");
+        bool breathing = false;
+        for (const ItemStack& stack : treasure.second)
+            if (stack.id == Items::Potion && Brewing::decode(stack.damage).potion == Brewing::Potion::WaterBreathing) breathing = true;
+        check(breathing, "and some hold water breathing potions");
+        const auto outpost = chests("chests/pillager_outpost", 200);
+        bool horns = false, regular = true;
+        for (const ItemStack& stack : outpost.second)
+            if (stack.id == Items::GoatHorn)
+            {
+                horns = true;
+                regular = regular && stack.damage >= 0 && stack.damage < 4;
+            }
+        check(horns && regular, "a pillager outpost chest can hold one of the four regular goat horns");
+        const auto end = chests("chests/end_city_treasure", 200);
+        int enchanted = 0, diamond = 0;
+        for (const ItemStack& stack : end.second)
+            if (stack.id == Items::DiamondSword || stack.id == Items::DiamondChestplate)
+            {
+                ++diamond;
+                if (Enchanting::any(stack.enchantments)) ++enchanted;
+            }
+        check(diamond > 10 && enchanted == diamond, "end city diamond gear always comes enchanted");
+        bool thorny = false, sharpAxe = false;
+        for (int i = 0; i < 400; ++i)
+        {
+            ItemStack helmet;
+            helmet.id = Items::DiamondHelmet;
+            helmet.count = 1;
+            if (Enchanting::has(EntityLoot::enchantWithLevels(helmet, 30, static_cast<uint32_t>(i + 1), true).enchantments, Enchanting::Kind::Thorns)) thorny = true;
+            ItemStack axe;
+            axe.id = Items::DiamondAxe;
+            axe.count = 1;
+            if (Enchanting::has(EntityLoot::enchantWithLevels(axe, 30, static_cast<uint32_t>(i + 1), true).enchantments, Enchanting::Kind::Sharpness)) sharpAxe = true;
+        }
+        check(!thorny && !sharpAxe, "levelled enchanting only offers an item's primary enchantments");
+        ItemStack book;
+        book.id = Items::Book;
+        book.count = 1;
+        const ItemStack read = EntityLoot::enchantWithLevels(book, 30, 99u, true);
+        check(read.id == Items::EnchantedBook && Enchanting::any(read.enchantments), "a book enchanted with levels becomes an enchanted book");
+        bool mapped = false;
+        for (const ItemStack& stack : chests("chests/underwater_ruin_big", 100).second)
+            if (stack.id == Items::FilledMap && (stack.enchantments >> 24) == static_cast<uint32_t>(Maps::TreasureExplorer)) mapped = true;
+        check(mapped, "a big ocean ruin chest can hold a buried treasure map");
+        int stews = 0;
+        for (const ItemStack& stack : chests("chests/shipwreck_supply", 200).second)
+            if (stack.id == Items::SuspiciousStew && stack.damage >= 0 && stack.damage <= 9) ++stews;
+        check(stews > 0, "shipwreck supply chests carry suspicious stew with a flower's effect");
+        const auto houses = chests("chests/village/village_plains_house", 100);
+        check(houses.first.count(RecipeBook::stackNamed("dandelion")) && houses.first.count(RecipeBook::stackNamed("oak_sapling")) && !houses.first.count(static_cast<StackId>(Items::Diamond)),
+              "a plains house chest rolls from the plains house table");
+        const std::vector<ItemStack> one = EntityLoot::fillChest("chests/simple_dungeon", 5u, 27);
+        const std::vector<ItemStack> again = EntityLoot::fillChest("chests/simple_dungeon", 5u, 27);
+        bool same = one.size() == 27 && again.size() == 27;
+        for (size_t i = 0; same && i < one.size(); ++i) same = one[i].id == again[i].id && one[i].count == again[i].count;
+        check(same, "the same chest always rolls the same contents");
     }
 
     void testAdd()
@@ -590,8 +667,8 @@ namespace
             bool cauldron = false, pot = false;
             for (int y = 40; y < 120; ++y)
             {
-                if (probe.at(midX + 1, y, midZ - 2) == Blocks::Cauldron0) cauldron = true;
-                if (probe.at(midX + 2, y, midZ - 2) == pottedOf(Blocks::RedMushroom)) pot = true;
+                if (probe.at(midX + 1, y, midZ + 2) == Blocks::Cauldron0) cauldron = true;
+                if (probe.at(midX - 2, y, midZ + 1) == pottedOf(Blocks::RedMushroom)) pot = true;
             }
             check(cauldron && pot, "a swamp hut has its cauldron and potted red mushroom");
         }
@@ -10055,7 +10132,8 @@ namespace
                         for (int y = 0; y < Chunk::SY; ++y)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                                 for (int lz = 0; lz < Chunk::SZ; ++lz)
-                                    if (chunk.getBlock(lx, y, lz) == Blocks::Chest) ++chests;
+                                    if (chunk.getBlock(lx, y, lz) == Blocks::Chest ||
+                                        (kind == WorldGen::Landmark::SwampHut && chunk.getBlock(lx, y, lz) == Blocks::Cauldron0)) ++chests;
                     }
 
                 check(chests > 0, who + ": and it was built there");
@@ -10241,15 +10319,15 @@ namespace
                                     case Blocks::SprucePlanks:
                                     case Blocks::SpruceLog:     ++spruce; break;
                                     case Blocks::Chest:         ++chests; break;
-                                    case Blocks::BrewingStand:  ++stands; break;
+                                    case Blocks::Cauldron0:     ++stands; break;
                                     case Blocks::CraftingTable: ++benches; break;
                                     default: break;
                                 }
                 }
 
             check(spruce > 40, "a hut is a shack's worth of spruce");
-            check(chests > 0, "with a chest in it");
-            check(stands > 0, "the stand she brews at");
+            check(chests == 0, "with no chest in it, as in Minecraft");
+            check(stands > 0, "the cauldron she brews in");
             check(benches > 0, "and a bench");
         }
 
@@ -11650,6 +11728,7 @@ namespace
                                     case Blocks::Barrel: ++barrels; break;
                                     case Blocks::Chest:
                                         if (generator.hoardAt(wx, y, wz) == WorldGen::Hoard::Stronghold ||
+                                            generator.hoardAt(wx, y, wz) == WorldGen::Hoard::StrongholdCorridor ||
                                             generator.hoardAt(wx, y, wz) == WorldGen::Hoard::StrongholdLibrary)
                                             ++chests;
                                         break;

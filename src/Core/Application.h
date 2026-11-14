@@ -1086,6 +1086,10 @@ private:
     void renderSkinPartsScreen();
     void renderSubtitles();
     float m_gearPickupClock = 0.0f;
+    std::unordered_map<uint32_t, float> m_heroGiftClock;
+    void tickHeroGifts(float deltaTime);
+    void tickPandaSneezes(float deltaTime);
+    float m_sneezeClock = 0.0f;
     void mobsPickUpGear();
     void barterWith(Mob& piglin);
     void tickPiglins();
@@ -1563,7 +1567,7 @@ private:
     void updatePortal(float deltaTime);
     void buildReturnPortal();
     void openChest(const glm::ivec3& block);
-    std::vector<VillageLoot::Stack> villageChestLoot(const glm::ivec3& block) const;
+    bool villageChestKind(const glm::ivec3& block, Village::Kind& kind, int& style) const;
     void stowChest();
     void setTrappedOpen(const glm::ivec3& block, bool open);
     void openCrafter(const glm::ivec3& block);

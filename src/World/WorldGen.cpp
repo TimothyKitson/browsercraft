@@ -451,6 +451,23 @@ bool WorldGen::placedVillageAt(int blockX, int blockZ, Village::Site& site) cons
     return false;
 }
 
+int WorldGen::villageStyle(const Village::Site& site) const
+{
+    for (const PlacedStart& start : placedNear(site.x, site.z, Structures::CHUNK))
+        if (start.kind == Placed::Village && start.chunkX * Structures::CHUNK + Structures::CHUNK / 2 == site.x &&
+            start.chunkZ * Structures::CHUNK + Structures::CHUNK / 2 == site.z)
+            return std::clamp(start.style, 0, 4);
+    const Biomes::Kind exact = kindAt(site.x, site.z);
+    if (exact == Biomes::Kind::Taiga || exact == Biomes::Kind::OldGrowthPineTaiga || exact == Biomes::Kind::OldGrowthSpruceTaiga) return 4;
+    switch (biomeAt(site.x, site.z))
+    {
+        case Biome::Desert: return 1;
+        case Biome::Savanna: return 2;
+        case Biome::Snowy: return 3;
+        default: return 0;
+    }
+}
+
 bool WorldGen::stampPlaced(Chunk& chunk, const PlacedStart& start) const
 {
     const Solo solo(&start);
@@ -3193,8 +3210,6 @@ int WorldGen::landmarkChests(Landmark kind, ChestSpot out[4])
             out[2] = { -2, 11, -2 };
             return 3;
         case Landmark::SwampHut:
-            out[0] = {  1,  5,  1 };
-            return 1;
         case Landmark::Count:
             break;
     }
@@ -3888,74 +3903,52 @@ void WorldGen::stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) co
     }
 }
 
-// The witch's hut: a spruce shack up on stilts over the water, with an
-// open porch on one side. Minecraft's has a cauldron and a crafting
-// table in it; there is no cauldron here, so the brewing stand stands
-// in for it -- which is what a witch would be using it for anyway.
 void WorldGen::stampSwampHut(Chunk& chunk, int midX, int midZ, int ground) const
 {
-    constexpr int HALF = 3;
-    constexpr int STILTS = 4;      // how far the floor stands clear
-    constexpr int WALL = 4;
+    const int x0 = midX - 3;
+    const int z0 = midZ - 4;
+    const int y0 = std::max(ground, SEA_LEVEL) + 1;
+    auto at = [&](int i, int j, int k, BlockId block) { put(chunk, x0 + i, y0 + j, z0 + k, block); };
+    auto box = [&](int i0, int j0, int k0, int i1, int j1, int k1, BlockId block) {
+        for (int i = i0; i <= i1; ++i)
+            for (int j = j0; j <= j1; ++j)
+                for (int k = k0; k <= k1; ++k) at(i, j, k, block);
+    };
 
-    // The floor sits above the water rather than on the mud, which is
-    // the whole look of the thing.
-    const int floorY = std::max(ground, SEA_LEVEL) + STILTS;
+    box(1, 2, 0, 5, 3, 7, Blocks::Air);
+    box(1, 1, 1, 5, 1, 7, Blocks::SprucePlanks);
+    box(1, 4, 2, 5, 4, 7, Blocks::SprucePlanks);
+    box(2, 1, 0, 4, 1, 0, Blocks::SprucePlanks);
+    box(2, 2, 2, 3, 3, 2, Blocks::SprucePlanks);
+    box(1, 2, 3, 1, 3, 6, Blocks::SprucePlanks);
+    box(5, 2, 3, 5, 3, 6, Blocks::SprucePlanks);
+    box(2, 2, 7, 4, 3, 7, Blocks::SprucePlanks);
+    box(1, 0, 2, 1, 3, 2, Blocks::Log);
+    box(5, 0, 2, 5, 3, 2, Blocks::Log);
+    box(1, 0, 7, 1, 3, 7, Blocks::Log);
+    box(5, 0, 7, 5, 3, 7, Blocks::Log);
+    const BlockId fence = fenceOfWood(0);
+    at(2, 3, 2, fence);
+    at(3, 3, 7, fence);
+    at(1, 3, 4, Blocks::Air);
+    at(5, 3, 4, Blocks::Air);
+    at(5, 3, 5, Blocks::Air);
+    at(1, 3, 5, pottedOf(Blocks::RedMushroom));
+    at(3, 2, 6, Blocks::CraftingTable);
+    at(4, 2, 6, Blocks::Cauldron0);
+    at(1, 2, 1, fence);
+    at(5, 2, 1, fence);
+    box(0, 4, 1, 6, 4, 1, stairsOf(8, false, 2));
+    box(0, 4, 2, 0, 4, 7, stairsOf(8, false, 3));
+    box(6, 4, 2, 6, 4, 7, stairsOf(8, false, 1));
+    box(0, 4, 8, 6, 4, 8, stairsOf(8, false, 0));
 
-    // The legs it stands on, down into whatever is below -- water or
-    // mud, both of which a stilt has to reach through.
-    for (int dx = -HALF; dx <= HALF; dx += HALF * 2)
-        for (int dz = -HALF; dz <= HALF; dz += HALF * 2)
-            for (int y = floorY - 1; y > ground - 2; --y)
-                put(chunk, midX + dx, y, midZ + dz, Blocks::SpruceLog);
-
-    for (int dx = -HALF; dx <= HALF; ++dx)
-        for (int dz = -HALF; dz <= HALF; ++dz)
+    for (int k = 2; k <= 7; k += 5)
+        for (int i = 1; i <= 5; i += 4)
         {
-            put(chunk, midX + dx, floorY, midZ + dz, Blocks::SprucePlanks);
-
-            for (int dy = 1; dy <= WALL; ++dy)
-            {
-                const bool wall = std::abs(dx) == HALF || std::abs(dz) == HALF;
-                const bool roof = dy == WALL;
-
-                // The porch: one side left open, which is how you get
-                // in and what makes it read as a hut rather than a box.
-                const bool porch = dz == HALF && std::abs(dx) <= 1 && dy < WALL;
-                const bool corner = std::abs(dx) == HALF && std::abs(dz) == HALF;
-
-                BlockId block = Blocks::Air;
-                if (roof) block = Blocks::SprucePlanks;
-                else if (porch) block = Blocks::Air;
-                else if (corner) block = Blocks::SpruceLog;
-                else if (wall) block = Blocks::SprucePlanks;
-
-                put(chunk, midX + dx, floorY + dy, midZ + dz, block);
-            }
+            const int floor = surfaceHeight(x0 + i, z0 + k);
+            for (int y = y0 - 1; y > floor && y > 1; --y) put(chunk, x0 + i, y, z0 + k, Blocks::Log);
         }
-
-    // What is inside: the stand she brews at, a table, and the chest.
-    put(chunk, midX - 1, floorY + 1, midZ - 1, Blocks::BrewingStand);
-    put(chunk, midX - 1, floorY + 1, midZ + 1, Blocks::CraftingTable);
-    put(chunk, midX + 1, floorY + 1, midZ - 2, Blocks::Cauldron0);
-    put(chunk, midX + 2, floorY + 1, midZ - 2, pottedOf(Blocks::RedMushroom));
-    const BlockId spruceFence = fenceOfWood(1);
-    put(chunk, midX, floorY + 2, midZ - HALF, spruceFence);
-    put(chunk, midX - HALF, floorY + 2, midZ, spruceFence);
-    put(chunk, midX + HALF, floorY + 2, midZ, spruceFence);
-    put(chunk, midX - 1, floorY + 1, midZ + HALF, spruceFence);
-    put(chunk, midX + 1, floorY + 1, midZ + HALF, spruceFence);
-    for (int dx = -HALF - 1; dx <= HALF + 1; ++dx)
-    {
-        put(chunk, midX + dx, floorY + WALL, midZ - HALF - 1, stairsOf(8, false, 0));
-        put(chunk, midX + dx, floorY + WALL, midZ + HALF + 1, stairsOf(8, false, 2));
-    }
-    for (int dz = -HALF; dz <= HALF; ++dz)
-    {
-        put(chunk, midX - HALF - 1, floorY + WALL, midZ + dz, stairsOf(8, false, 3));
-        put(chunk, midX + HALF + 1, floorY + WALL, midZ + dz, stairsOf(8, false, 1));
-    }
-    putChests(chunk, Landmark::SwampHut, midX, floorY - STILTS, midZ);
 }
 
 // The desert well, which is not a structure in Minecraft at all: it is
@@ -4828,7 +4821,7 @@ bool WorldGen::strongholdChest(const Stronghold::Site& site, const Stronghold::R
     {
         case Kind::Store:   x = midX; y = site.y; z = midZ; hoard = Hoard::Stronghold; return true;
         case Kind::Library: x = room.x + 1; y = site.y; z = room.z + 1; hoard = Hoard::StrongholdLibrary; return true;
-        case Kind::Stairs:  x = midX; y = site.y - 6; z = midZ + 3; hoard = Hoard::Stronghold; return true;
+        case Kind::Stairs:  x = midX; y = site.y - 6; z = midZ + 3; hoard = Hoard::StrongholdCorridor; return true;
         default: return false;
     }
 }

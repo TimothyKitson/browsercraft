@@ -303,11 +303,11 @@ bool EntityManager::roomFor(const MobType& type, BlockId block)
 
 bool EntityManager::fits(const World& world, const MobType& type, const glm::vec3& feet) const
 {
-    const float half = type.width * 0.5f;
+    const float half = type.width * type.modelScale * 0.5f;
     const int minX = static_cast<int>(std::floor(feet.x - half));
     const int maxX = static_cast<int>(std::floor(feet.x + half));
     const int minY = static_cast<int>(std::floor(feet.y));
-    const int maxY = static_cast<int>(std::floor(feet.y + type.height));
+    const int maxY = static_cast<int>(std::floor(feet.y + type.height * type.modelScale - 0.001f));
     const int minZ = static_cast<int>(std::floor(feet.z - half));
     const int maxZ = static_cast<int>(std::floor(feet.z + half));
 

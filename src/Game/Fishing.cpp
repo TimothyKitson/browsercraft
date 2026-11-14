@@ -1,4 +1,5 @@
 #include "Fishing.h"
+#include "EntityLoot.h"
 #include "Brewing.h"
 #include "Enchanting.h"
 #include "World/Noise.h"
@@ -104,6 +105,19 @@ Fishing::Catch Fishing::roll(uint32_t seed, bool openWater, bool jungle, int luc
     {
         out.category = Category::Treasure;
         entry = &pick(TREASURE, unit(seed, 4), jungle);
+    }
+    EntityLoot::Context context;
+    context.seed = seed * 2654435761u + 0x51ED27u;
+    context.luck = static_cast<float>(luck);
+    context.jungle = jungle;
+    context.openWater = openWater;
+    const char* table = out.category == Category::Fish ? "gameplay/fishing/fish"
+                        : out.category == Category::Junk ? "gameplay/fishing/junk" : "gameplay/fishing/treasure";
+    const std::vector<ItemStack> landed = EntityLoot::roll(table, context);
+    if (!landed.empty())
+    {
+        out.stack = landed.front();
+        return out;
     }
     out.stack.id = entry->id;
     out.stack.count = entry->count;

@@ -4636,23 +4636,80 @@ void Application::openChest(const glm::ivec3& block)
     setMouseCaptured(false);
 }
 
-// Whether this chest is one of a village's, and what is in it if so.
-std::vector<VillageLoot::Stack> Application::villageChestLoot(const glm::ivec3& block) const
+bool Application::villageChestKind(const glm::ivec3& block, Village::Kind& kind, int& style) const
 {
-    const Village::Site site = Village::siteFor(Village::regionOf(block.x),
-                                                Village::regionOf(block.z),
-                                                m_world->seed());
-    if (!Village::reaches(site, block.x, block.z, block.x, block.z)) return {};
-
-    // The cheap tests passed; now it is worth asking whether the
-    // village was actually built here.
-    if (!m_world->generator().nearestVillage(block.x, block.z, 0).exists) return {};
+    Village::Site site;
+    if (!m_world->generator().placedVillageAt(block.x, block.z, site))
+    {
+        site = Village::siteFor(Village::regionOf(block.x), Village::regionOf(block.z), m_world->seed());
+        if (!Village::reaches(site, block.x, block.z, block.x, block.z)) return false;
+        if (!m_world->generator().nearestVillage(block.x, block.z, 0).exists) return false;
+    }
 
     Village::Building building;
-    if (!Village::buildingAt(site, m_world->seed(), block.x, block.z, building)) return {};
-    if (!Village::isHouse(building.kind)) return {};
+    if (!Village::buildingAt(site, m_world->seed(), block.x, block.z, building)) return false;
+    if (!Village::isHouse(building.kind)) return false;
+    kind = building.kind;
+    style = m_world->generator().villageStyle(site);
+    return true;
+}
 
-    return VillageLoot::rollFor(building.kind, block.x, block.y, block.z, m_world->seed());
+namespace
+{
+    std::string villageTable(Village::Kind kind, int style)
+    {
+        static const char* const STYLES[] = { "plains", "desert", "savanna", "snowy", "taiga" };
+        switch (kind)
+        {
+            case Village::Kind::Home: return std::string("chests/village/village_") + STYLES[std::clamp(style, 0, 4)] + "_house";
+            case Village::Kind::Blacksmith: return "chests/village/village_weaponsmith";
+            case Village::Kind::Butcher: return "chests/village/village_butcher";
+            case Village::Kind::Fletcher: return "chests/village/village_fletcher";
+            case Village::Kind::Mason: return "chests/village/village_mason";
+            case Village::Kind::Cartographer: return "chests/village/village_cartographer";
+            case Village::Kind::Tannery: return "chests/village/village_tannery";
+            case Village::Kind::Shepherd: return "chests/village/village_shepherd";
+            case Village::Kind::Fisher: return "chests/village/village_fisher";
+            case Village::Kind::Church: return "chests/village/village_temple";
+            case Village::Kind::Toolsmith: return "chests/village/village_toolsmith";
+            default: return "";
+        }
+    }
+
+    std::string hoardTable(WorldGen::Hoard hoard, const glm::ivec3& block, uint32_t seed)
+    {
+        using H = WorldGen::Hoard;
+        switch (hoard)
+        {
+            case H::DesertPyramid: return "chests/desert_pyramid";
+            case H::JungleTemple: return "chests/jungle_temple";
+            case H::TrapDispenser: return "chests/jungle_temple_dispenser";
+            case H::Igloo: return "chests/igloo_chest";
+            case H::RuinedPortal: return "chests/ruined_portal";
+            case H::PillagerOutpost: return "chests/pillager_outpost";
+            case H::WoodlandMansion: return "chests/woodland_mansion";
+            case H::Shipwreck: return "chests/shipwreck_treasure";
+            case H::ShipwreckSupply: return "chests/shipwreck_supply";
+            case H::ShipwreckMap: return "chests/shipwreck_map";
+            case H::BuriedTreasure: return "chests/buried_treasure";
+            case H::Mineshaft: return "chests/abandoned_mineshaft";
+            case H::Dungeon: return "chests/simple_dungeon";
+            case H::Stronghold: return "chests/stronghold_crossing";
+            case H::StrongholdCorridor: return "chests/stronghold_corridor";
+            case H::StrongholdLibrary: return "chests/stronghold_library";
+            case H::AncientCity: return "chests/ancient_city";
+            case H::EndCity: return "chests/end_city_treasure";
+            case H::Bastion: return "chests/bastion_other";
+            case H::BastionTreasure: return "chests/bastion_treasure";
+            case H::BastionBridge: return "chests/bastion_bridge";
+            case H::BastionStable: return "chests/bastion_hoglin_stable";
+            case H::TrialChamber: return "chests/trial_chambers/supply";
+            case H::Fortress: return "chests/nether_bridge";
+            case H::OceanRuin:
+                return (hashCoords(block.x, 40, block.z, seed + 9307) & 3u) == 0 ? "chests/underwater_ruin_big" : "chests/underwater_ruin_small";
+            default: return "";
+        }
+    }
 }
 
 // A chest the generator put down has never been opened before, so
@@ -4667,19 +4724,26 @@ void Application::fillVillageChest(const glm::ivec3& block)
 {
     if (!m_world) return;
 
-    // Already known, so it has been opened before -- or the player
-    // built it. Either way it is not ours to fill.
     if (m_chests.has(block)) return;
 
+    const int slots = isDispenser(m_world->getBlock(block.x, block.y, block.z)) ? Hopper::THROWER_SLOTS : Chests::SLOTS;
+    const uint32_t seed = hashCoords(block.x, block.y, block.z, m_world->seed() + 61200);
+    std::string table;
     std::vector<VillageLoot::Stack> loot;
-    if (m_dimension == Dimension::Overworld) loot = villageChestLoot(block);
 
-    if (loot.empty())
+    Village::Kind kind = Village::Kind::Home;
+    int style = 0;
+    if (m_dimension == Dimension::Overworld && villageChestKind(block, kind, style))
     {
-        const WorldGen::Hoard hoard =
-            m_world->generator().hoardAt(block.x, block.y, block.z);
-        loot = StructureLoot::rollFor(hoard, block.x, block.y, block.z, m_world->seed());
-        if (!loot.empty())
+        table = villageTable(kind, style);
+        if (table.empty()) loot = VillageLoot::rollFor(kind, block.x, block.y, block.z, m_world->seed());
+    }
+    else
+    {
+        const WorldGen::Hoard hoard = m_world->generator().hoardAt(block.x, block.y, block.z);
+        table = hoardTable(hoard, block, m_world->seed());
+        if (table.empty()) loot = StructureLoot::rollFor(hoard, block.x, block.y, block.z, m_world->seed());
+        if (!table.empty() || !loot.empty())
         {
             if (hoard == WorldGen::Hoard::Bastion) award("nether/loot_bastion", "loot_bastion_other");
             else if (hoard == WorldGen::Hoard::BastionTreasure) award("nether/loot_bastion", "loot_bastion_treasure");
@@ -4688,21 +4752,23 @@ void Application::fillVillageChest(const glm::ivec3& block)
         }
     }
 
+    Chests::Contents filled{};
+    if (!table.empty())
+    {
+        const std::vector<ItemStack> rolled = EntityLoot::fillChest(table, seed, slots);
+        for (int i = 0; i < slots && i < static_cast<int>(rolled.size()); ++i) filled[i] = rolled[static_cast<size_t>(i)];
+        m_chests.put(block, filled);
+        return;
+    }
+
     if (loot.empty()) return;
 
-    Chests::Contents filled{};
-    const int slots = isDispenser(m_world->getBlock(block.x, block.y, block.z)) ? Hopper::THROWER_SLOTS : Chests::SLOTS;
-
-    // Spread through the chest rather than packed into the first few
-    // slots, which is how a found chest looks in Minecraft.
     for (size_t i = 0; i < loot.size() && i < static_cast<size_t>(slots); ++i)
     {
         const uint32_t where = hashCoords(block.x + static_cast<int>(i), block.y, block.z,
                                           m_world->seed() + 61100);
         int slot = static_cast<int>(where % static_cast<uint32_t>(slots));
 
-        // Walk on to the next free one, so two draws landing on the
-        // same slot do not lose one of the stacks.
         for (int step = 0; step < slots && !filled[slot].empty(); ++step)
             slot = (slot + 1) % slots;
 

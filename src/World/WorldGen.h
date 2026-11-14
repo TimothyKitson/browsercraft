@@ -165,6 +165,7 @@ public:
         BastionTreasure,
         BastionBridge,
         BastionStable,
+        StrongholdCorridor,
     };
 
     Hoard hoardAt(int x, int y, int z) const;
@@ -434,6 +435,7 @@ public:
     std::vector<PlacedStart> placedNear(int blockX, int blockZ, int reachBlocks) const;
     bool stampPlaced(Chunk& chunk, const PlacedStart& start) const;
     bool placedVillageAt(int blockX, int blockZ, Village::Site& site) const;
+    int villageStyle(const Village::Site& site) const;
     class Solo
     {
     public:

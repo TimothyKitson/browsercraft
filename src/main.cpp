@@ -12,6 +12,7 @@
 #include "Game/Smithing.h"
 #include "Game/Smelting.h"
 #include "Game/StructureLoot.h"
+#include "Game/EntityLoot.h"
 #include "Game/Trial.h"
 #include "Game/Farming.h"
 #include "Entity/MobType.h"
@@ -1014,6 +1015,12 @@ namespace
                 for (const StructureLoot::Stack& stack : StructureLoot::rollFor(
                          static_cast<WorldGen::Hoard>(h), n * 7, 50, n * 11, seed))
                     haveItem.insert(stack.id);
+
+        for (int t = 0; t < EntityLoot::tableCount(); ++t)
+            if (std::string(EntityLoot::tableName(t)).rfind("chests/", 0) == 0)
+                for (int n = 0; n < 60; ++n)
+                    for (const ItemStack& stack : EntityLoot::fillChest(EntityLoot::tableName(t), static_cast<uint32_t>(n * 7919 + t), 27))
+                        if (!stack.empty()) haveItem.insert(stack.id);
 
         for (Village::Kind kind : { Village::Kind::Home, Village::Kind::Blacksmith,
                                     Village::Kind::Library, Village::Kind::Butcher })
