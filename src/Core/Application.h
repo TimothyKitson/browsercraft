@@ -814,8 +814,11 @@ private:
         glm::vec3 position{ 0.0f };
         int xp = 0;
         std::vector<int> uses;
+        std::vector<int> demand;
+        int type = -1;
         float restockIn = Trading::RESTOCK_SECONDS;
     };
+    int villagerTypeAt(const glm::vec3& at) const;
     std::unordered_map<uint32_t, TraderRecord> m_traders;
     int m_tradeSelected = -1;
     int m_tradeScroll = 0;

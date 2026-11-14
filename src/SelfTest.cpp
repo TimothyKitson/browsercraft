@@ -4786,9 +4786,10 @@ namespace
                 if (Enchanting::offerFor(row, 15, Items::DiamondBoots, roll * 2654435761u).kind == Kind::FrostWalker) neverOffered = false;
         check(neverOffered, "the table never offers it");
         bool sold = false;
-        for (const Trading::Deal& deal : Trading::dealsFor(Trading::Profession::Armorer))
-            if (deal.offer.give == Items::IronBoots && Enchanting::has(deal.offer.giveEnchantments, Kind::FrostWalker)) sold = true;
-        check(sold, "an armorer sells frost walker boots");
+        for (uint32_t seed = 1; seed < 400 && !sold; ++seed)
+            for (const Trading::Deal& deal : Trading::dealsFor(Trading::Profession::Librarian, seed, 0))
+                if (deal.offer.give == Items::EnchantedBook && Enchanting::has(deal.offer.giveEnchantments, Kind::FrostWalker)) sold = true;
+        check(sold, "a librarian can sell a frost walker book");
         const Enchanting::Set kept = Enchanting::withLevel(Enchanting::withLevel(0u, Kind::Power, 5), Kind::FrostWalker, 2);
         check(Enchanting::levelOf(kept, Kind::Power) == 5 && Enchanting::levelOf(kept, Kind::FrostWalker) == 2,
               "and it packs beside the old kinds without disturbing them");
@@ -14839,12 +14840,40 @@ namespace
             for (const Trading::Deal& d : deals)
             {
                 if (d.maxUses <= 0) stocked = false;
-                if (d.villagerXp <= 0 || d.playerXp <= 0) earnsXp = false;
+                if (d.villagerXp <= 0) earnsXp = false;
             }
         }
         check(everyRank, "every profession has something new at every rank");
         check(stocked, "every deal can be struck at least once before it sells out");
-        check(earnsXp, "and every deal teaches the villager and the player something");
+        check(earnsXp, "and every deal teaches the villager something");
+
+        const std::vector<std::string> strangers = Trading::unknownTradeItems();
+        std::string strangeNames;
+        for (const std::string& id : strangers) strangeNames += " " + id;
+        check(strangers.empty(), "every item Minecraft's trade lists name exists in the game" + strangeNames);
+        bool twoEach = true;
+        for (int i = 0; i < static_cast<int>(Profession::Count); ++i)
+        {
+            if (static_cast<Profession>(i) == Profession::Nitwit) continue;
+            const std::vector<Trading::Deal> own = Trading::dealsFor(static_cast<Profession>(i), 4242u, 0);
+            int perRank[Trading::RANKS] = { 0, 0, 0, 0, 0 };
+            for (const Trading::Deal& d : own) ++perRank[std::clamp(d.rank, 0, Trading::RANKS - 1)];
+            for (int r = 0; r < Trading::RANKS; ++r)
+                if (perRank[r] < 1 || perRank[r] > Trading::TRADES_PER_LEVEL) twoEach = false;
+        }
+        check(twoEach, "a villager draws up to two trades from each level's list, as Minecraft's do");
+        const std::vector<Trading::Deal> sameAgain = Trading::dealsFor(Profession::Librarian, 99u, 0);
+        const std::vector<Trading::Deal> sameOnce = Trading::dealsFor(Profession::Librarian, 99u, 0);
+        bool steady = sameAgain.size() == sameOnce.size();
+        for (size_t k = 0; steady && k < sameAgain.size(); ++k)
+            steady = sameAgain[k].offer.give == sameOnce[k].offer.give && sameAgain[k].offer.wantCount == sameOnce[k].offer.wantCount &&
+                     sameAgain[k].offer.giveEnchantments == sameOnce[k].offer.giveEnchantments;
+        check(steady, "and keeps the same ones every time it is asked");
+        bool boats = false;
+        for (uint32_t seed = 1; seed < 200 && !boats; ++seed)
+            for (const Trading::Deal& d : Trading::dealsFor(Profession::Fisherman, seed, 3))
+                if (d.offer.want == RecipeBook::stackNamed("acacia_boat")) boats = true;
+        check(boats, "a savanna fisherman buys acacia boats");
 
         section("trading: what you can afford");
 

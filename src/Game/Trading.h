@@ -1,6 +1,7 @@
 #pragma once
 #include "Items.h"
 #include <cstdint>
+#include <string>
 #include <vector>
 
 // Villager trades: what each sort of villager will deal in, and at what
@@ -54,6 +55,7 @@ namespace Trading
         StackId give = Blocks::Air;
         int giveCount = 0;
         uint32_t giveEnchantments = 0;
+        int giveDamage = 0;
 
         bool valid() const
         {
@@ -84,10 +86,32 @@ namespace Trading
         int maxUses = 12;
         int villagerXp = 2;
         int playerXp = 1;
+        float multiplier = 0.05f;
     };
 
+    enum class FactoryKind : uint8_t { Buy, Sell, Process, Book, Tool, Dyed, Map, Tipped, Stew, Boat };
+    struct Factory
+    {
+        uint8_t profession;
+        uint8_t level;
+        FactoryKind kind;
+        const char* item;
+        int count;
+        int price;
+        int maxUses;
+        int xp;
+        float multiplier;
+        const char* item2;
+        int count2;
+        int extra;
+    };
+    constexpr int VILLAGER_TYPES = 7;
+    constexpr int TRADES_PER_LEVEL = 2;
+
     std::vector<Deal> dealsFor(Profession trade);
+    std::vector<Deal> dealsFor(Profession trade, uint32_t seed, int villagerType);
     std::vector<Deal> wandererDeals(uint32_t seed);
+    std::vector<std::string> unknownTradeItems();
 
     // How long a villager takes to restock everything it has sold out
     // of, in seconds of play.

@@ -288,6 +288,8 @@ void Application::saveTraders()
                      record.dimension, record.position.x, record.position.y, record.position.z,
                      record.xp, record.restockIn, record.uses.size());
         for (int used : record.uses) std::fprintf(file, " %d", used);
+        std::fprintf(file, " T%d D%zu", record.type, record.demand.size());
+        for (int wanted : record.demand) std::fprintf(file, " %d", wanted);
         std::fprintf(file, "\n");
     }
     std::fclose(file);
@@ -319,6 +321,20 @@ void Application::loadTraders()
             record.uses.push_back(used);
             rest += step;
         }
+        int type = -1, step = 0;
+        size_t wants = 0;
+        if (std::sscanf(rest, " T%d D%zu%n", &type, &wants, &step) == 2)
+        {
+            record.type = type;
+            rest += step;
+            for (size_t i = 0; i < wants && i < 64; ++i)
+            {
+                int wanted = 0, more = 0;
+                if (std::sscanf(rest, " %d%n", &wanted, &more) != 1) break;
+                record.demand.push_back(wanted);
+                rest += more;
+            }
+        }
         m_traders[record.seed] = record;
     }
     std::fclose(file);
@@ -331,9 +347,15 @@ void Application::updateTraders(float deltaTime)
 {
     for (auto& [seed, record] : m_traders)
     {
+        if (record.profession == static_cast<int>(Trading::Profession::Count)) continue;
         record.restockIn -= deltaTime;
         if (record.restockIn <= 0.0f)
         {
+            const std::vector<Trading::Deal> stock =
+                Trading::dealsFor(static_cast<Trading::Profession>(record.profession), record.seed, std::max(0, record.type));
+            record.demand.resize(record.uses.size(), 0);
+            for (size_t i = 0; i < record.uses.size() && i < stock.size(); ++i)
+                record.demand[i] = std::clamp(record.demand[i] + record.uses[i] - (stock[i].maxUses - record.uses[i]), -1000, 1000);
             std::fill(record.uses.begin(), record.uses.end(), 0);
             record.restockIn = Trading::RESTOCK_SECONDS;
         }
@@ -14069,19 +14091,49 @@ void Application::gossip(const glm::vec3& at, uint32_t villager, int change, int
     }
 }
 
+int Application::villagerTypeAt(const glm::vec3& at) const
+{
+    if (!m_world) return 0;
+    switch (m_world->generator().biomeAt(static_cast<int>(std::floor(at.x)), static_cast<int>(std::floor(at.z))))
+    {
+        case Biome::Desert: return 1;
+        case Biome::Jungle: return 2;
+        case Biome::Savanna: return 3;
+        case Biome::Snowy: return 4;
+        case Biome::Swamp: return 5;
+        case Biome::Mountains:
+        case Biome::Forest: return 6;
+        default: return 0;
+    }
+}
+
 std::vector<Trading::Deal> Application::tradeDeals() const
 {
-    std::vector<Trading::Deal> deals = m_tradeWandering ? Trading::wandererDeals(m_tradeSeed) : Trading::dealsFor(m_tradeWith);
-    if (!m_tradeWandering)
+    const auto found = m_traders.find(m_tradeSeed);
+    if (m_tradeWandering) return Trading::wandererDeals(m_tradeSeed);
+    int type = found != m_traders.end() ? found->second.type : -1;
+    if (type < 0)
     {
-        const int standing = reputationOf(m_tradeSeed);
-        for (Trading::Deal& deal : deals)
-            deal.offer.wantCount = std::clamp(deal.offer.wantCount - standing / 5, 1, 64);
+        const Mob* villager = tradingVillager();
+        type = villagerTypeAt(villager ? villager->position() : m_player.position);
     }
-    if (m_player.effects.has(Effects::Kind::HeroOfTheVillage))
+    std::vector<Trading::Deal> deals = Trading::dealsFor(m_tradeWith, m_tradeSeed, type);
+    const int standing = reputationOf(m_tradeSeed);
+    const bool hero = m_player.effects.has(Effects::Kind::HeroOfTheVillage);
+    const int heroLevel = hero ? m_player.effects.amplifier(Effects::Kind::HeroOfTheVillage) : 0;
+    for (size_t i = 0; i < deals.size(); ++i)
     {
-        const int level = m_player.effects.amplifier(Effects::Kind::HeroOfTheVillage);
-        for (Trading::Deal& deal : deals) deal.offer.wantCount = Raids::heroPrice(deal.offer.wantCount, level);
+        Trading::Deal& deal = deals[i];
+        const int base = deal.offer.wantCount;
+        const int demand = found != m_traders.end() && i < found->second.demand.size() ? found->second.demand[i] : 0;
+        const int bump = std::max(0, static_cast<int>(std::floor(static_cast<float>(base * demand) * deal.multiplier)));
+        int special = -static_cast<int>(std::floor(static_cast<float>(standing) * deal.multiplier));
+        if (hero)
+        {
+            const double share = 0.3 + 0.0625 * static_cast<double>(heroLevel);
+            special -= std::max(static_cast<int>(std::floor(share * static_cast<double>(base))), 1);
+        }
+        deal.offer.wantCount = std::clamp(base + bump + special, 1, maxStackOf(deal.offer.want));
     }
     return deals;
 }

@@ -124,5 +124,15 @@ namespace EntityLoot
         int level = 0;
     };
     std::vector<Pick> tablePicks(StackId item, int level, uint32_t seed);
+
+    struct EnchantInfo
+    {
+        std::string id;
+        int maxLevel = 1;
+        bool nonTreasure = false;
+        bool randomLoot = false;
+    };
+    std::vector<EnchantInfo> enchantList();
+    ItemStack withEnchant(ItemStack stack, const std::string& id, int level);
     ItemStack applyPicks(ItemStack stack, const std::vector<Pick>& picks);
 }

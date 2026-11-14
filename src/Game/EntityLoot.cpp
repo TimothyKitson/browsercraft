@@ -581,6 +581,21 @@ namespace EntityLoot
         return out;
     }
 
+    std::vector<EnchantInfo> enchantList()
+    {
+        std::vector<EnchantInfo> out;
+        for (int i = 0; i < ENCHANT_COUNT; ++i)
+            out.push_back(EnchantInfo{ ENCHANTS[i].id, ENCHANTS[i].maxLevel, ENCHANTS[i].nonTreasure, ENCHANTS[i].randomLoot });
+        return out;
+    }
+
+    ItemStack withEnchant(ItemStack stack, const std::string& id, int level)
+    {
+        const int index = enchantIndex(id);
+        if (index >= 0) addEnchant(stack, index, level);
+        return stack;
+    }
+
     ItemStack applyPicks(ItemStack stack, const std::vector<Pick>& picks)
     {
         for (const Pick& pick : picks)

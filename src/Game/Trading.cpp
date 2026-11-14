@@ -3,6 +3,13 @@
 #include "Maps.h"
 #include "World/Block.h"
 #include "Enchanting.h"
+#include "EntityLoot.h"
+#include "RecipeBook.h"
+#include "Brewing.h"
+#include <map>
+#include <string>
+
+#include "TradeData.inl"
 
 namespace Trading
 {
@@ -97,273 +104,209 @@ namespace Trading
 
     namespace
     {
-        Deal buy(StackId want, int count, int rank, int uses = 16)
+        struct Dice
+        {
+            uint32_t state;
+            uint32_t next()
+            {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                return state;
+            }
+            int below(int bound) { return bound <= 1 ? 0 : static_cast<int>(next() % static_cast<uint32_t>(bound)); }
+            float unit() { return static_cast<float>(next() % 1000000u) / 1000000.0f; }
+        };
+
+        uint32_t mix(uint32_t a, uint32_t b)
+        {
+            uint32_t h = a * 0x9E3779B9u ^ (b + 0x7F4A7C15u);
+            h ^= h >> 16; h *= 0x7FEB352Du;
+            h ^= h >> 15; h *= 0x846CA68Bu;
+            h ^= h >> 16;
+            return h ? h : 1u;
+        }
+
+        StackId stackOf(const char* id)
+        {
+            static std::map<std::string, StackId> cache;
+            const auto found = cache.find(id);
+            if (found != cache.end()) return found->second;
+            const StackId stack = RecipeBook::stackNamed(id);
+            cache[id] = stack;
+            return stack;
+        }
+
+        std::vector<Brewing::Brew> arrowBrews()
+        {
+            std::vector<Brewing::Brew> out;
+            for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
+            {
+                const Brewing::Potion potion = static_cast<Brewing::Potion>(p);
+                if (potion == Brewing::Potion::Water || potion == Brewing::Potion::Awkward || potion == Brewing::Potion::Mundane ||
+                    potion == Brewing::Potion::Thick || potion == Brewing::Potion::Luck)
+                    continue;
+                out.push_back(Brewing::Brew{ potion, false, false });
+                if (Brewing::canExtend(potion)) out.push_back(Brewing::Brew{ potion, true, false });
+                if (Brewing::canStrengthen(potion)) out.push_back(Brewing::Brew{ potion, false, true });
+            }
+            return out;
+        }
+
+        Deal resolve(const Factory& f, Dice& dice, int villagerType)
         {
             Deal d;
-            d.offer = { want, count, Blocks::Air, 0, Items::Emerald, 1 };
-            d.rank = rank;
-            d.maxUses = uses;
-            d.villagerXp = 2 + rank * 3;
-            d.playerXp = 1 + rank;
+            d.rank = std::max(0, static_cast<int>(f.level) - 1);
+            d.maxUses = f.maxUses;
+            d.villagerXp = f.xp;
+            d.playerXp = 0;
+            d.multiplier = f.multiplier;
+            Offer& o = d.offer;
+            const StackId item = f.item[0] ? stackOf(f.item) : static_cast<StackId>(Blocks::Air);
+            switch (f.kind)
+            {
+            case FactoryKind::Buy:
+                o.want = item; o.wantCount = f.count; o.give = Items::Emerald; o.giveCount = f.price;
+                break;
+            case FactoryKind::Sell:
+            case FactoryKind::Dyed:
+                o.want = Items::Emerald; o.wantCount = f.price; o.give = item; o.giveCount = f.count;
+                break;
+            case FactoryKind::Process:
+            case FactoryKind::Tipped:
+                o.want = Items::Emerald; o.wantCount = f.price; o.also = stackOf(f.item2); o.alsoCount = f.count2;
+                o.give = item; o.giveCount = f.count;
+                if (f.kind == FactoryKind::Tipped)
+                {
+                    const std::vector<Brewing::Brew> brews = arrowBrews();
+                    const Brewing::Brew brew = brews[static_cast<size_t>(dice.below(static_cast<int>(brews.size())))];
+                    const std::vector<Brewing::Dose> doses = Brewing::dosesOf(brew);
+                    if (!doses.empty()) o.giveDamage = Brewing::tippedDamage(doses.front().kind, doses.front().amplifier);
+                }
+                break;
+            case FactoryKind::Book:
+            {
+                std::vector<EntityLoot::EnchantInfo> options;
+                for (const EntityLoot::EnchantInfo& info : EntityLoot::enchantList())
+                    if (info.nonTreasure || info.id == "binding_curse" || info.id == "vanishing_curse" ||
+                        info.id == "frost_walker" || info.id == "mending")
+                        options.push_back(info);
+                ItemStack book{ static_cast<StackId>(Items::Book), 1 };
+                int price = 1;
+                if (!options.empty())
+                {
+                    const EntityLoot::EnchantInfo& pick = options[static_cast<size_t>(dice.below(static_cast<int>(options.size())))];
+                    const int level = 1 + dice.below(std::max(1, pick.maxLevel));
+                    book = EntityLoot::withEnchant(book, pick.id, level);
+                    price = 2 + dice.below(5 + level * 10) + 3 * level;
+                    if (!pick.nonTreasure) price *= 2;
+                    price = std::min(price, 64);
+                }
+                o.want = Items::Emerald; o.wantCount = price; o.also = Items::Book; o.alsoCount = 1;
+                o.give = book.id; o.giveCount = 1; o.giveEnchantments = book.enchantments;
+                d.maxUses = 12;
+                break;
+            }
+            case FactoryKind::Tool:
+            {
+                const int level = 5 + dice.below(15);
+                ItemStack tool{ item, 1 };
+                tool = EntityLoot::enchantWithLevels(tool, level, dice.next(), false);
+                o.want = Items::Emerald; o.wantCount = std::min(f.price + level, 64);
+                o.give = tool.id; o.giveCount = 1; o.giveEnchantments = tool.enchantments;
+                break;
+            }
+            case FactoryKind::Map:
+                o.want = Items::Emerald; o.wantCount = f.price; o.also = Items::Compass; o.alsoCount = 1;
+                o.give = Items::FilledMap; o.giveCount = 1; o.giveEnchantments = static_cast<uint32_t>(f.extra) << 24;
+                break;
+            case FactoryKind::Stew:
+            {
+                static const int FLOWERS[6] = { 7, 4, 8, 1, 5, 2 };
+                o.want = Items::Emerald; o.wantCount = 1; o.give = Items::SuspiciousStew; o.giveCount = 1;
+                o.giveDamage = FLOWERS[std::clamp(f.extra, 0, 5)];
+                break;
+            }
+            case FactoryKind::Boat:
+            {
+                static const char* const BOATS[VILLAGER_TYPES] = { "oak_boat", "jungle_boat", "jungle_boat", "acacia_boat",
+                                                                   "spruce_boat", "dark_oak_boat", "spruce_boat" };
+                o.want = stackOf(BOATS[std::clamp(villagerType, 0, VILLAGER_TYPES - 1)]); o.wantCount = f.count;
+                o.give = Items::Emerald; o.giveCount = 1;
+                break;
+            }
+            }
+            if (o.want != Blocks::Air) o.wantCount = std::clamp(o.wantCount, 1, maxStackOf(o.want));
+            if (o.also != Blocks::Air) o.alsoCount = std::clamp(o.alsoCount, 1, maxStackOf(o.also));
             return d;
         }
 
-        Deal sell(int emeralds, StackId give, int count, int rank, int uses = 12,
-                  StackId also = Blocks::Air, int alsoCount = 0, uint32_t enchantments = 0)
+        std::vector<const Factory*> poolOf(int profession, int level)
         {
-            Deal d;
-            d.offer = { Items::Emerald, emeralds, also, alsoCount, give, count, enchantments };
-            d.rank = rank;
-            d.maxUses = uses;
-            d.villagerXp = 2 + rank * 3;
-            d.playerXp = 1 + rank;
-            return d;
+            std::vector<const Factory*> pool;
+            for (int i = 0; i < FACTORY_COUNT; ++i)
+                if (FACTORIES[i].profession == profession && FACTORIES[i].level == level) pool.push_back(&FACTORIES[i]);
+            return pool;
         }
 
-        uint32_t enchanted(Enchanting::Kind kind, int level)
+        void pickFrom(std::vector<const Factory*> pool, int count, Dice& dice, int villagerType, std::vector<Deal>& out)
         {
-            return Enchanting::withLevel(0u, kind, level);
+            int taken = 0;
+            while (taken < count && !pool.empty())
+            {
+                const size_t at = static_cast<size_t>(dice.below(static_cast<int>(pool.size())));
+                const Factory* chosen = pool[at];
+                pool.erase(pool.begin() + static_cast<long>(at));
+                const Deal deal = resolve(*chosen, dice, villagerType);
+                if (!deal.offer.valid()) continue;
+                out.push_back(deal);
+                ++taken;
+            }
         }
     }
 
     std::vector<Deal> wandererDeals(uint32_t seed)
     {
-        const std::vector<Deal> common = {
-            sell(1, Blocks::OakSapling, 1, 0, 8), sell(1, Blocks::SpruceSapling, 1, 0, 8), sell(1, Blocks::BirchSapling, 1, 0, 8),
-            sell(1, Blocks::JungleSapling, 1, 0, 8), sell(1, Blocks::AcaciaSapling, 1, 0, 8), sell(1, Blocks::DarkOakSapling, 1, 0, 8),
-            sell(1, Blocks::CherrySapling, 1, 0, 8), sell(1, Blocks::Fern, 1, 0, 12), sell(1, Blocks::SugarCane, 1, 0, 8),
-            sell(1, Blocks::Pumpkin, 1, 0, 4), sell(1, Blocks::Cactus, 3, 0, 8), sell(1, Blocks::Vine, 1, 0, 12),
-            sell(1, Blocks::BrownMushroom, 1, 0, 12), sell(1, Blocks::RedMushroom, 1, 0, 12), sell(1, Blocks::LilyPad, 2, 0, 5),
-            sell(1, Blocks::Seagrass, 1, 0, 12), sell(2, Blocks::SeaPickle, 1, 0, 5), sell(4, Items::Slimeball, 1, 0, 5),
-            sell(2, Blocks::Glowstone, 1, 0, 5), sell(4, Items::NautilusShell, 1, 0, 5), sell(1, Blocks::Bamboo, 1, 0, 8),
-            sell(1, Blocks::Moss, 2, 0, 5), sell(1, Blocks::RootedDirt, 2, 0, 5), sell(1, Blocks::RedSand, 4, 0, 6),
-            sell(1, Items::DyeWhite, 3, 0, 12), sell(1, Items::DyeBlack, 3, 0, 12),
-        };
-        const std::vector<Deal> rare = {
-            sell(5, Items::PufferfishBucket, 1, 0, 4), sell(5, Items::TropicalFishBucket, 1, 0, 4),
-            sell(3, Blocks::Podzol, 3, 0, 6), sell(6, Blocks::BlueIce, 1, 0, 6), sell(5, Blocks::Melon, 1, 0, 4),
-        };
         std::vector<Deal> out;
-        uint32_t roll = seed * 2654435761u + 0x9E37u;
-        std::vector<int> picked;
-        while (out.size() < 5)
+        Dice dice{ mix(seed, 0xA11Du) };
+        pickFrom(poolOf(255, 1), 5, dice, 0, out);
+        pickFrom(poolOf(255, 2), 1, dice, 0, out);
+        return out;
+    }
+
+    std::vector<Deal> dealsFor(Profession trade, uint32_t seed, int villagerType)
+    {
+        std::vector<Deal> out;
+        for (int level = 1; level <= RANKS; ++level)
         {
-            roll = roll * 1664525u + 1013904223u;
-            const int k = static_cast<int>((roll >> 8) % common.size());
-            if (std::find(picked.begin(), picked.end(), k) != picked.end()) continue;
-            picked.push_back(k);
-            out.push_back(common[static_cast<size_t>(k)]);
+            Dice dice{ mix(seed, static_cast<uint32_t>(level) * 977u + static_cast<uint32_t>(trade)) };
+            pickFrom(poolOf(static_cast<int>(trade), level), TRADES_PER_LEVEL, dice, villagerType, out);
         }
-        roll = roll * 1664525u + 1013904223u;
-        out.push_back(rare[(roll >> 8) % rare.size()]);
-        for (Deal& deal : out) { deal.villagerXp = 0; deal.playerXp = 1; }
         return out;
     }
 
     std::vector<Deal> dealsFor(Profession trade)
     {
-        using Enchanting::Kind;
-        switch (trade)
-        {
-        case Profession::Farmer:
-            return {
-                buy(Items::Wheat, 20, 0),
-                sell(1, Items::Bread, 6, 0),
-                buy(Items::Carrot, 22, 1),
-                buy(Items::Potato, 26, 1),
-                buy(Blocks::Pumpkin, 6, 2, 12),
-                sell(1, Items::Apple, 4, 2),
-                buy(Blocks::Melon, 4, 3, 12),
-                sell(3, Items::Cookie, 18, 3),
-                buy(Items::Beetroot, 15, 4),
-                sell(1, Items::Cake, 1, 4, 6),
-            };
+        std::vector<Deal> out;
+        Dice dice{ 0x5EEDu };
+        for (int i = 0; i < FACTORY_COUNT; ++i)
+            if (FACTORIES[i].profession == static_cast<int>(trade))
+            {
+                const Deal deal = resolve(FACTORIES[i], dice, 0);
+                if (deal.offer.valid()) out.push_back(deal);
+            }
+        return out;
+    }
 
-        case Profession::Librarian:
-            return {
-                buy(Items::Paper, 24, 0),
-                sell(9, Blocks::Bookshelf, 1, 0),
-                buy(Items::Book, 4, 1, 12),
-                sell(5, Items::EnchantedBook, 1, 1, 8, Items::Book, 1, enchanted(Kind::Efficiency, 1)),
-                buy(Items::InkSac, 5, 2, 12),
-                sell(1, Blocks::Glass, 4, 2),
-                sell(12, Items::EnchantedBook, 1, 3, 6, Items::Book, 1, enchanted(Kind::Unbreaking, 2)),
-                sell(1, Blocks::Lantern, 1, 3),
-                sell(24, Blocks::EnchantingTable, 1, 4, 4, Items::Book, 1),
-                sell(20, Items::EnchantedBook, 1, 4, 4, Items::Book, 1, enchanted(Kind::SilkTouch, 1)),
-            };
-
-        case Profession::Toolsmith:
-            return {
-                buy(Items::Coal, 15, 0),
-                sell(1, Items::StonePickaxe, 1, 0),
-                buy(Items::IronIngot, 4, 1, 12),
-                sell(2, Items::Bucket, 1, 1),
-                buy(Items::Flint, 24, 2),
-                sell(7, Items::IronPickaxe, 1, 2, 6),
-                buy(Items::GoldIngot, 3, 3, 12),
-                sell(8, Items::IronAxe, 1, 3, 4, Blocks::Air, 0, enchanted(Kind::Efficiency, 2)),
-                sell(18, Items::DiamondPickaxe, 1, 4, 3, Items::Diamond, 1),
-                sell(14, Items::DiamondAxe, 1, 4, 3, Items::Diamond, 1),
-            };
-
-        case Profession::Fletcher:
-            return {
-                buy(Items::Stick, 32, 0),
-                sell(1, Items::Arrow, 8, 0),
-                buy(Items::Feather, 16, 1),
-                sell(2, Items::Bow, 1, 1),
-                buy(Items::StringItem, 14, 2),
-                sell(1, Items::Flint, 10, 2, 12, Blocks::Gravel, 10),
-                sell(5, Items::Arrow, 24, 3),
-                sell(3, Items::Crossbow, 1, 3),
-                sell(4, Items::Bow, 1, 3, 4, Blocks::Air, 0, enchanted(Kind::Power, 1)),
-                buy(Items::Feather, 24, 4),
-                sell(9, Items::Bow, 1, 4, 3, Blocks::Air, 0, enchanted(Kind::Unbreaking, 3)),
-            };
-
-        case Profession::Armorer:
-            return {
-                buy(Items::Coal, 15, 0),
-                sell(5, Items::IronHelmet, 1, 0),
-                sell(9, Items::IronChestplate, 1, 0),
-                sell(7, Items::IronLeggings, 1, 0),
-                sell(4, Items::IronBoots, 1, 0),
-                buy(Items::IronIngot, 4, 1, 12),
-                sell(1, Items::ChainmailBoots, 1, 1),
-                sell(3, Items::ChainmailLeggings, 1, 1),
-                buy(Items::LavaBucket, 1, 2, 12),
-                sell(1, Items::ChainmailHelmet, 1, 2),
-                sell(4, Items::ChainmailChestplate, 1, 2),
-                buy(Items::Diamond, 1, 2, 12),
-                sell(5, Items::Shield, 1, 3),
-                sell(14, Items::DiamondLeggings, 1, 4, 3, Blocks::Air, 0, enchanted(Kind::Protection, 2)),
-                sell(16, Items::DiamondChestplate, 1, 4, 3, Blocks::Air, 0, enchanted(Kind::Protection, 2)),
-                sell(12, Items::IronBoots, 1, 3, 3, Blocks::Air, 0, enchanted(Kind::FrostWalker, 1)),
-                sell(36, Blocks::BellFirst + 2, 1, 2, 3),
-            };
-
-        case Profession::Butcher:
-            return {
-                buy(Items::RawChicken, 14, 0),
-                buy(Items::RawPorkchop, 7, 0),
-                buy(Items::RawRabbit, 4, 0),
-                sell(1, Items::CookedRabbit, 1, 0),
-                buy(Items::Coal, 15, 1),
-                sell(1, Items::CookedPorkchop, 5, 1),
-                sell(1, Items::CookedChicken, 8, 1),
-                buy(Items::RawMutton, 7, 2),
-                buy(Items::RawBeef, 10, 2),
-                sell(1, Items::CookedMutton, 6, 3),
-                sell(1, Items::Steak, 6, 4),
-            };
-
-        case Profession::Cartographer:
-            return {
-                buy(Items::Paper, 24, 0),
-                sell(7, Items::EmptyMap, 1, 0),
-                buy(Blocks::GlassPane, 11, 1),
-                sell(13, Items::FilledMap, 1, 1, 12, Items::Compass, 1, static_cast<uint32_t>(Maps::OceanExplorer) << 24),
-                buy(Items::Compass, 1, 2, 12),
-                sell(14, Items::FilledMap, 1, 2, 12, Items::Compass, 1, static_cast<uint32_t>(Maps::WoodlandExplorer) << 24),
-                sell(12, Items::FilledMap, 1, 2, 12, Items::Compass, 1, static_cast<uint32_t>(Maps::TrialExplorer) << 24),
-                sell(7, Items::ItemFrame, 1, 3),
-                sell(3, static_cast<StackId>(Blocks::BannerFirst + 0 * 8), 1, 3),
-                sell(3, static_cast<StackId>(Blocks::BannerFirst + 11 * 8), 1, 3),
-                sell(8, Items::GlobeBannerPattern, 1, 4),
-            };
-
-        case Profession::Cleric:
-            return {
-                buy(Items::RottenFlesh, 32, 0),
-                sell(1, Items::Redstone, 2, 0),
-                buy(Items::GoldIngot, 3, 1, 12),
-                sell(1, Items::LapisLazuli, 1, 1),
-                buy(Items::RabbitFoot, 2, 2, 12),
-                sell(4, Blocks::Glowstone, 1, 2),
-                buy(Items::TurtleScute, 4, 3, 12),
-                buy(Items::GlassBottle, 9, 3, 12),
-                sell(5, Items::EnderPearl, 1, 3),
-                buy(Items::NetherWart, 22, 4, 12),
-                sell(3, Items::ExperienceBottle, 1, 4),
-            };
-
-        case Profession::Fisherman:
-            return {
-                buy(Items::StringItem, 20, 0),
-                buy(Items::Coal, 10, 0),
-                sell(1, Items::CookedCod, 6, 0, 16, Items::RawCod, 6),
-                buy(Items::RawCod, 15, 1),
-                sell(2, Blocks::Campfire, 1, 1),
-                buy(Items::RawSalmon, 13, 2),
-                sell(1, Items::CookedSalmon, 6, 2, 16, Items::RawSalmon, 6),
-                buy(Items::Pufferfish, 4, 3, 12),
-                buy(Items::Boat, 1, 4, 12),
-            };
-
-        case Profession::Leatherworker:
-            return {
-                buy(Items::Leather, 6, 0),
-                sell(3, Items::LeatherLeggings, 1, 0),
-                sell(7, Items::LeatherChestplate, 1, 0),
-                buy(Items::Flint, 26, 1),
-                sell(5, Items::LeatherHelmet, 1, 1),
-                sell(4, Items::LeatherBoots, 1, 1),
-                buy(Items::RabbitHide, 9, 2, 12),
-                sell(7, Items::LeatherChestplate, 1, 3, 6, Blocks::Air, 0, enchanted(Kind::Protection, 1)),
-                sell(5, Items::LeatherHelmet, 1, 4, 6, Blocks::Air, 0, enchanted(Kind::Protection, 1)),
-                sell(6, Items::LeatherHorseArmor, 1, 3),
-                sell(6, Items::Saddle, 1, 4),
-            };
-
-        case Profession::Mason:
-            return {
-                buy(Blocks::Stone, 20, 0),
-                sell(1, Blocks::Bricks, 10, 0),
-                buy(Blocks::Granite, 16, 1),
-                buy(Blocks::Andesite, 16, 1),
-                buy(Blocks::Diorite, 16, 2),
-                sell(1, Blocks::Calcite, 4, 2),
-                sell(1, Blocks::DripstoneBlock, 4, 3),
-                sell(1, Blocks::Cobblestone, 16, 4),
-            };
-
-        case Profession::Nitwit:
-            return {};
-
-        case Profession::Shepherd:
-            return {
-                buy(Blocks::Wool, 18, 0),
-                buy(Items::DyeWhite, 12, 1),
-                buy(Items::DyeGray, 12, 1),
-                buy(Items::DyeBlack, 12, 1),
-                sell(1, Blocks::WoolOrange, 1, 1),
-                sell(1, Blocks::WoolLightBlue, 1, 1),
-                sell(1, Blocks::WoolLime, 1, 1),
-                buy(Items::DyeLightBlue, 12, 2),
-                buy(Items::DyeLime, 12, 2),
-                sell(3, bedOf(0, 0, false), 1, 2),
-                sell(1, Blocks::WoolMagenta, 1, 3),
-                sell(1, Blocks::WoolYellow, 1, 3),
-                sell(3, static_cast<StackId>(Blocks::BannerFirst + 14 * 8 + 2), 1, 3),
-                sell(2, bedOf(14, 0, false), 1, 4),
-            };
-
-        case Profession::Weaponsmith:
-            return {
-                buy(Items::Coal, 15, 0),
-                sell(3, Items::IronAxe, 1, 0),
-                sell(2, Items::IronSword, 1, 0, 12, Blocks::Air, 0, enchanted(Kind::Sharpness, 1)),
-                buy(Items::IronIngot, 4, 1, 12),
-                buy(Items::Flint, 24, 2),
-                buy(Items::Diamond, 1, 3, 12),
-                sell(12, Items::DiamondAxe, 1, 3, 3, Blocks::Air, 0, enchanted(Kind::Sharpness, 2)),
-                sell(8, Items::DiamondSword, 1, 4, 3, Blocks::Air, 0, enchanted(Kind::Sharpness, 3)),
-            };
-
-        default: break;
-        }
-        return {};
+    std::vector<std::string> unknownTradeItems()
+    {
+        std::vector<std::string> out;
+        for (int i = 0; i < FACTORY_COUNT; ++i)
+            for (const char* id : { FACTORIES[i].item, FACTORIES[i].item2 })
+                if (id[0] && stackOf(id) == Blocks::Air && std::find(out.begin(), out.end(), id) == out.end()) out.push_back(id);
+        for (const char* boat : { "oak_boat", "jungle_boat", "acacia_boat", "spruce_boat", "dark_oak_boat" })
+            if (stackOf(boat) == Blocks::Air) out.push_back(boat);
+        return out;
     }
 
     std::vector<Offer> offersFor(Profession trade)

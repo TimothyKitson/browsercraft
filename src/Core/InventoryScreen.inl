@@ -1933,7 +1933,7 @@ void Application::renderContainerScreen(float w, float h)
                 guiSprite(out ? "sprites/container/villager/trade_arrow_out_of_stock"
                               : "sprites/container/villager/trade_arrow",
                           listX + 55.0f, ry + 5.0f, 10.0f, 9.0f);
-                drawItem(listX + 68.0f, ry + 2.0f, SLOT, offer.give, offer.giveCount, glm::vec4(1.0f), 0, offer.giveEnchantments);
+                drawItem(listX + 68.0f, ry + 2.0f, SLOT, offer.give, offer.giveCount, glm::vec4(1.0f), offer.giveDamage, offer.giveEnchantments);
 
                 std::string tip = "Give " + std::to_string(offer.wantCount) + " " + displayName(offer.want);
                 if (offer.also != Blocks::Air)
@@ -2099,7 +2099,7 @@ void Application::renderContainerScreen(float w, float h)
                     drawItem(listX + 20.0f, ry + 1.5f, SLOT, offer.also, offer.alsoCount, tint);
                 if (out) redCross(listX + 41.0f, ry + 3.0f, 12.0f);
                 else drawCraftArrow(listX + 39.0f, ry + 4.0f, 15.0f, 11.0f);
-                drawItem(listX + 60.0f, ry + 1.5f, SLOT, offer.give, offer.giveCount, tint, 0, offer.giveEnchantments);
+                drawItem(listX + 60.0f, ry + 1.5f, SLOT, offer.give, offer.giveCount, tint, offer.giveDamage, offer.giveEnchantments);
 
                 std::string tip = "Give " + std::to_string(offer.wantCount) + " " + displayName(offer.want);
                 if (offer.also != Blocks::Air)
@@ -3947,11 +3947,17 @@ Application::TraderRecord& Application::openTrader()
     if (record.seed != m_tradeSeed)
     {
         record.seed = m_tradeSeed;
-        record.profession = static_cast<int>(m_tradeWith);
+        record.profession = m_tradeWandering ? static_cast<int>(Trading::Profession::Count) : static_cast<int>(m_tradeWith);
         record.dimension = static_cast<int>(m_dimension);
+    }
+    if (record.type < 0)
+    {
+        const Mob* villager = tradingVillager();
+        record.type = villagerTypeAt(villager ? villager->position() : m_player.position);
     }
     const size_t deals = tradeDeals().size();
     if (record.uses.size() != deals) record.uses.resize(deals, 0);
+    if (record.demand.size() != deals) record.demand.resize(deals, 0);
     return record;
 }
 
@@ -4043,6 +4049,7 @@ void Application::refreshTradeResult()
     result.id = offer.give;
     result.count = offer.giveCount;
     result.enchantments = offer.giveEnchantments;
+    result.damage = offer.giveDamage;
 }
 
 void Application::takeTradeResult(bool all)
@@ -4063,7 +4070,7 @@ void Application::takeTradeResult(bool all)
         else
         {
             const bool fits = cursor.empty() ||
-                              (cursor.id == made.id && cursor.enchantments == made.enchantments &&
+                              (cursor.id == made.id && cursor.enchantments == made.enchantments && cursor.damage == made.damage &&
                                cursor.count + made.count <= maxStackOf(made.id));
             if (!fits) return;
             if (cursor.empty()) cursor = made;
@@ -4099,9 +4106,13 @@ void Application::takeTradeResult(bool all)
         for (const Mob& mob : m_entities.mobs())
             if (mob.typeId() == MobId::Villager && mob.birthSeed() == m_tradeSeed)
                 record.position = mob.position();
-        m_player.experience += deal.playerXp;
-
         const int rankAfter = Trading::rankFor(record.xp);
+        {
+            const Mob* trader = tradingVillager();
+            const uint32_t roll = hashCoords(static_cast<int>(m_tradeSeed), record.xp, static_cast<int>(m_elapsedSeconds * 20.0f), 0x7EADu);
+            const int orb = 3 + static_cast<int>(roll % 4u) + (rankAfter > rankBefore ? 5 : 0);
+            m_orbs.spawnValue((trader ? trader->position() : m_player.position) + glm::vec3(0.0f, 0.5f, 0.0f), orb);
+        }
         if (rankAfter > rankBefore)
             m_audio.play(Sound::Pickup, 0.8f, 0.6f);
         else
