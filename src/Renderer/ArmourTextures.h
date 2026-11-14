@@ -10,7 +10,7 @@ class ArmourTextures
 public:
     ~ArmourTextures();
 
-    unsigned int layer(StackId piece, bool leggings);
+    unsigned int layer(StackId piece, bool leggings, uint32_t colour = 0);
     unsigned int leatherOverlay(bool leggings);
     unsigned int trim(int pattern, int material, StackId armour, bool leggings);
     unsigned int trimIcon(int slot, int material);

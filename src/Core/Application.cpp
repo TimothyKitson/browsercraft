@@ -3842,6 +3842,7 @@ bool Application::frame()
                 m_inventory.slot(Inventory::ARMOR_FIRST + 2).count = 1;
                 m_inventory.slot(Inventory::ARMOR_FIRST + 3).id = Items::LeatherBoots;
                 m_inventory.slot(Inventory::ARMOR_FIRST + 3).count = 1;
+                m_inventory.slot(Inventory::ARMOR_FIRST + 3).enchantments = Enchanting::withColour(0u, 0x1000000u | 0x3C44AAu);
                 m_player.armourPoints = armourPoints();
             }
 
@@ -3870,6 +3871,13 @@ bool Application::frame()
                     Blocks::DripstoneDown, Blocks::Bamboo, Items::Bow,
                 };
                 for (StackId id : show) m_inventory.add(id, 1);
+                static const uint32_t DYED[4] = { 0xB02E26u, 0x3C44AAu, 0x80C71Fu, 0xF38BAAu };
+                for (int piece = 0; piece < 4; ++piece)
+                {
+                    ItemStack dyed{ static_cast<StackId>(Items::LeatherHelmet + piece), 1 };
+                    dyed.enchantments = Enchanting::withColour(0u, 0x1000000u | DYED[piece]);
+                    m_inventory.addStack(dyed);
+                }
                 for (int brew = 0; brew < 12; ++brew)
                 {
                     ItemStack potion;
@@ -17882,6 +17890,16 @@ bool Application::useCauldron(const glm::ivec3& at, BlockId block)
         if (m_inventory.addStack(left) > 0) m_drops.spawnStack(m_player.position, left);
     };
 
+    if (((held.id >= Items::LeatherHelmet && held.id <= Items::LeatherBoots) || held.id == Items::LeatherHorseArmor) &&
+        Enchanting::colourOf(held.enchantments) != 0u && level > 0)
+    {
+        held.enchantments = Enchanting::withColour(held.enchantments, 0u);
+        if (!m_player.creative()) setLevel(level - 1);
+        m_stats.add(Stats::Custom::CleanArmor);
+        m_audio.play(Sound::Pickup, 0.5f, 1.3f);
+        return true;
+    }
+
     if (!isItem(held.id) && isBanner(asBlock(held.id)) && held.damage > 0 && level > 0)
     {
         Banners::Design design = m_bannerLibrary.design(held.damage);
@@ -24425,7 +24443,7 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
             if (worn.empty() || !Armour::isArmour(worn.id)) continue;
             const int piece = static_cast<int>(Armour::pieceOf(worn.id));
             const bool leggings = piece == 3;
-            m_playerModel.renderArmour(armourShader, *m_world, pose, piece, m_armourTextures.layer(worn.id, leggings));
+            m_playerModel.renderArmour(armourShader, *m_world, pose, piece, m_armourTextures.layer(worn.id, leggings, Enchanting::colourOf(worn.enchantments)));
             if (Armour::tierOf(worn.id) == Armour::Tier::Leather)
                 m_playerModel.renderArmour(armourShader, *m_world, pose, piece, m_armourTextures.leatherOverlay(leggings), 0.01f);
             if (Smithing::trimPattern(worn.enchantments) >= 0)

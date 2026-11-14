@@ -640,8 +640,10 @@ namespace Tiles
         ItemRecoveryFirst, ItemRecoveryLast = ItemRecoveryFirst + 31,
         ItemDebugStick,
         ItemSpyglassModel,
+        ItemLeatherBaseFirst, ItemLeatherBaseLast = ItemLeatherBaseFirst + 3,
+        ItemLeatherOverlayFirst, ItemLeatherOverlayLast = ItemLeatherOverlayFirst + 3,
 
-        ItemTileEnd = ItemSpyglassModel + 1
+        ItemTileEnd = ItemLeatherOverlayLast + 1
     };
 
     // Ten progressively more broken overlay tiles for the mining animation.

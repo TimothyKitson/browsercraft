@@ -79,7 +79,8 @@ namespace Enchanting
             { "Curse of Vanishing", "vanishing_curse", 1, true },
         };
 
-        using Levels = std::array<uint8_t, KIND_COUNT>;
+        constexpr int COLOUR_AT = KIND_COUNT;
+        using Levels = std::array<uint8_t, KIND_COUNT + 4>;
 
         constexpr uint32_t LIBRARY_MARK = 7u << 21;
         constexpr uint32_t LIBRARY_INDEX = (1u << 21) - 1u;
@@ -114,7 +115,7 @@ namespace Enchanting
 
         Set encode(const Levels& levels, Set top)
         {
-            bool packs = levels[static_cast<size_t>(Kind::FrostWalker)] < 7;
+            bool packs = levels[static_cast<size_t>(Kind::FrostWalker)] < 7 && levels[static_cast<size_t>(COLOUR_AT)] == 0;
             for (int k = PACKED_KINDS; k < KIND_COUNT && packs; ++k)
                 if (levels[static_cast<size_t>(k)] != 0) packs = false;
             if (packs)
@@ -265,7 +266,7 @@ namespace Enchanting
         std::string out;
         for (const Levels& levels : library().sets)
         {
-            for (int k = 0; k < KIND_COUNT; ++k)
+            for (int k = 0; k < static_cast<int>(levels.size()); ++k)
             {
                 if (k) out += ' ';
                 out += std::to_string(levels[static_cast<size_t>(k)]);
@@ -291,8 +292,9 @@ namespace Enchanting
             std::istringstream line(row);
             Levels levels{};
             int value = 0;
-            for (int k = 0; k < KIND_COUNT && line >> value; ++k)
-                levels[static_cast<size_t>(k)] = static_cast<uint8_t>(std::clamp(value, 0, maxLevel(static_cast<Kind>(k))));
+            for (int k = 0; k < static_cast<int>(levels.size()) && line >> value; ++k)
+                levels[static_cast<size_t>(k)] = static_cast<uint8_t>(k < KIND_COUNT ? std::clamp(value, 0, maxLevel(static_cast<Kind>(k)))
+                                                                                        : std::clamp(value, 0, 255));
             library().index.emplace(levels, static_cast<uint32_t>(library().sets.size()));
             library().sets.push_back(levels);
         }
@@ -301,7 +303,35 @@ namespace Enchanting
     size_t librarySize() { return library().sets.size(); }
 
     bool has(Set set, Kind kind) { return levelOf(set, kind) > 0; }
-    bool any(Set set) { return (set & KIND_BITS) != 0u; }
+    bool any(Set set)
+    {
+        if (!shelved(set)) return (set & KIND_BITS) != 0u;
+        const Levels levels = decode(set);
+        for (int k = 0; k < KIND_COUNT; ++k)
+            if (levels[static_cast<size_t>(k)] != 0) return true;
+        return false;
+    }
+
+    uint32_t colourOf(Set set)
+    {
+        if (!shelved(set)) return 0u;
+        const Levels levels = decode(set);
+        if (levels[static_cast<size_t>(COLOUR_AT)] == 0) return 0u;
+        return 0x1000000u | (static_cast<uint32_t>(levels[static_cast<size_t>(COLOUR_AT) + 1]) << 16) |
+               (static_cast<uint32_t>(levels[static_cast<size_t>(COLOUR_AT) + 2]) << 8) |
+               static_cast<uint32_t>(levels[static_cast<size_t>(COLOUR_AT) + 3]);
+    }
+
+    Set withColour(Set set, uint32_t colour)
+    {
+        Levels levels = decode(set);
+        const bool dyed = (colour & 0x1000000u) != 0u;
+        levels[static_cast<size_t>(COLOUR_AT)] = dyed ? 1 : 0;
+        levels[static_cast<size_t>(COLOUR_AT) + 1] = dyed ? static_cast<uint8_t>((colour >> 16) & 255u) : 0;
+        levels[static_cast<size_t>(COLOUR_AT) + 2] = dyed ? static_cast<uint8_t>((colour >> 8) & 255u) : 0;
+        levels[static_cast<size_t>(COLOUR_AT) + 3] = dyed ? static_cast<uint8_t>(colour & 255u) : 0;
+        return encode(levels, set);
+    }
 
     bool glints(StackId id, Set set)
     {
@@ -309,7 +339,7 @@ namespace Enchanting
         if (id == Items::Trident) return set != 0u;
         if (id == Items::EnchantedGoldenApple || id == Items::ExperienceBottle || id == Items::EnchantedBook ||
             id == Items::WrittenBook) return true;
-        return (set & KIND_BITS) != 0u;
+        return any(set);
     }
 
     namespace

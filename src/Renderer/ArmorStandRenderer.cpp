@@ -3,6 +3,7 @@
 #include "Game/Armour.h"
 #include "Game/Items.h"
 #include "Game/Smithing.h"
+#include "Game/Enchanting.h"
 #include "Shader.h"
 #include "World/World.h"
 #include <stb_image.h>
@@ -194,7 +195,7 @@ void ArmorStandRenderer::render(Shader& shader, const World& world, const std::v
             if (worn.empty() || !Armour::isArmour(worn.id)) continue;
             const bool leggings = slot == ArmorStands::Legs;
             std::vector<BoxMesh::Box> boxes = armourBoxes(stand, slot);
-            BoxMesh::appendAll(layered[m_textures.layer(worn.id, leggings)], boxes, frame);
+            BoxMesh::appendAll(layered[m_textures.layer(worn.id, leggings, Enchanting::colourOf(worn.enchantments))], boxes, frame);
             if (Armour::tierOf(worn.id) == Armour::Tier::Leather)
             {
                 for (BoxMesh::Box& box : boxes) box.inflate += 0.01f;

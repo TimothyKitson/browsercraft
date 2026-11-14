@@ -358,6 +358,9 @@ namespace
     {
         std::string lore;
         auto line = [&](const std::string& text) { lore += "\n" + text; };
+        if (((stack.id >= Items::LeatherHelmet && stack.id <= Items::LeatherBoots) || stack.id == Items::LeatherHorseArmor) &&
+            Enchanting::colourOf(stack.enchantments) != 0u)
+            line("Dyed");
         if (stack.id == Items::WrittenBook)
         {
             if (g_books && stack.damage > 0 && stack.damage <= static_cast<int>(g_books->size()))
@@ -761,8 +764,19 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
         }
         if (id == Items::Elytra && damage >= Armour::maxDurability(Items::Elytra)) tile = Tiles::ItemBrokenElytra;
         const TileUV uv = tileUV(tile);
-        m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
-                          uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
+        const uint32_t dyedWith = Enchanting::colourOf(enchantments);
+        if (dyedWith != 0u && id >= Items::LeatherHelmet && id <= Items::LeatherBoots && m_iconOverride < 0)
+        {
+            const int piece = static_cast<int>(id - Items::LeatherHelmet);
+            const glm::vec4 dyeTint(((dyedWith >> 16) & 255u) / 255.0f, ((dyedWith >> 8) & 255u) / 255.0f, (dyedWith & 255u) / 255.0f, 1.0f);
+            const TileUV baseUV = tileUV(Tiles::ItemLeatherBaseFirst + piece);
+            const TileUV overUV = tileUV(Tiles::ItemLeatherOverlayFirst + piece);
+            m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size, baseUV.u0, baseUV.vTop, baseUV.u1, baseUV.vBottom, dyeTint * tint);
+            m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size, overUV.u0, overUV.vTop, overUV.u1, overUV.vBottom, tint);
+        }
+        else
+            m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
+                              uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
         if (id == Items::WolfArmor && ((enchantments >> 24) & 0x1Fu) != 0u)
         {
             const unsigned int c = Banners::dyeRgb(static_cast<int>((enchantments >> 24) & 0x1Fu) - 1);
@@ -970,7 +984,10 @@ void Application::drawPlayerFigure(const PlayerSkin& skin, float x1, float y1, f
         if (!image) continue;
         m_dollModel.buildArmour(pose, piece, 1.0f, 0.0f);
         const bool leather = tier == 1;
-        gather(image->texture, leather ? glm::vec3(0.627f, 0.396f, 0.251f) : glm::vec3(1.0f), 0.01f,
+        const uint32_t dyedWith = Enchanting::colourOf(worn.enchantments);
+        const glm::vec3 leatherTint = dyedWith != 0u ? glm::vec3(((dyedWith >> 16) & 255u) / 255.0f, ((dyedWith >> 8) & 255u) / 255.0f, (dyedWith & 255u) / 255.0f)
+                                                     : glm::vec3(0.627f, 0.396f, 0.251f);
+        gather(image->texture, leather ? leatherTint : glm::vec3(1.0f), 0.01f,
                Enchanting::glints(worn.id, worn.enchantments));
         if (Smithing::trimPattern(worn.enchantments) >= 0)
         {

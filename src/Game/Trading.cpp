@@ -6,6 +6,7 @@
 #include "EntityLoot.h"
 #include "RecipeBook.h"
 #include "Brewing.h"
+#include "Crafting.h"
 #include <map>
 #include <string>
 
@@ -169,9 +170,17 @@ namespace Trading
                 o.want = item; o.wantCount = f.count; o.give = Items::Emerald; o.giveCount = f.price;
                 break;
             case FactoryKind::Sell:
-            case FactoryKind::Dyed:
                 o.want = Items::Emerald; o.wantCount = f.price; o.give = item; o.giveCount = f.count;
                 break;
+            case FactoryKind::Dyed:
+            {
+                o.want = Items::Emerald; o.wantCount = f.price; o.give = item; o.giveCount = f.count;
+                std::vector<int> dyes{ dice.below(16) };
+                if (dice.unit() > 0.7f) dyes.push_back(dice.below(16));
+                if (dice.unit() > 0.8f) dyes.push_back(dice.below(16));
+                o.giveEnchantments = Enchanting::withColour(0u, mixLeatherColour(0u, dyes));
+                break;
+            }
             case FactoryKind::Process:
             case FactoryKind::Tipped:
                 o.want = Items::Emerald; o.wantCount = f.price; o.also = stackOf(f.item2); o.alsoCount = f.count2;

@@ -11672,6 +11672,23 @@ Atlas::Atlas()
         paintArmourTile(tile, i % 4, i / 4);
         blitPainted(Tiles::ItemArmourFirst + i, tile);
     }
+    for (int i = 0; i < 4; ++i)
+    {
+        Tile tile;
+        paintArmourTile(tile, i, 0);
+        for (int y = 0; y < Tile::N; ++y)
+            for (int x = 0; x < Tile::N; ++x)
+            {
+                const Color c = tile.get(x, y);
+                if (c.a == 0) continue;
+                const uint8_t grey = clampByte((c.r * 3 + c.g * 4 + c.b) * 255 / (8 * 160));
+                tile.set(x, y, Color{ grey, grey, grey, c.a });
+            }
+        blitPainted(Tiles::ItemLeatherBaseFirst + i, tile);
+        Tile overlay;
+        overlay.fill(Color{ 0, 0, 0, 0 });
+        blitPainted(Tiles::ItemLeatherOverlayFirst + i, overlay);
+    }
     for (int i = 0; i < 12; ++i)
     {
         Tile tile;
@@ -12136,11 +12153,13 @@ Atlas::Atlas()
                 Image body = loadPNG(base + ".png");
                 if (!body.valid()) continue;
                 body = scaleNearest(body, tilePixels, tilePixels);
+                blitImage(Tiles::ItemLeatherBaseFirst + piece, body);
                 tintImage(body, LEATHER);
                 Image over = loadPNG(base + "_overlay.png");
                 if (over.valid())
                 {
                     over = scaleNearest(over, tilePixels, tilePixels);
+                    blitImage(Tiles::ItemLeatherOverlayFirst + piece, over);
                     for (int y = 0; y < tilePixels; ++y)
                         for (int x = 0; x < tilePixels; ++x)
                             if (over.at(x, y).a > 0) body.set(x, y, over.at(x, y));
@@ -13171,6 +13190,7 @@ bool Atlas::hasPainter(int tileIndex)
     if (tileIndex >= Tiles::ItemDiscFirst && tileIndex <= Tiles::ItemDiscLast) return true;
     if (tileIndex >= Tiles::ItemHangingSignFirst && tileIndex <= Tiles::ItemHangingSignLast) return true;
     if (tileIndex >= Tiles::ItemArmadilloScute && tileIndex <= Tiles::ItemWolfArmorOverlay) return true;
+    if (tileIndex >= Tiles::ItemLeatherBaseFirst && tileIndex <= Tiles::ItemLeatherOverlayLast) return true;
     if (tileIndex >= Tiles::ConcreteTile && tileIndex <= Tiles::GlazedTileLast &&
         tileIndex != Tiles::TerracottaPlainTile) return true;
     if (tileIndex >= Tiles::StainedGlassTile && tileIndex <= Tiles::StainedGlassTileLast) return true;

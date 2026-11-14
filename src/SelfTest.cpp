@@ -280,6 +280,32 @@ namespace
         for (size_t i = 0; same && i < one.size(); ++i) same = one[i].id == again[i].id && one[i].count == again[i].count;
         check(same, "the same chest always rolls the same contents");
 
+        section("dyeing leather");
+        ItemStack dyeGrid[9]{};
+        dyeGrid[0] = ItemStack{ static_cast<StackId>(Items::LeatherHelmet), 1 };
+        dyeGrid[1] = ItemStack{ static_cast<StackId>(Items::DyeRed), 1 };
+        const CraftOutput red = Crafting::match(dyeGrid, 2);
+        check(red.valid() && red.id == Items::LeatherHelmet && Enchanting::colourOf(red.enchantments) == (0x1000000u | 0xB02E26u),
+              "a leather cap and red dye make a red cap in Minecraft's red");
+        check(!Enchanting::any(red.enchantments) && !Enchanting::glints(red.id, red.enchantments), "and dyeing it does not make it look enchanted");
+        dyeGrid[0].enchantments = red.enchantments;
+        dyeGrid[1] = ItemStack{ static_cast<StackId>(Items::DyeYellow), 1 };
+        const CraftOutput orange = Crafting::match(dyeGrid, 2);
+        const uint32_t mixed = Enchanting::colourOf(orange.enchantments);
+        check(orange.valid() && mixed != 0u && mixed != (0x1000000u | 0xB02E26u) && ((mixed >> 8) & 255u) > 46u,
+              "and yellow over red mixes toward orange the way Minecraft averages dyes");
+        const Enchanting::Set both = Enchanting::withLevel(red.enchantments, Enchanting::Kind::Protection, 3);
+        check(Enchanting::levelOf(both, Enchanting::Kind::Protection) == 3 && Enchanting::colourOf(both) == (0x1000000u | 0xB02E26u),
+              "a dyed piece keeps its colour beside its enchantments");
+        const std::string shelf = Enchanting::librarySave();
+        Enchanting::libraryLoad(shelf);
+        check(Enchanting::colourOf(both) == (0x1000000u | 0xB02E26u), "and the colour survives saving the world");
+        check(Enchanting::colourOf(Enchanting::withColour(both, 0u)) == 0u &&
+                  Enchanting::levelOf(Enchanting::withColour(both, 0u), Enchanting::Kind::Protection) == 3,
+              "washing it takes the colour and leaves the enchantment");
+        dyeGrid[3] = ItemStack{ static_cast<StackId>(Items::Stick), 1 };
+        check(!Crafting::match(dyeGrid, 2).valid(), "nothing else may be in the grid");
+
         int several = 0, mended = 0, swords = 0;
         for (uint32_t seed = 1; seed <= 400; ++seed)
         {

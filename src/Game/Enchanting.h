@@ -107,6 +107,8 @@ namespace Enchanting
     Set withLevel(Set set, Kind kind, int level);
     bool has(Set set, Kind kind);
     bool any(Set set);
+    uint32_t colourOf(Set set);
+    Set withColour(Set set, uint32_t colour);
 
     // Every kind on the item, for showing it and for saving it.
     std::vector<std::pair<Kind, int>> listOf(Set set);

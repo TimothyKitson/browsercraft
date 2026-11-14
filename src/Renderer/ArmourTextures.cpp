@@ -1,4 +1,5 @@
 #include "ArmourTextures.h"
+#include <cstdio>
 #include "Core/GLFunctions.h"
 #include "Game/Armour.h"
 #include "Game/Smithing.h"
@@ -99,20 +100,25 @@ bool ArmourTextures::palette(int material, bool darker, std::vector<uint8_t>& ou
     return true;
 }
 
-unsigned int ArmourTextures::layer(StackId piece, bool leggings)
+unsigned int ArmourTextures::layer(StackId piece, bool leggings, uint32_t colour)
 {
     const char* tier = tierName(piece);
     if (!tier) return 0;
-    const std::string name = std::string(tier) + (leggings ? "_layer_2" : "_layer_1");
+    const bool dyed = (colour & 0x1000000u) != 0u && Armour::tierOf(piece) == Armour::Tier::Leather;
+    const unsigned int tint = dyed ? (colour & 0xFFFFFFu) : 0xA06540u;
+    char hex[16];
+    std::snprintf(hex, sizeof(hex), "_%06X", tint);
+    const std::string file = std::string(tier) + (leggings ? "_layer_2" : "_layer_1");
+    const std::string name = file + (dyed ? std::string(hex) : std::string());
     const auto found = m_cache.find(name);
     if (found != m_cache.end()) return found->second;
     std::vector<uint8_t> rgba;
     int w = 0, h = 0;
-    if (!loadRgba("assets/textures/models/armor/" + name + ".png", rgba, w, h))
+    if (!loadRgba("assets/textures/models/armor/" + file + ".png", rgba, w, h))
     {
         w = 64;
         h = 32;
-        const unsigned int c = fallbackColour(piece);
+        const unsigned int c = dyed ? tint : fallbackColour(piece);
         rgba.assign(static_cast<size_t>(w * h * 4), 255);
         for (size_t i = 0; i < rgba.size(); i += 4)
         {
@@ -125,9 +131,9 @@ unsigned int ArmourTextures::layer(StackId piece, bool leggings)
     {
         for (size_t i = 0; i < rgba.size(); i += 4)
         {
-            rgba[i] = static_cast<uint8_t>(rgba[i] * 0xA0 / 255);
-            rgba[i + 1] = static_cast<uint8_t>(rgba[i + 1] * 0x65 / 255);
-            rgba[i + 2] = static_cast<uint8_t>(rgba[i + 2] * 0x40 / 255);
+            rgba[i] = static_cast<uint8_t>(rgba[i] * ((tint >> 16) & 255u) / 255);
+            rgba[i + 1] = static_cast<uint8_t>(rgba[i + 1] * ((tint >> 8) & 255u) / 255);
+            rgba[i + 2] = static_cast<uint8_t>(rgba[i + 2] * (tint & 255u) / 255);
         }
     }
     return m_cache[name] = upload(rgba, w, h);

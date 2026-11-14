@@ -8,7 +8,34 @@
 #include "Tools.h"
 #include "Armour.h"
 #include "Banners.h"
+#include "Enchanting.h"
 #include <algorithm>
+
+uint32_t mixLeatherColour(uint32_t had, const std::vector<int>& dyes)
+{
+    int red = 0, green = 0, blue = 0, brightest = 0, mixed = 0;
+    auto add = [&](unsigned int rgb) {
+        const int r = static_cast<int>((rgb >> 16) & 255u), g = static_cast<int>((rgb >> 8) & 255u), b = static_cast<int>(rgb & 255u);
+        brightest += std::max(r, std::max(g, b));
+        red += r;
+        green += g;
+        blue += b;
+        ++mixed;
+    };
+    if (had & 0x1000000u) add(had & 0xFFFFFFu);
+    for (int dye : dyes) add(Banners::dyeRgb(dye));
+    if (mixed == 0) return 0u;
+    int r = red / mixed, g = green / mixed, b = blue / mixed;
+    const float average = static_cast<float>(brightest) / static_cast<float>(mixed);
+    const float peak = static_cast<float>(std::max(r, std::max(g, b)));
+    if (peak > 0.0f)
+    {
+        r = static_cast<int>(static_cast<float>(r) * average / peak);
+        g = static_cast<int>(static_cast<float>(g) * average / peak);
+        b = static_cast<int>(static_cast<float>(b) * average / peak);
+    }
+    return 0x1000000u | (static_cast<uint32_t>(r & 255) << 16) | (static_cast<uint32_t>(g & 255) << 8) | static_cast<uint32_t>(b & 255);
+}
 
 namespace
 {
@@ -1709,6 +1736,34 @@ namespace Crafting
         return out;
     }
 
+    CraftOutput matchLeatherDye(const ItemStack* grid, int size)
+    {
+        CraftOutput out;
+        const ItemStack* armour = nullptr;
+        std::vector<int> dyes;
+        for (int i = 0; i < 9; ++i)
+        {
+            if (i % 3 >= size || i / 3 >= size) continue;
+            const ItemStack& cell = grid[i];
+            if (cell.empty()) continue;
+            const bool dyeable = (cell.id >= Items::LeatherHelmet && cell.id <= Items::LeatherBoots) || cell.id == Items::LeatherHorseArmor;
+            if (dyeable)
+            {
+                if (armour) return out;
+                armour = &cell;
+            }
+            else if (cell.id >= Items::DyeWhite && cell.id <= Items::DyeBlack)
+                dyes.push_back(static_cast<int>(cell.id - Items::DyeWhite));
+            else return out;
+        }
+        if (!armour || dyes.empty()) return out;
+        out.id = armour->id;
+        out.count = 1;
+        out.damage = armour->damage;
+        out.enchantments = Enchanting::withColour(armour->enchantments, mixLeatherColour(Enchanting::colourOf(armour->enchantments), dyes));
+        return out;
+    }
+
     CraftOutput matchTippedArrows(const ItemStack* grid, int size)
     {
         CraftOutput out;
@@ -1781,6 +1836,8 @@ namespace Crafting
         if (tipped.valid()) return tipped;
         const CraftOutput dyedArmour = matchWolfArmourDye(grid, size);
         if (dyedArmour.valid()) return dyedArmour;
+        const CraftOutput dyedLeather = matchLeatherDye(grid, size);
+        if (dyedLeather.valid()) return dyedLeather;
         const CraftOutput firework = Fireworks::match(grid, size);
         if (firework.valid()) return firework;
         const CraftOutput boat = matchChestBoat(grid, size);

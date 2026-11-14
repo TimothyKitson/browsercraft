@@ -56,3 +56,5 @@ namespace Crafting
     int tableSize();
     TableRecipe tableRecipe(int index);
 }
+
+uint32_t mixLeatherColour(uint32_t had, const std::vector<int>& dyes);
