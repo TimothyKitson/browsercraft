@@ -33,6 +33,7 @@ void main()
 in vec2 vUV;
 in vec3 vTint;
 in float vTintSelective;
+in float vHurt;
 in float vShade;
 in float vSkyLight;
 in float vBlockLight;
@@ -59,6 +60,8 @@ uniform int uPbrEnabled;
 // Light floor for a world with no sun. The Nether is lit well above
 // pitch black even where nothing is burning.
 uniform float uAmbient;
+uniform float uGamma;
+uniform float uNightVision;
 
 out vec4 FragColor;
 
@@ -174,6 +177,7 @@ void main()
     if (texel.a < 0.1) discard; // leaf gaps, plant cut-outs
     vec3 biomeTint = vTintSelective > 0.5 ? mix(vec3(1.0), vTint, step(texel.r + 0.02, texel.g)) : vTint;
     texel.rgb *= biomeTint;
+    if (vHurt > 0.5) texel.rgb = mix(vec3(1.0, 0.0, 0.0), texel.rgb, 0.7);
     if (uGlint == 1)
     {
         mat2 turn = mat2(0.9848, 0.1736, -0.1736, 0.9848);
@@ -185,6 +189,8 @@ void main()
     // Baked voxel lighting: sunlight dims at night, torch light never does.
     float sky = vSkyLight * uDaylight;
     float level = max(sky, vBlockLight);
+    level = mix(level, 1.0 - pow(1.0 - level, 3.0), clamp(uGamma, 0.0, 1.0) * 0.6);
+    level = mix(level, 1.0, clamp(uNightVision, 0.0, 1.0));
     float brightness = mix(uAmbient, 1.0, level);
 
     vec3 albedo = texel.rgb;
@@ -294,6 +300,7 @@ uniform vec3 uChunkOffset;
 out vec2 vUV;
 out vec3 vTint;
 out float vTintSelective;
+out float vHurt;
 out float vShade;
 out float vSkyLight;
 out float vBlockLight;
@@ -337,6 +344,7 @@ void main()
     uint packedTint = uint(max(aTint, 0.0) + 0.5);
     vTint = vec3(float((packedTint >> 14u) & 127u), float((packedTint >> 7u) & 127u), float(packedTint & 127u)) / 64.0;
     vTintSelective = float((packedTint >> 21u) & 1u);
+    vHurt = (int(aFace + 0.5) >> 3) == 28672 ? 1.0 : 0.0;
     vShade = aShade;
     vSkyLight = aSkyLight;
     vBlockLight = aBlockLight;
@@ -975,6 +983,7 @@ void main()
 in vec2 vUV;
 in vec3 vTint;
 in float vTintSelective;
+in float vHurt;
 in float vShade;
 in float vSkyLight;
 in float vBlockLight;
@@ -1004,6 +1013,7 @@ uniform vec3 uSkyAmbient;
 uniform float uShadowStrength;
 uniform float uDaylight;
 uniform float uAmbient;
+uniform float uNightVision;
 uniform float uRain;
 uniform float uTime;
 uniform int uDimension;
@@ -1197,6 +1207,7 @@ void main()
     if (texel.a < 0.1) discard;
     vec3 biomeTint = vTintSelective > 0.5 ? mix(vec3(1.0), vTint, step(texel.r + 0.02, texel.g)) : vTint;
     texel.rgb *= biomeTint;
+    if (vHurt > 0.5) texel.rgb = mix(vec3(1.0, 0.0, 0.0), texel.rgb, 0.7);
 
     int material = vMaterial;
     bool chunk = vBlock > 0;
@@ -1308,6 +1319,7 @@ void main()
     vec3 floorLight = vec3(0.006, 0.007, 0.011) * (1.0 - sky);
     if (uDimension == 1) floorLight = uSkyAmbient * 0.22 + vec3(0.02, 0.008, 0.004);
     if (uDimension == 2) floorLight = uSkyAmbient * 0.20;
+    floorLight = max(floorLight, vec3(0.62) * clamp(uNightVision, 0.0, 1.0));
 
     vec3 light = direct + (ambient + (torchLight + floorLight) * (0.55 + 0.45 * faceLight)) * ao;
     vec3 colour = albedo * light;
@@ -1387,6 +1399,7 @@ uniform float uRain;
 out vec2 vUV;
 out vec3 vTint;
 out float vTintSelective;
+out float vHurt;
 out float vShade;
 out float vSkyLight;
 out float vBlockLight;
@@ -1402,6 +1415,7 @@ void main()
     uint packedTint = uint(max(aTint, 0.0) + 0.5);
     vTint = vec3(float((packedTint >> 14u) & 127u), float((packedTint >> 7u) & 127u), float(packedTint & 127u)) / 64.0;
     vTintSelective = float((packedTint >> 21u) & 1u);
+    vHurt = (int(aFace + 0.5) >> 3) == 28672 ? 1.0 : 0.0;
     int face = tagFace(aFace);
     int block = tagBlock(aFace);
     vec4 info = texelFetch(uMaterials, ivec2(block, 0), 0);
