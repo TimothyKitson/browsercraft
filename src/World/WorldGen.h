@@ -393,6 +393,55 @@ public:
     using BiomeCells = std::map<std::array<int, 4>, Biomes::Kind>;
     void setBiomeCells(const BiomeCells& cells) const;
     BiomeCells biomeCells() const;
+
+    enum class Placed : uint8_t
+    {
+        DesertPyramid,
+        JungleTemple,
+        Igloo,
+        RuinedPortal,
+        PillagerOutpost,
+        WoodlandMansion,
+        SwampHut,
+        Shipwreck,
+        Monument,
+        AncientCity,
+        EndCity,
+        Bastion,
+        Fortress,
+        OceanRuin,
+        TrailRuins,
+        BuriedTreasure,
+        Village,
+        Count
+    };
+    struct PlacedStart
+    {
+        Placed kind = Placed::Count;
+        int dimension = 0;
+        int chunkX = 0;
+        int chunkZ = 0;
+        int style = 0;
+    };
+    static bool placedKind(const std::string& id, Placed& kind, int& style);
+    static const char* placedName(Placed kind, int style);
+    static int placedReach(Placed kind);
+    void setPlaced(const std::vector<PlacedStart>& all) const;
+    std::vector<PlacedStart> placedHere() const;
+    std::vector<PlacedStart> placedNear(int blockX, int blockZ, int reachBlocks) const;
+    bool stampPlaced(Chunk& chunk, const PlacedStart& start) const;
+    bool placedVillageAt(int blockX, int blockZ, Village::Site& site) const;
+    class Solo
+    {
+    public:
+        explicit Solo(const PlacedStart* start);
+        ~Solo();
+        Solo(const Solo&) = delete;
+        Solo& operator=(const Solo&) = delete;
+
+    private:
+        const PlacedStart* m_previous;
+    };
     float variantAt(int worldX, int worldZ) const;
     Biomes::Kind variantOf(Biome family, int worldX, int worldZ, int height) const;
     void paintTints(Chunk& chunk) const;
@@ -453,6 +502,10 @@ private:
         std::map<std::array<int, 3>, Biomes::Kind> columns;
     };
     mutable std::shared_ptr<const BiomeOverrides> m_overrides;
+    mutable std::shared_ptr<const std::vector<PlacedStart>> m_placedStarts;
+    static thread_local const PlacedStart* s_solo;
+    static Structures::Spot soloSpot(Placed kind);
+    Hoard hoardIn(int x, int y, int z) const;
     bool forcedCell(Dimension dimension, int worldX, int y, int worldZ, Biomes::Kind& out) const;
     bool forcedColumn(Dimension dimension, int worldX, int worldZ, Biomes::Kind& out) const;
     float m_scale = 1.0f;

@@ -474,6 +474,7 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                                         world.seed());
                 if (Village::reaches(home, x, z, x, z))
                     inVillage = world.generator().nearestVillage(x, z, 0).exists;
+                if (!inVillage) inVillage = world.generator().placedVillageAt(x, z, home);
             }
 
             if (inVillage)
@@ -1447,15 +1448,10 @@ void EntityManager::courtVillagers(const World& world, float deltaTime)
         const int x = static_cast<int>(std::floor(mob.position().x));
         const int z = static_cast<int>(std::floor(mob.position().z));
 
-        const Village::Site site = Village::siteFor(Village::regionOf(x), Village::regionOf(z),
-                                                    world.seed());
-        if (!Village::reaches(site, x, z, x, z)) continue;
-
-        // The box reaching here is not the same as a village having
-        // been built here: plenty of sites are turned down for the
-        // biome or the slope, and villagers standing in one of those
-        // are standing in open country with no beds to count.
-        if (!world.generator().nearestVillage(x, z, 0).exists) continue;
+        Village::Site site = Village::siteFor(Village::regionOf(x), Village::regionOf(z),
+                                              world.seed());
+        const bool natural = Village::reaches(site, x, z, x, z) && world.generator().nearestVillage(x, z, 0).exists;
+        if (!natural && !world.generator().placedVillageAt(x, z, site)) continue;
 
         Home* found = nullptr;
         for (Home& home : homes)

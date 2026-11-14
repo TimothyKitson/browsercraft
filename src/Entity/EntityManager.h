@@ -18,6 +18,7 @@ enum class Biome : uint8_t;
 class EntityManager
 {
 public:
+    void spawnWaveNow(const World& world, const glm::vec3& playerPosition, float daylight) { trySpawnWave(world, playerPosition, daylight); }
     int takeAxolotlAssists() { const int n = m_axolotlAssists; m_axolotlAssists = 0; return n; }
     // What the night sends. Exposed so --selftest can ask what can
     // turn up without waiting for dark -- which is how the breeze

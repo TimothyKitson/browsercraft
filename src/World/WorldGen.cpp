@@ -285,6 +285,184 @@ void WorldGen::setBiomeCells(const BiomeCells& cells) const
     std::atomic_store(&m_overrides, std::shared_ptr<const BiomeOverrides>(fresh));
 }
 
+thread_local const WorldGen::PlacedStart* WorldGen::s_solo = nullptr;
+
+WorldGen::Solo::Solo(const PlacedStart* start) : m_previous(s_solo)
+{
+    s_solo = start;
+}
+
+WorldGen::Solo::~Solo()
+{
+    s_solo = m_previous;
+}
+
+Structures::Spot WorldGen::soloSpot(Placed kind)
+{
+    Structures::Spot spot;
+    if (!s_solo || s_solo->kind != kind) return spot;
+    spot.exists = true;
+    spot.chunkX = s_solo->chunkX;
+    spot.chunkZ = s_solo->chunkZ;
+    return spot;
+}
+
+namespace
+{
+    struct PlacedId
+    {
+        const char* id;
+        WorldGen::Placed kind;
+        int style;
+    };
+    const PlacedId PLACED_IDS[] = {
+        { "desert_pyramid", WorldGen::Placed::DesertPyramid, 0 },
+        { "jungle_pyramid", WorldGen::Placed::JungleTemple, 0 },
+        { "igloo", WorldGen::Placed::Igloo, 0 },
+        { "ruined_portal", WorldGen::Placed::RuinedPortal, 0 },
+        { "ruined_portal_desert", WorldGen::Placed::RuinedPortal, 0 },
+        { "ruined_portal_jungle", WorldGen::Placed::RuinedPortal, 0 },
+        { "ruined_portal_mountain", WorldGen::Placed::RuinedPortal, 0 },
+        { "ruined_portal_ocean", WorldGen::Placed::RuinedPortal, 0 },
+        { "ruined_portal_swamp", WorldGen::Placed::RuinedPortal, 0 },
+        { "pillager_outpost", WorldGen::Placed::PillagerOutpost, 0 },
+        { "mansion", WorldGen::Placed::WoodlandMansion, 0 },
+        { "swamp_hut", WorldGen::Placed::SwampHut, 0 },
+        { "shipwreck", WorldGen::Placed::Shipwreck, 0 },
+        { "shipwreck_beached", WorldGen::Placed::Shipwreck, 0 },
+        { "monument", WorldGen::Placed::Monument, 0 },
+        { "ancient_city", WorldGen::Placed::AncientCity, 0 },
+        { "end_city", WorldGen::Placed::EndCity, 0 },
+        { "bastion_remnant", WorldGen::Placed::Bastion, 0 },
+        { "fortress", WorldGen::Placed::Fortress, 0 },
+        { "ocean_ruin_cold", WorldGen::Placed::OceanRuin, 0 },
+        { "ocean_ruin_warm", WorldGen::Placed::OceanRuin, 1 },
+        { "trail_ruins", WorldGen::Placed::TrailRuins, 0 },
+        { "buried_treasure", WorldGen::Placed::BuriedTreasure, 0 },
+        { "village_plains", WorldGen::Placed::Village, 0 },
+        { "village_desert", WorldGen::Placed::Village, 1 },
+        { "village_savanna", WorldGen::Placed::Village, 2 },
+        { "village_snowy", WorldGen::Placed::Village, 3 },
+        { "village_taiga", WorldGen::Placed::Village, 4 },
+    };
+}
+
+bool WorldGen::placedKind(const std::string& id, Placed& kind, int& style)
+{
+    for (const PlacedId& entry : PLACED_IDS)
+        if (id == entry.id)
+        {
+            kind = entry.kind;
+            style = entry.style;
+            return true;
+        }
+    return false;
+}
+
+const char* WorldGen::placedName(Placed kind, int style)
+{
+    for (const PlacedId& entry : PLACED_IDS)
+        if (entry.kind == kind && entry.style == style) return entry.id;
+    return "unknown";
+}
+
+int WorldGen::placedReach(Placed kind)
+{
+    switch (kind)
+    {
+        case Placed::Fortress: return 4;
+        case Placed::Village: return 3;
+        case Placed::WoodlandMansion:
+        case Placed::AncientCity:
+        case Placed::Bastion:
+        case Placed::Monument:
+        case Placed::EndCity: return 3;
+        case Placed::BuriedTreasure: return 0;
+        default: return 2;
+    }
+}
+
+void WorldGen::setPlaced(const std::vector<PlacedStart>& all) const
+{
+    auto fresh = std::make_shared<std::vector<PlacedStart>>();
+    for (const PlacedStart& start : all)
+        if (start.dimension == static_cast<int>(m_dimension)) fresh->push_back(start);
+    std::atomic_store(&m_placedStarts, std::shared_ptr<const std::vector<PlacedStart>>(fresh));
+}
+
+std::vector<WorldGen::PlacedStart> WorldGen::placedHere() const
+{
+    const std::shared_ptr<const std::vector<PlacedStart>> now = std::atomic_load(&m_placedStarts);
+    return now ? *now : std::vector<PlacedStart>{};
+}
+
+std::vector<WorldGen::PlacedStart> WorldGen::placedNear(int blockX, int blockZ, int reachBlocks) const
+{
+    std::vector<PlacedStart> out;
+    const std::shared_ptr<const std::vector<PlacedStart>> now = std::atomic_load(&m_placedStarts);
+    if (!now) return out;
+    for (const PlacedStart& start : *now)
+    {
+        const int midX = start.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+        const int midZ = start.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+        if (std::abs(midX - blockX) <= reachBlocks && std::abs(midZ - blockZ) <= reachBlocks) out.push_back(start);
+    }
+    return out;
+}
+
+bool WorldGen::placedVillageAt(int blockX, int blockZ, Village::Site& site) const
+{
+    for (const PlacedStart& start : placedNear(blockX, blockZ, Village::MAX_RADIUS + 1))
+    {
+        if (start.kind != Placed::Village) continue;
+        Village::Site placed;
+        placed.exists = true;
+        placed.x = start.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+        placed.z = start.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+        if (!Village::reaches(placed, blockX, blockZ, blockX, blockZ)) continue;
+        site = placed;
+        return true;
+    }
+    return false;
+}
+
+bool WorldGen::stampPlaced(Chunk& chunk, const PlacedStart& start) const
+{
+    const Solo solo(&start);
+    const int midX = start.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+    const int midZ = start.chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+    switch (start.kind)
+    {
+        case Placed::DesertPyramid:
+        case Placed::JungleTemple:
+        case Placed::Igloo:
+        case Placed::RuinedPortal:
+        case Placed::PillagerOutpost:
+        case Placed::WoodlandMansion:
+        case Placed::SwampHut:
+            stampLandmark(chunk, static_cast<Landmark>(start.kind), midX, midZ);
+            return true;
+        case Placed::Shipwreck: stampShipwreck(chunk, midX, midZ); return true;
+        case Placed::Monument: stampMonument(chunk, midX, midZ); return true;
+        case Placed::AncientCity: stampAncientCity(chunk, midX, midZ); return true;
+        case Placed::EndCity:
+        {
+            const int ground = m_dimension == Dimension::End ? endGroundAt(midX, midZ) : surfaceHeight(midX, midZ);
+            if (ground < 0) return false;
+            stampEndCity(chunk, midX, midZ, ground);
+            return true;
+        }
+        case Placed::Bastion: stampBastion(chunk, midX, midZ); return true;
+        case Placed::Fortress: buildNetherFortresses(chunk); return true;
+        case Placed::OceanRuin: buildOceanRuins(chunk); return true;
+        case Placed::TrailRuins: buildTrailRuins(chunk); return true;
+        case Placed::BuriedTreasure: stampBuriedTreasure(chunk, start.chunkX, start.chunkZ); return true;
+        case Placed::Village: buildVillages(chunk); return true;
+        case Placed::Count: break;
+    }
+    return false;
+}
+
 WorldGen::BiomeCells WorldGen::biomeCells() const
 {
     const std::shared_ptr<const BiomeOverrides> now = std::atomic_load(&m_overrides);
@@ -2824,6 +3002,9 @@ bool WorldGen::landmarkSuits(Landmark kind, Biomes::Kind biome)
 // nothing was built is worse than no search.
 bool WorldGen::landmarkStands(Landmark kind, int midX, int midZ) const
 {
+    if (s_solo)
+        return s_solo->kind == static_cast<Placed>(kind) && midX == s_solo->chunkX * Structures::CHUNK + Structures::CHUNK / 2 &&
+               midZ == s_solo->chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
     if (!landmarkSuits(kind, kindAt(midX, midZ))) return false;
     if (kind == Landmark::RuinedPortal) return surfaceHeight(midX, midZ) > SEA_LEVEL || surfaceHeight(midX, midZ) < SEA_LEVEL - 3;
     return surfaceHeight(midX, midZ) > SEA_LEVEL;
@@ -2832,6 +3013,7 @@ bool WorldGen::landmarkStands(Landmark kind, int midX, int midZ) const
 Structures::Spot WorldGen::nearestLandmark(Landmark kind, int blockX, int blockZ,
                                            int squares) const
 {
+    if (s_solo) return soloSpot(static_cast<Placed>(kind));
     const Structures::Grid& grid = landmarkGrid(kind);
     const int chunkX = (blockX >= 0) ? blockX / Structures::CHUNK
                                      : -(((-blockX) + Structures::CHUNK - 1) / Structures::CHUNK);
@@ -3799,6 +3981,18 @@ void WorldGen::buildDesertWells(Chunk& chunk) const
 bool WorldGen::oceanRuinIn(int cellX, int cellZ, int& midX, int& midZ, int& floor) const
 {
     constexpr int CELL = OCEAN_RUIN_CELL;
+    if (s_solo)
+    {
+        if (s_solo->kind != Placed::OceanRuin) return false;
+        const int x = s_solo->chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+        const int z = s_solo->chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+        auto cellOf = [](int v) { return v >= 0 ? v / CELL : -((-v + CELL - 1) / CELL); };
+        if (cellOf(x) != cellX || cellOf(z) != cellZ) return false;
+        midX = x;
+        midZ = z;
+        floor = surfaceHeight(midX, midZ);
+        return true;
+    }
     if (hashToFloat(hashCoords(cellX, 41, cellZ, m_seed + 9301)) > 0.4f) return false;
     midX = cellX * CELL + 16 + static_cast<int>(hashCoords(cellX, 42, cellZ, m_seed + 9302) % static_cast<uint32_t>(CELL - 32));
     midZ = cellZ * CELL + 16 + static_cast<int>(hashCoords(cellX, 43, cellZ, m_seed + 9303) % static_cast<uint32_t>(CELL - 32));
@@ -3820,7 +4014,7 @@ void WorldGen::buildOceanRuins(Chunk& chunk) const
         {
             int midX = 0, midZ = 0, floor = 0;
             if (!oceanRuinIn(cx, cz, midX, midZ, floor)) continue;
-            const bool warm = reefWater(midX, midZ);
+            const bool warm = s_solo ? s_solo->style == 1 : reefWater(midX, midZ);
             const uint32_t roll = hashCoords(midX, 40, midZ, m_seed + 9307);
             const bool big = (roll & 3u) == 0;
 
@@ -3883,6 +4077,17 @@ void WorldGen::buildOceanRuins(Chunk& chunk) const
 bool WorldGen::trailRuinIn(int cx, int cz, int& midX, int& midZ) const
 {
     constexpr int CELL = TRAIL_RUIN_CELL;
+    if (s_solo)
+    {
+        if (s_solo->kind != Placed::TrailRuins) return false;
+        const int x = s_solo->chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+        const int z = s_solo->chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+        auto cellOf = [](int v) { return v >= 0 ? v / CELL : -((-v + CELL - 1) / CELL); };
+        if (cellOf(x) != cx || cellOf(z) != cz) return false;
+        midX = x;
+        midZ = z;
+        return true;
+    }
     if (hashToFloat(hashCoords(cx, 51, cz, m_seed + 9401)) > 0.55f) return false;
     midX = cx * CELL + 12 + static_cast<int>(hashCoords(cx, 52, cz, m_seed + 9402) % static_cast<uint32_t>(CELL - 24));
     midZ = cz * CELL + 12 + static_cast<int>(hashCoords(cx, 53, cz, m_seed + 9403) % static_cast<uint32_t>(CELL - 24));
@@ -3967,6 +4172,7 @@ void WorldGen::buildTrailRuins(Chunk& chunk) const
 // first rails anybody sees come from.
 bool WorldGen::mineshaftPlan(int chunkX, int chunkZ, ShaftPlan& out) const
 {
+    if (s_solo) return false;
     if (!Structures::spreadAt(chunkX, chunkZ, m_seed, MINESHAFT_SALT, MINESHAFT_CHANCE)) return false;
     out = ShaftPlan{};
     const int y = MINESHAFT_MIN +
@@ -4098,6 +4304,16 @@ void WorldGen::buildMineshafts(Chunk& chunk) const
 // which is where blazes come from and the only reason to go.
 bool WorldGen::fortressIn(int squareX, int squareZ, int& midX, int& midZ, int& turn) const
 {
+    if (s_solo)
+    {
+        if (s_solo->kind != Placed::Fortress) return false;
+        const int spacing = Structures::NETHER_FORTRESS.spacing;
+        if (Structures::squareOf(s_solo->chunkX, spacing) != squareX || Structures::squareOf(s_solo->chunkZ, spacing) != squareZ) return false;
+        midX = s_solo->chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+        midZ = s_solo->chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+        turn = static_cast<int>(hashCoords(s_solo->chunkX, 31, s_solo->chunkZ, m_seed + 6611) & 3u);
+        return true;
+    }
     const Structures::Spot spot = Structures::inSquare(Structures::NETHER_FORTRESS, squareX, squareZ, m_seed);
     if (bastionWins(spot.chunkX, spot.chunkZ)) return false;
     midX = spot.chunkX * Structures::CHUNK + Structures::CHUNK / 2;
@@ -4606,9 +4822,16 @@ void WorldGen::buildVillages(Chunk& chunk) const
     for (int rz = firstZ; rz <= lastZ; ++rz)
         for (int rx = firstX; rx <= lastX; ++rx)
         {
-            const Village::Site site = Village::siteFor(rx, rz, m_seed);
+            Village::Site site = Village::siteFor(rx, rz, m_seed);
+            if (s_solo)
+            {
+                if (s_solo->kind != Placed::Village || rx != firstX || rz != firstZ) continue;
+                site.exists = true;
+                site.x = s_solo->chunkX * Structures::CHUNK + Structures::CHUNK / 2;
+                site.z = s_solo->chunkZ * Structures::CHUNK + Structures::CHUNK / 2;
+            }
             if (!Village::reaches(site, baseX - 1, baseZ - 1, maxX + 1, maxZ + 1)) continue;
-            if (!villageFits(site)) continue;
+            if (!s_solo && !villageFits(site)) continue;
 
             // Clear the site first. decorate() has already scattered
             // trees over it without knowing a village was coming, and
@@ -4631,8 +4854,9 @@ void WorldGen::buildVillages(Chunk& chunk) const
             // One palette for the whole village, from the biome at its
             // middle: a village with half its houses in sandstone and
             // half in oak would read as two villages that collided.
-            Palette palette = paletteFor(biomeAt(site.x, site.z));
-            const Biomes::Kind exact = kindAt(site.x, site.z);
+            static const Biome STYLE_BIOMES[5] = { Biome::Plains, Biome::Desert, Biome::Savanna, Biome::Snowy, Biome::Plains };
+            Palette palette = paletteFor(s_solo ? STYLE_BIOMES[std::clamp(s_solo->style, 0, 4)] : biomeAt(site.x, site.z));
+            const Biomes::Kind exact = s_solo ? (s_solo->style == 4 ? Biomes::Kind::Taiga : Biomes::Kind::Plains) : kindAt(site.x, site.z);
             if (exact == Biomes::Kind::Taiga || exact == Biomes::Kind::OldGrowthPineTaiga || exact == Biomes::Kind::OldGrowthSpruceTaiga)
             {
                 palette.wall = Blocks::SprucePlanks;
@@ -5319,12 +5543,14 @@ namespace
 
 Structures::Spot WorldGen::nearestShipwreck(int blockX, int blockZ, int squares) const
 {
+    if (s_solo) return soloSpot(Placed::Shipwreck);
     return nearestUsable(Structures::SHIPWRECK, blockX, blockZ, m_seed, squares,
                          [this](int x, int z) { return shipwreckFits(x, z); });
 }
 
 Structures::Spot WorldGen::nearestMonument(int blockX, int blockZ, int squares) const
 {
+    if (s_solo) return soloSpot(Placed::Monument);
     return nearestUsable(Structures::OCEAN_MONUMENT, blockX, blockZ, m_seed, squares,
                          [this](int x, int z) { return monumentFits(x, z); });
 }
@@ -5411,6 +5637,14 @@ void WorldGen::stampBuriedTreasure(Chunk& chunk, int chunkX, int chunkZ) const
 
 bool WorldGen::buriedTreasureIn(int chunkX, int chunkZ, int& x, int& y, int& z) const
 {
+    if (s_solo)
+    {
+        if (s_solo->kind != Placed::BuriedTreasure || s_solo->chunkX != chunkX || s_solo->chunkZ != chunkZ) return false;
+        x = chunkX * Structures::CHUNK + 9;
+        z = chunkZ * Structures::CHUNK + 9;
+        y = surfaceHeight(x, z) - 2;
+        return true;
+    }
     if (!Structures::spreadAt(chunkX, chunkZ, m_seed, Structures::BURIED_TREASURE_SALT, Structures::BURIED_TREASURE_CHANCE))
         return false;
     x = chunkX * Structures::CHUNK + 9;
@@ -5644,6 +5878,7 @@ void WorldGen::stampMonument(Chunk& chunk, int midX, int midZ) const
 // ---------------------------------------------------------------------
 bool WorldGen::dungeonIn(int chunkX, int chunkZ, int& x, int& y, int& z) const
 {
+    if (s_solo) return false;
     constexpr uint32_t SALT = 778211u;
     if (!Structures::spreadAt(chunkX, chunkZ, m_seed, SALT, 0.14f)) return false;
     const uint32_t h = hashCoords(chunkX, 31, chunkZ, m_seed + SALT);
@@ -6020,6 +6255,7 @@ void WorldGen::shapeBasaltDeltas(Chunk& chunk) const
 
 bool WorldGen::netherPortalRuinIn(int chunkX, int chunkZ, int& midX, int& midZ) const
 {
+    if (s_solo) return false;
     const uint32_t h = hashCoords(chunkX, 71, chunkZ, m_seed + 9201);
     if (hashToFloat(h) >= 0.008f) return false;
     midX = chunkX * Chunk::SX + 4 + static_cast<int>((h >> 8) % 8u);
@@ -6358,6 +6594,19 @@ void WorldGen::dressNether(Chunk& chunk) const
 
 WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
 {
+    const Hoard natural = hoardIn(x, y, z);
+    if (natural != Hoard::None || s_solo) return natural;
+    for (const PlacedStart& start : placedNear(x, z, 160))
+    {
+        const Solo solo(&start);
+        const Hoard found = hoardIn(x, y, z);
+        if (found != Hoard::None) return found;
+    }
+    return Hoard::None;
+}
+
+WorldGen::Hoard WorldGen::hoardIn(int x, int y, int z) const
+{
     {
         int ox = 0, oy = 0, oz = 0;
         const int cx = static_cast<int>(std::floor(static_cast<float>(x) / Chunk::SX));
@@ -6438,11 +6687,10 @@ WorldGen::Hoard WorldGen::hoardAt(int x, int y, int z) const
     {
         const int chunkX = Structures::squareOf(x, Structures::CHUNK);
         const int chunkZ = Structures::squareOf(z, Structures::CHUNK);
-        if (x == chunkX * Structures::CHUNK + 9 && z == chunkZ * Structures::CHUNK + 9 &&
-            Structures::spreadAt(chunkX, chunkZ, m_seed,
-                                 Structures::BURIED_TREASURE_SALT,
-                                 Structures::BURIED_TREASURE_CHANCE) &&
-            y == surfaceHeight(x, z) - 2)
+        const bool chosen = s_solo ? s_solo->kind == Placed::BuriedTreasure && s_solo->chunkX == chunkX && s_solo->chunkZ == chunkZ
+                                   : Structures::spreadAt(chunkX, chunkZ, m_seed, Structures::BURIED_TREASURE_SALT,
+                                                          Structures::BURIED_TREASURE_CHANCE);
+        if (x == chunkX * Structures::CHUNK + 9 && z == chunkZ * Structures::CHUNK + 9 && chosen && y == surfaceHeight(x, z) - 2)
             return Hoard::BuriedTreasure;
     }
 
@@ -6702,6 +6950,7 @@ void WorldGen::dressSeabed(Chunk& chunk) const
 
 Structures::Spot WorldGen::nearestAncientCity(int blockX, int blockZ, int squares) const
 {
+    if (s_solo) return soloSpot(Placed::AncientCity);
     return Structures::nearest(Structures::ANCIENT_CITY, blockX, blockZ, m_seed, squares);
 }
 
@@ -6974,6 +7223,7 @@ bool WorldGen::endCityStands(int midX, int midZ) const
 
 Structures::Spot WorldGen::nearestEndCity(int blockX, int blockZ, int squares) const
 {
+    if (s_solo) return soloSpot(Placed::EndCity);
     return nearestUsable(Structures::END_CITY, blockX, blockZ, m_seed, squares,
                          [this](int x, int z) { return endCityStands(x, z); });
 }
@@ -7167,6 +7417,7 @@ bool WorldGen::bastionWins(int chunkX, int chunkZ) const
 
 Structures::Spot WorldGen::nearestBastion(int blockX, int blockZ, int squares) const
 {
+    if (s_solo) return soloSpot(Placed::Bastion);
     const uint32_t seed = m_seed;
     const Structures::Grid& grid = Structures::BASTION;
 

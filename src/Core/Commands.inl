@@ -884,9 +884,71 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
         glm::vec3 at = origin;
         if (args.size() >= 5 && !(coordinateNear(arg(2), origin.x, at.x) && coordinateNear(arg(3), origin.y, at.y) && coordinateNear(arg(4), origin.z, at.z)))
             return false;
+        if (kind == "structure" && m_world)
+        {
+            WorldGen::Placed placedKind = WorldGen::Placed::Count;
+            int style = 0;
+            if (!WorldGen::placedKind(what, placedKind, style))
+            {
+                output = "There is no structure with type \"minecraft:" + what + "\"";
+                return false;
+            }
+            const int chunkX = static_cast<int>(std::floor(at.x / static_cast<float>(Chunk::SX)));
+            const int chunkZ = static_cast<int>(std::floor(at.z / static_cast<float>(Chunk::SZ)));
+            const int reach = WorldGen::placedReach(placedKind);
+            for (int dz = -reach; dz <= reach; ++dz)
+                for (int dx = -reach; dx <= reach; ++dx)
+                    if (!m_world->chunkAt(chunkX + dx, chunkZ + dz))
+                    {
+                        output = "That position is not loaded";
+                        return false;
+                    }
+            const WorldGen::PlacedStart start{ placedKind, static_cast<int>(m_dimension), chunkX, chunkZ, style };
+            const WorldGen& gen = m_world->generator();
+            int changed = 0;
+            for (int dz = -reach; dz <= reach; ++dz)
+                for (int dx = -reach; dx <= reach; ++dx)
+                {
+                    const Chunk* live = m_world->chunkAt(chunkX + dx, chunkZ + dz);
+                    Chunk scratch(live->position());
+                    scratch.blocks() = live->blocks();
+                    if (!gen.stampPlaced(scratch, start))
+                    {
+                        output = "Failed to place structure";
+                        return false;
+                    }
+                    const std::vector<BlockId>& before = live->blocks();
+                    const std::vector<BlockId>& after = scratch.blocks();
+                    std::vector<std::pair<int, BlockId>> edits;
+                    for (int i = 0; i < Chunk::BLOCK_COUNT; ++i)
+                        if (before[static_cast<size_t>(i)] != after[static_cast<size_t>(i)]) edits.emplace_back(i, after[static_cast<size_t>(i)]);
+                    const int baseX = live->position().x * Chunk::SX;
+                    const int baseZ = live->position().z * Chunk::SZ;
+                    for (const auto& [index, block] : edits)
+                    {
+                        const int lx = index % Chunk::SX;
+                        const int lz = (index / Chunk::SX) % Chunk::SZ;
+                        const int ly = index / (Chunk::SX * Chunk::SZ);
+                        m_world->setBlock(baseX + lx, ly, baseZ + lz, block);
+                        m_net.onLocalBlockChange(baseX + lx, ly, baseZ + lz, block);
+                        ++changed;
+                    }
+                }
+            if (changed == 0)
+            {
+                output = "Failed to place structure";
+                return false;
+            }
+            m_placedStarts.push_back(start);
+            m_world->generator().setPlaced(m_placedStarts);
+            const glm::ivec3 block = glm::ivec3(glm::floor(at));
+            output = "Generated structure \"minecraft:" + what + "\" at " + std::to_string(block.x) + ", " + std::to_string(block.y) + ", " + std::to_string(block.z);
+            return true;
+        }
         if (kind != "feature" || !m_world)
         {
-            output = "Only /place feature <tree|huge_mushroom|huge_fungus> [x y z] is supported";
+            output = kind == "jigsaw" ? "Jigsaw pools are not supported; use /place structure <id> [x y z]"
+                                      : "Usage: /place feature <id> [x y z] or /place structure <id> [x y z]";
             return false;
         }
         struct WorldCells : Saplings::Cells

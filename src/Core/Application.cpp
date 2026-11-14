@@ -885,6 +885,7 @@ void Application::travelTo(Dimension dimension)
     m_world = std::make_unique<World>(m_world->seed(), m_savePath,
                                       DEFAULT_RENDER_DISTANCE, dimension, generatorOptions(m_worldMeta));
     m_world->generator().setBiomeCells(m_biomeCells);
+    m_world->generator().setPlaced(m_placedStarts);
     m_world->forcedChunks = m_forcedChunks[static_cast<int>(dimension)];
 
     // The Nether is a slab with a ceiling, so the overworld's spawn
@@ -1087,6 +1088,15 @@ void Application::loadLevel()
             if (Biomes::known(id)) m_biomeCells[key] = Biomes::fromId(id);
     }
     if (m_world) m_world->generator().setBiomeCells(m_biomeCells);
+    m_placedStarts.clear();
+    {
+        std::ifstream placed(m_savePath + "/placed.txt");
+        int kind = 0, dimension = 0, chunkX = 0, chunkZ = 0, style = 0;
+        while (placed >> kind >> dimension >> chunkX >> chunkZ >> style)
+            if (kind >= 0 && kind < static_cast<int>(WorldGen::Placed::Count))
+                m_placedStarts.push_back({ static_cast<WorldGen::Placed>(kind), dimension, chunkX, chunkZ, style });
+    }
+    if (m_world) m_world->generator().setPlaced(m_placedStarts);
     m_catPerches.clear();
     for (ShoulderParrot& rider : m_shoulders) rider = ShoulderParrot{};
     {
@@ -1609,6 +1619,10 @@ void Application::saveLevel()
         if (biomes)
             for (const auto& [key, kind] : m_biomeCells)
                 biomes << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3] << ' ' << Biomes::info(kind).id << '\n';
+        std::ofstream placed(m_savePath + "/placed.txt");
+        if (placed)
+            for (const WorldGen::PlacedStart& start : m_placedStarts)
+                placed << static_cast<int>(start.kind) << ' ' << start.dimension << ' ' << start.chunkX << ' ' << start.chunkZ << ' ' << start.style << '\n';
     }
     {
         std::ofstream riders(m_savePath + "/shoulders.txt");
@@ -9005,9 +9019,21 @@ bool Application::frame()
         {
             m_cheatAuditPending = false;
             runCheatAudit();
-            m_running = false;
+            m_cheatAuditShot = 5.0f;
         }
     }
+    if (m_cheatAuditShot > 0.0f)
+    {
+        m_cheatAuditShot -= deltaTime;
+        if (m_cheatAuditShot <= 0.0f)
+        {
+            m_lanShotName = "cheats-placed";
+            m_pendingScreenshot = true;
+            m_cheatAuditQuit = true;
+        }
+    }
+    else if (m_cheatAuditQuit && !m_pendingScreenshot)
+        m_running = false;
 
     if (m_pendingScreenshot)
     {
@@ -12609,14 +12635,6 @@ void Application::tickStructureLairs(float deltaTime)
     if (!m_world) return;
 
     constexpr float INTERVAL = 4.0f;
-    constexpr int GUARDIAN_LIMIT = 6;
-    constexpr int SHULKER_LIMIT = 8;
-    constexpr int DROWNED_LIMIT = 5;
-    constexpr int PILLAGER_LIMIT = 6;
-    constexpr int VINDICATOR_LIMIT = 5;
-    constexpr int BRUTE_LIMIT = 4;
-    constexpr int VEX_LIMIT = 3;
-
     m_lairTimer -= deltaTime;
     if (m_lairTimer > 0.0f) return;
     m_lairTimer = INTERVAL;
@@ -12625,6 +12643,23 @@ void Application::tickStructureLairs(float deltaTime)
     const int px = static_cast<int>(m_player.position.x);
     const int py = static_cast<int>(m_player.position.y);
     const int pz = static_cast<int>(m_player.position.z);
+    lairsAround(gen, px, py, pz);
+    for (const WorldGen::PlacedStart& start : gen.placedNear(px, pz, 160))
+    {
+        const WorldGen::Solo solo(&start);
+        lairsAround(gen, px, py, pz);
+    }
+}
+
+void Application::lairsAround(const WorldGen& gen, int px, int py, int pz)
+{
+    constexpr int GUARDIAN_LIMIT = 6;
+    constexpr int SHULKER_LIMIT = 8;
+    constexpr int DROWNED_LIMIT = 5;
+    constexpr int PILLAGER_LIMIT = 6;
+    constexpr int VINDICATOR_LIMIT = 5;
+    constexpr int BRUTE_LIMIT = 4;
+    constexpr int VEX_LIMIT = 3;
 
     // The Nether's own: the bastion, and the brutes that guard it.
     // Everything else down there wanders; a brute does not, which is
@@ -31030,6 +31065,74 @@ void Application::runCheatAudit()
         report(modified && cow && !cow->noAI(), "/data modify sets one value", modSaid);
         run("/kill @e[type=cow]");
         report(cow && !cow->alive(), "/kill still kills an invulnerable mob", std::string());
+    }
+    {
+        const glm::vec3 spot = m_player.position + glm::vec3(0.0f, 0.0f, 40.0f);
+        const auto [placed, placeSaid] = run("/place structure minecraft:desert_pyramid ~ ~ ~40");
+        const WorldGen& gen = m_world->generator();
+        const int midX = static_cast<int>(std::floor(spot.x / 16.0f)) * 16 + 8;
+        const int midZ = static_cast<int>(std::floor(spot.z / 16.0f)) * 16 + 8;
+        const int ground = gen.surfaceHeight(midX, midZ);
+        WorldGen::ChestSpot chests[4];
+        const int many = WorldGen::landmarkChests(WorldGen::Landmark::DesertPyramid, chests);
+        int found = 0, looted = 0;
+        for (int i = 0; i < many; ++i)
+        {
+            const glm::ivec3 at(midX + chests[i].dx, ground + chests[i].dy, midZ + chests[i].dz);
+            if (isChestFamily(m_world->getBlock(at.x, at.y, at.z))) ++found;
+            if (gen.hoardAt(at.x, at.y, at.z) == WorldGen::Hoard::DesertPyramid) ++looted;
+        }
+        report(placed && many > 0 && found == many, "/place structure builds a desert pyramid with its chests", placeSaid);
+        report(looted == many, "a placed pyramid's chests hold pyramid loot", std::to_string(looted) + " of " + std::to_string(many));
+        bool listed = false;
+        for (const WorldGen::PlacedStart& start : m_placedStarts)
+            if (start.kind == WorldGen::Placed::DesertPyramid) listed = true;
+        report(listed, "a placed structure is remembered for the save", std::string());
+        const auto [village, villageSaid] = run("/place structure village_taiga ~-36 ~ ~");
+        Village::Site site;
+        report(village && gen.placedVillageAt(static_cast<int>(m_player.position.x) - 36, static_cast<int>(m_player.position.z), site),
+               "/place structure builds a village that counts as one", villageSaid);
+        {
+            const int villageX = static_cast<int>(std::floor(m_player.position.x / 16.0f)) * 16 - 32 + 8;
+            const int villageZ = static_cast<int>(std::floor(m_player.position.z / 16.0f)) * 16 + 8;
+            run("/kill @e[type=villager]");
+            const glm::vec3 keep = m_player.position;
+            m_player.position = glm::vec3(static_cast<float>(villageX) + 0.5f, static_cast<float>(gen.surfaceHeight(villageX, villageZ) + 2), static_cast<float>(villageZ) + 0.5f);
+            int villagers = 0;
+            for (int wave = 0; wave < 400 && villagers == 0; ++wave)
+            {
+                m_entities.spawnWaveNow(*m_world, m_player.position, 1.0f);
+                for (const Mob& mob : m_entities.mobs())
+                    if (mob.alive() && mob.typeId() == MobId::Villager && glm::length(mob.position() - m_player.position) < 48.0f) ++villagers;
+            }
+            report(villagers > 0, "villagers move into a placed village", std::to_string(villagers));
+            m_player.position = keep;
+        }
+        {
+            run("/kill @e[type=witch]");
+            const auto [hut, hutSaid] = run("/place structure swamp_hut ~ ~ ~-40");
+            const int hutX = static_cast<int>(std::floor(m_player.position.x / 16.0f)) * 16 + 8;
+            const int hutZ = static_cast<int>(std::floor((m_player.position.z - 40.0f) / 16.0f)) * 16 + 8;
+            const glm::vec3 keep = m_player.position;
+            m_player.position = glm::vec3(static_cast<float>(hutX) + 3.5f, static_cast<float>(gen.surfaceHeight(hutX, hutZ) + 2), static_cast<float>(hutZ) + 3.5f);
+            m_lairTimer = 0.0f;
+            tickStructureLairs(1.0f);
+            int witches = 0;
+            for (const Mob& mob : m_entities.mobs())
+                if (mob.alive() && mob.typeId() == MobId::Witch) ++witches;
+            report(hut && witches == 1, "a placed swamp hut gets its witch", hutSaid);
+            m_player.position = keep;
+        }
+        const auto [unknown, unknownSaid] = run("/place structure minecraft:nowhere");
+        report(!unknown && unknownSaid.find("There is no structure") != std::string::npos, "/place structure names unknown structures", unknownSaid);
+        const auto [far, farSaid] = run("/place structure igloo ~5000 ~ ~5000");
+        report(!far && farSaid == "That position is not loaded", "/place structure refuses unloaded ground", farSaid);
+        run("/time set noon");
+        m_player.position = glm::vec3(static_cast<float>(midX) - 8.5f, static_cast<float>(ground + 34), static_cast<float>(midZ) - 34.5f);
+        m_player.velocity = glm::vec3(0.0f);
+        m_player.flying = true;
+        m_showDebug = false;
+        m_camera.setOrientation(76.0f, -40.0f);
     }
     std::printf("Cheat audit: %d passed, %d failed\n", passed, failed);
     std::fflush(stdout);

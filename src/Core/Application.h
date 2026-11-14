@@ -370,6 +370,8 @@ private:
     void runCheatAudit();
     bool positionLoaded(int x, int z) const;
     bool m_cheatAuditPending = false;
+    float m_cheatAuditShot = 0.0f;
+    bool m_cheatAuditQuit = false;
     float m_caveMood = 60.0f;
     struct Targets
     {
@@ -1034,6 +1036,7 @@ private:
     std::map<uint32_t, BeeMind> m_beeMinds;
     std::map<std::array<int, 4>, std::vector<HiveBee>> m_hiveBees;
     WorldGen::BiomeCells m_biomeCells;
+    std::vector<WorldGen::PlacedStart> m_placedStarts;
     std::set<std::array<int, 4>> m_seededNests;
     float m_nestScan = 0.0f;
     void tickBees(float deltaTime);
@@ -1382,6 +1385,7 @@ private:
     // allowed anywhere else.
     float m_lairTimer = 0.0f;
     void tickStructureLairs(float deltaTime);
+    void lairsAround(const WorldGen& gen, int px, int py, int pz);
     void tryRaiseGolem(const glm::ivec3& pumpkin);
     void stepThroughGateway();
 
