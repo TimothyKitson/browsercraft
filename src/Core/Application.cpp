@@ -27038,7 +27038,11 @@ void Application::updateMobs(float deltaTime)
             }
             if (death.type == MobId::Ghast && m_dimension == Dimension::Overworld) award("nether/uneasy_alliance", "killed_ghast");
         }
-        if (death.type == MobId::EnderDragon) award("end/kill_dragon", "killed_dragon");
+        if (death.type == MobId::EnderDragon)
+        {
+            m_dragonFirstKill = !m_advancements.done(Advancements::indexOf("end/kill_dragon"));
+            award("end/kill_dragon", "killed_dragon");
+        }
         if (death.oozing || death.weaving || death.windCharged)
             effectDeath(death.position, mobType(death.type).height * mobType(death.type).modelScale, death.oozing,
                         death.weaving, death.windCharged);
@@ -27222,8 +27226,30 @@ void Application::updateMobs(float deltaTime)
         // A baby is worth nothing, the way it is in Minecraft -- else
         // penning animals and killing the lambs is the best experience
         // in the game.
-        if (type.experience > 0 && !death.baby && (death.byPlayer || death.type == MobId::EnderDragon || death.type == MobId::Wither))
-            m_orbs.spawnValue(where, type.experience);
+        if (death.byPlayer || death.type == MobId::EnderDragon || death.type == MobId::Wither)
+        {
+            const uint32_t xpRoll = hashCoords(static_cast<int>(death.serial), static_cast<int>(m_elapsedSeconds * 20.0f), 0, 0x58E1u);
+            int xp = type.experience;
+            const MobId k = death.type;
+            const bool zombieKind = k == MobId::Zombie || k == MobId::Husk || k == MobId::Drowned || k == MobId::ZombieVillager ||
+                                    k == MobId::ZombiePigman;
+            const bool noXp = k == MobId::Villager || k == MobId::WanderingTrader || k == MobId::IronGolem || k == MobId::SnowGolem ||
+                              k == MobId::Allay || k == MobId::Bat || k == MobId::Giant;
+            if (k == MobId::EnderDragon) xp = m_dragonFirstKill ? 12000 : 500;
+            else if (noXp) xp = 0;
+            else if (type.spawnClass == SpawnClass::Passive && k != MobId::Slime && k != MobId::SlimeSmall && k != MobId::MagmaCube)
+                xp = death.baby ? 0 : 1 + static_cast<int>(xpRoll % 3u);
+            else if (death.baby && !zombieKind) xp = 0;
+            else
+            {
+                if (death.baby && zombieKind) xp = static_cast<int>(static_cast<float>(xp) * 2.5f);
+                if (xp > 0)
+                    for (size_t g = 0; g < death.gear.size(); ++g)
+                        if (death.gear[g] != 0 && !(g < death.gearSure.size() && death.gearSure[g]))
+                            xp += 1 + static_cast<int>((xpRoll >> (4 + g * 3)) % 3u);
+            }
+            if (xp > 0) m_orbs.spawnValue(where, xp);
+        }
         const auto killer = m_guestKills.find(death.serial);
         if (killer != m_guestKills.end() && death.byPlayer && m_elapsedSeconds - killer->second.second < 5.0f && m_net.role() == Net::Role::Host)
         {

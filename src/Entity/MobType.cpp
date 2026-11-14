@@ -1236,7 +1236,7 @@ namespace
             // game you are meant to run from rather than fight.
             MobType& t = table[static_cast<size_t>(MobId::Warden)];
             t.id = MobId::Warden;
-            t.experience = 30;
+            t.experience = 5;
             t.voice = Sound::MobWardenSay;
             t.hurtVoice = Sound::MobWardenHurt;
             t.deathVoice = Sound::MobWardenDeath;
@@ -1450,7 +1450,7 @@ namespace
             // a rattle instead of a roar.
             MobType& t = table[static_cast<size_t>(MobId::Wither)];
             t.id = MobId::Wither;
-            t.experience = 500;
+            t.experience = 50;
             t.voice = Sound::MobWitherSay;
             t.hurtVoice = Sound::MobWitherHurt;
             t.deathVoice = Sound::MobWitherDeath;
@@ -3225,7 +3225,7 @@ namespace
             // sea worth drowning over.
             MobType& t = table[static_cast<size_t>(MobId::ElderGuardian)];
             t.id = MobId::ElderGuardian;
-            t.experience = 40;
+            t.experience = 10;
             t.voice = Sound::MobElderGuardianSay;
             t.hurtVoice = Sound::MobElderGuardianHurt;
             t.deathVoice = Sound::MobElderGuardianDeath;

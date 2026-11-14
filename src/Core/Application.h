@@ -1507,6 +1507,7 @@ private:
     void tryRaiseWither(const glm::ivec3& skull);
     float m_dragonTimer = 0.0f;
     bool m_dragonSlain = false;
+    bool m_dragonFirstKill = true;
 
     // Whether one has been seen alive on this island. "There was one
     // and now there is not" is how its death is noticed: a mob that
