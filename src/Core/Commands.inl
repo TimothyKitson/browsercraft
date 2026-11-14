@@ -1089,37 +1089,44 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
             output = "/loot give <targets> loot <table> | /loot spawn <x y z> loot <table> | ... kill <target>";
             return false;
         }
-        MobId killed = MobId::Count;
+        std::string table;
+        Mob* victim = nullptr;
         if (arg(at) == "kill")
         {
-            if (Mob* mob = selectMob(arg(at + 1), m_player.position, 64.0f)) killed = mob->typeId();
+            victim = selectMob(arg(at + 1), m_player.position, 64.0f);
+            if (victim) table = entityId(victim->typeId());
+            if (victim && victim->typeId() == MobId::Sheep && !victim->sheared())
+            {
+                std::string colour = Banners::colourName(victim->woolColour());
+                for (char& c : colour) c = c == ' ' ? '_' : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                table = "sheep/" + colour;
+            }
         }
         else
         {
-            std::string table = bareId(arg(at + 1));
-            if (table.rfind("entities/", 0) == 0)
-            {
-                const int mob = Chat::parse("/summon " + table.substr(9), true).mob;
-                if (mob >= 0) killed = static_cast<MobId>(mob);
-            }
+            table = bareId(arg(at + 1));
+            if (table.rfind("entities/", 0) == 0) table = table.substr(9);
+            else table.clear();
         }
-        if (killed == MobId::Count)
+        if (table.empty() || !EntityLoot::has(table))
         {
             output = "Only entity loot tables (loot give @s loot minecraft:entities/<mob>) are known";
             return false;
         }
-        const MobType& type = mobType(killed);
         glm::vec3 where = m_player.position + glm::vec3(0.0f, 0.5f, 0.0f);
         if (spawn) { coordinateNear(arg(1), origin.x, where.x); coordinateNear(arg(2), origin.y, where.y); coordinateNear(arg(3), origin.z, where.z); }
+        EntityLoot::Context context;
+        context.byPlayer = true;
+        context.size = victim ? std::max(1, victim->size()) : 1;
+        context.burning = victim && victim->burning();
+        context.seed = SDL_GetTicks() * 2654435761u + 17u;
         int dropped = 0;
-        auto drop = [&](StackId id, int count) {
-            if (id == Blocks::Air || count <= 0) return;
-            if (give) m_inventory.add(id, count);
-            else m_drops.spawn(where, id, count);
-            dropped += count;
-        };
-        drop(type.drop, type.dropCount);
-        drop(type.secondDrop, type.secondDropCount);
+        for (const ItemStack& stack : EntityLoot::roll(table, context))
+        {
+            if (give) m_inventory.addStack(stack);
+            else m_drops.spawnStack(where, stack);
+            dropped += stack.count;
+        }
         output = dropped > 0 ? "Dropped " + std::to_string(dropped) + " item(s)" : "That loot table is empty";
         return dropped > 0;
     }

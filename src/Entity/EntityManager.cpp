@@ -834,6 +834,7 @@ void EntityManager::update(float deltaTime, const World& world,
             death.shot = mob.playerShot();
             death.distance = mob.playerHitDistance();
             death.captain = mob.captain();
+            death.burning = mob.burning();
             m_deaths.push_back(death);
         }
         if (const int silverfish = mob.takeSilverfish())

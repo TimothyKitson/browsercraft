@@ -555,6 +555,15 @@ namespace
         for (int book = 0; book < 4; ++book)
             for (const RecipeBook::Recipe& recipe : RecipeBook::recipes(static_cast<RecipeBook::Book>(book)))
                 std::printf("recipe %s %s\n", BOOKS[book], RecipeBook::vanillaIdOf(recipe.result).c_str());
+        for (int block = 1; isBlockId(block); block = nextBlockId(block))
+            for (const Stonecutting::Option& option : Stonecutting::optionsFor(static_cast<StackId>(block)))
+                std::printf("cut %s %s %d\n", RecipeBook::vanillaIdOf(static_cast<StackId>(block)).c_str(), RecipeBook::vanillaIdOf(option.result).c_str(), option.count);
+        for (int kind = 0; kind < mobTypeCount(); ++kind)
+        {
+            const MobType& type = mobType(static_cast<MobId>(kind));
+            std::printf("mob %s|%s|%d|%s|%d\n", type.name, type.drop == Blocks::Air ? "-" : RecipeBook::vanillaIdOf(type.drop).c_str(), type.dropCount,
+                        type.secondDrop == Blocks::Air ? "-" : RecipeBook::vanillaIdOf(type.secondDrop).c_str(), type.secondDropCount);
+        }
         std::printf("ids known %d, missing %d\n", known, missing);
         return 0;
     }

@@ -65,6 +65,7 @@
 #include "Game/Paintings.h"
 #include "Game/ArmorStands.h"
 #include "Game/Discs.h"
+#include "Game/EntityLoot.h"
 #include "World/Village.h"
 #include "Game/VillageLoot.h"
 #include "Game/StructureLoot.h"
@@ -142,6 +143,66 @@ namespace
     void section(const char* name) { std::printf("%s\n", name); }
 
     // --- picking things up -------------------------------------------
+
+    void testEntityLoot()
+    {
+        section("mob drops from Minecraft's loot tables");
+        auto many = [](const std::string& table, EntityLoot::Context context, int rolls) {
+            std::map<StackId, int> totals;
+            int most = 0, least = 1 << 30;
+            for (int i = 0; i < rolls; ++i)
+            {
+                context.seed = static_cast<uint32_t>(i * 2654435761u + 7u);
+                int beef = 0;
+                for (const ItemStack& stack : EntityLoot::roll(table, context))
+                {
+                    totals[stack.id] += stack.count;
+                    if (stack.id == static_cast<StackId>(Items::RawBeef)) beef += stack.count;
+                }
+                most = std::max(most, beef);
+                least = std::min(least, beef);
+            }
+            return std::make_tuple(totals, least, most);
+        };
+        EntityLoot::Context plain;
+        plain.byPlayer = true;
+        const auto [cows, fewestBeef, mostBeef] = many("cow", plain, 2000);
+        check(fewestBeef == 1 && mostBeef == 3, "a cow drops one to three beef");
+        check(cows.count(static_cast<StackId>(Items::Leather)) && cows.at(static_cast<StackId>(Items::Leather)) > 1500 && cows.at(static_cast<StackId>(Items::Leather)) < 2500,
+              "and on average a leather");
+        EntityLoot::Context burning = plain;
+        burning.burning = true;
+        const auto burnt = std::get<0>(many("cow", burning, 200));
+        check(burnt.count(static_cast<StackId>(Items::Steak)) && !burnt.count(static_cast<StackId>(Items::RawBeef)), "a burning cow drops steak");
+        const auto skeletons = std::get<0>(many("wither_skeleton", plain, 4000));
+        const int skulls = skeletons.count(static_cast<StackId>(Blocks::WitherSkull)) ? skeletons.at(static_cast<StackId>(Blocks::WitherSkull)) : 0;
+        check(skulls > 40 && skulls < 180, "a wither skeleton skull drops about one time in forty");
+        EntityLoot::Context nobody;
+        const auto unwitnessed = std::get<0>(many("wither_skeleton", nobody, 2000));
+        check(!unwitnessed.count(static_cast<StackId>(Blocks::WitherSkull)), "and never unless a player kills it");
+        const auto ravagers = std::get<0>(many("ravager", plain, 20));
+        check(ravagers.size() == 1 && ravagers.count(static_cast<StackId>(Items::Saddle)) && ravagers.at(static_cast<StackId>(Items::Saddle)) == 20,
+              "a ravager drops its saddle and nothing else");
+        const auto wardens = std::get<0>(many("warden", plain, 5));
+        check(wardens.size() == 1 && wardens.count(RecipeBook::stackNamed("sculk_catalyst")), "a warden drops a sculk catalyst");
+        const auto ghasts = std::get<0>(many("ghast", plain, 400));
+        check(ghasts.count(static_cast<StackId>(Items::GhastTear)) && ghasts.count(static_cast<StackId>(Items::Gunpowder)), "a ghast drops tears and gunpowder");
+        const auto white = std::get<0>(many("sheep/white", plain, 10));
+        check(white.count(static_cast<StackId>(woolOfColour(0))) && white.at(static_cast<StackId>(woolOfColour(0))) == 10, "a white sheep drops one white wool");
+        EntityLoot::Context shot = plain;
+        shot.killerSkeleton = true;
+        int discs = 0;
+        for (const auto& entry : std::get<0>(many("creeper", shot, 20)))
+            if (Discs::discOf(entry.first) >= 0) discs += entry.second;
+        check(discs == 20, "a creeper shot by a skeleton drops a disc");
+        EntityLoot::Context big = plain;
+        big.size = 4;
+        check(std::get<0>(many("slime", big, 50)).empty(), "a big slime drops no slimeballs; the small ones do");
+        const auto piglins = std::get<0>(many("zombified_piglin", plain, 400));
+        check(piglins.count(static_cast<StackId>(Items::RottenFlesh)) && piglins.count(static_cast<StackId>(Items::GoldNugget)) &&
+                  !piglins.count(static_cast<StackId>(Items::RawPorkchop)),
+              "a zombified piglin drops rotten flesh and gold, not pork");
+    }
 
     void testAdd()
     {
@@ -18492,6 +18553,7 @@ namespace
 int runSelfTest()
 {
     std::printf("\n=== self test ===\n");
+    testEntityLoot();
     testAdd();
     testClicks();
     testQuickMove();

@@ -99,6 +99,7 @@ public:
         int how = 0;
         float distance = 0.0f;
         bool captain = false;
+        bool burning = false;
         uint32_t shot = 0;
         bool saddled = false;
         uint16_t worn = 0;

@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "Game/EntityLoot.h"
 #include <cstdlib>
 #include "BuildTag.h"
 #include "Utf8.h"
@@ -26950,11 +26951,33 @@ void Application::updateMobs(float deltaTime)
         }
         else if (m_rules.on(GameRules::Rule::DoMobLoot))
         {
-            for (int i = 0; i < type.dropCount; ++i)
-                if (death.type != MobId::Sheep || (death.variant & 16) == 0)
-                    m_drops.spawn(where, death.type == MobId::Sheep ? static_cast<StackId>(woolOfColour(death.variant & 15)) : type.drop, 1);
-            for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
             const int looting = death.byPlayer ? Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::Looting) : 0;
+            std::string table = entityId(death.type);
+            if (death.type == MobId::Sheep && (death.variant & 16) == 0)
+            {
+                std::string colour = Banners::colourName(death.variant & 15);
+                for (char& c : colour) c = c == ' ' ? '_' : static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                table = "sheep/" + colour;
+            }
+            const bool vanillaTable = EntityLoot::has(table);
+            if (vanillaTable)
+            {
+                EntityLoot::Context context;
+                context.byPlayer = death.byPlayer;
+                context.looting = looting;
+                context.burning = death.burning;
+                context.fireAspect = death.byPlayer && Enchanting::levelOf(m_inventory.selected().enchantments, Enchanting::Kind::FireAspect) > 0;
+                context.killerSkeleton = death.shotByMob;
+                context.size = death.type == MobId::SlimeSmall ? 1 : std::max(1, death.size);
+                context.captain = death.captain;
+                context.seed = hashCoords(static_cast<int>(death.position.x * 16.0f), static_cast<int>(death.serial), static_cast<int>(m_elapsedSeconds * 20.0f), 0x4C00Fu);
+                for (const ItemStack& stack : EntityLoot::roll(table, context)) m_drops.spawnStack(where, stack);
+            }
+            else
+            {
+                for (int i = 0; i < type.dropCount; ++i) m_drops.spawn(where, type.drop, 1);
+                for (int i = 0; i < type.secondDropCount; ++i) m_drops.spawn(where, type.secondDrop, 1);
+            }
             for (int slot = 0; slot < Mob::GearSlots; ++slot)
             {
                 const uint16_t worn = death.gear[static_cast<size_t>(slot)];
@@ -26967,7 +26990,7 @@ void Application::updateMobs(float deltaTime)
                 if (!sure && most > 1) stack.damage = static_cast<int>((roll >> 10) % static_cast<uint32_t>(most - 1));
                 m_drops.spawnStack(where, stack);
             }
-            if (looting > 0 && death.type != MobId::Sheep)
+            if (!vanillaTable && looting > 0)
             {
                 const uint32_t roll = hashCoords(static_cast<int>(death.position.x * 4.0f), static_cast<int>(m_elapsedSeconds * 10.0f),
                                                  static_cast<int>(death.position.z * 4.0f), 0x1007u);
@@ -26982,14 +27005,6 @@ void Application::updateMobs(float deltaTime)
         {
             const uint32_t luck = hashCoords(static_cast<int>(death.position.x * 8.0f), static_cast<int>(m_elapsedSeconds * 20.0f),
                                              static_cast<int>(death.position.z * 8.0f), 0x7A11u);
-            if (death.type == MobId::Stray && luck % 2u == 0u)
-            {
-                ItemStack slowing{ Items::TippedArrow, 1 };
-                slowing.damage = static_cast<int>(Effects::Kind::Slowness);
-                m_drops.spawnStack(where, slowing);
-            }
-            if (death.type == MobId::Rabbit && luck % 10u == 0u) m_drops.spawn(where, Items::RabbitFoot, 1);
-            if (death.type == MobId::Creeper && death.shotByMob) m_drops.spawn(where, Discs::itemOf(static_cast<int>((luck >> 5) % 12u)), 1);
             if (death.chargedBlast && m_chargedHeadReady)
             {
                 const int kind = death.type == MobId::Skeleton ? 0 : death.type == MobId::WitherSkeleton ? 1 : death.type == MobId::Zombie ? 2
@@ -26999,12 +27014,6 @@ void Application::updateMobs(float deltaTime)
                     m_drops.spawn(where, kind == 1 ? static_cast<StackId>(Blocks::WitherSkull) : static_cast<StackId>(headOf(kind, false, 0)), 1);
                     m_chargedHeadReady = false;
                 }
-            }
-            if (death.type == MobId::Guardian || death.type == MobId::ElderGuardian)
-            {
-                const uint32_t pool = (luck >> 4) % 5u;
-                if (pool < 2u) m_drops.spawn(where, Items::RawCod, 1);
-                else if (pool < 4u) m_drops.spawn(where, Items::PrismarineCrystals, 1);
             }
             if (death.type == MobId::Pillager && luck % 1000u < 85u)
             {
@@ -27035,9 +27044,6 @@ void Application::updateMobs(float deltaTime)
         // A drowned carries a trident about one time in eight, which
         // is roughly Minecraft's rate. A chance like this cannot be a
         // drop slot: those always pay.
-        if (death.type == MobId::ElderGuardian &&
-            static_cast<uint32_t>(where.x * 31.0f + where.z * 17.0f + m_elapsedSeconds * 101.0f) % 5u == 0u)
-            m_drops.spawn(where, Items::TideTemplate, 1);
         if (death.type == MobId::Drowned)
         {
             const uint32_t roll = static_cast<uint32_t>(
@@ -31200,6 +31206,10 @@ void Application::runCheatAudit()
                        m_inventory.countOf(static_cast<StackId>(Items::EyeOfEnder)) == eyes + 1 &&
                        RecipeBook::vanillaIdOf(static_cast<StackId>(Items::Steak)) == "cooked_beef",
                    "commands take Minecraft's own ids where the name differs", beefSaid + " / " + eyeSaid);
+            const StackId catalyst = RecipeBook::stackNamed("sculk_catalyst");
+            const int before = m_inventory.countOf(catalyst);
+            const auto [looted, lootSaid] = run("/loot give @s loot minecraft:entities/warden");
+            report(looted && m_inventory.countOf(catalyst) == before + 1, "/loot rolls Minecraft's entity loot table", lootSaid);
         }
         {
             const auto [shaft, shaftSaid] = run("/place structure mineshaft " + std::to_string(static_cast<int>(loadedMiddle.x)) + " " +
