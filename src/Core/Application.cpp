@@ -26376,6 +26376,7 @@ void Application::placePendingMobs()
         for (const glm::vec3& other : m_entities.others())
             if (glm::length(glm::vec2(px - other.x, pz - other.z)) < RETURN_DISTANCE) watched = true;
         if (!watched) { ++i; continue; }
+        if (static_cast<int>(m_entities.mobs().size()) >= EntityManager::MAX_MOBS) break;
         const std::string row = m_pendingMobs[i];
         m_pendingMobs.erase(m_pendingMobs.begin() + static_cast<long>(i));
         std::istringstream in(row);
@@ -26386,7 +26387,7 @@ void Application::placePendingMobs()
         if (!(in >> type >> x >> y >> z >> yaw >> health >> baby >> seed >> variant >> tamed >> sitting >> saddled >> armour >> charged >> name))
             continue;
         if (type < 0 || type >= static_cast<int>(MobId::Count)) continue;
-        if (!m_entities.spawnAt(static_cast<MobId>(type), glm::vec3(x, y, z), *m_world, baby != 0)) continue;
+        if (!m_entities.summonAt(static_cast<MobId>(type), glm::vec3(x, y, z), baby != 0)) continue;
         Mob& mob = m_entities.mobs().back();
         mob.setBirthSeed(seed);
         mob.setVariant(variant);

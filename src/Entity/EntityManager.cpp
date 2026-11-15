@@ -357,8 +357,21 @@ namespace
 void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosition, float daylight)
 {
     if (static_cast<int>(m_mobs.size()) >= MAX_MOBS) return;
+    int monsters = 0, creatures = 0, ambient = 0, swimmers = 0;
+    for (const Mob& mob : m_mobs)
+    {
+        const MobType& kind = mobType(mob.typeId());
+        if (!mob.alive() || kind.inanimate || isTechnicalMob(mob.typeId())) continue;
+        if (mob.typeId() == MobId::Villager || mob.typeId() == MobId::IronGolem || mob.typeId() == MobId::SnowGolem ||
+            mob.typeId() == MobId::WanderingTrader)
+            continue;
+        if (glm::length(glm::vec2(mob.position().x - playerPosition.x, mob.position().z - playerPosition.z)) > 128.0f) continue;
+        if (mob.typeId() == MobId::Bat) ++ambient;
+        else if (kind.aquatic) ++swimmers;
+        else if (kind.spawnClass == SpawnClass::Hostile) ++monsters;
+        else ++creatures;
+    }
 
-    // Monsters come out when the sun is down; animals keep to the daylight.
     const bool night = daylight < 0.35f;
 
     // Whether this whole wave goes looking underground. Decided once
@@ -550,6 +563,13 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         }
         else if (!canSpawnOn(species, ground, light)) continue;
         if (m_peaceful && mobType(species).spawnClass == SpawnClass::Hostile) continue;
+        const bool unlimited = species == MobId::Villager || species == MobId::IronGolem || species == MobId::SnowGolem ||
+                               species == MobId::WanderingTrader;
+        if (!unlimited && (species == MobId::Bat ? ambient >= AMBIENT_CAP
+                           : mobType(species).aquatic ? swimmers >= WATER_CAP
+                           : mobType(species).spawnClass == SpawnClass::Hostile ? monsters >= MONSTER_CAP
+                                                                                 : creatures >= CREATURE_CAP))
+            continue;
 
         const bool zombieKind = species == MobId::Zombie || species == MobId::Husk || species == MobId::Drowned ||
                                 species == MobId::ZombieVillager || species == MobId::ZombiePigman;

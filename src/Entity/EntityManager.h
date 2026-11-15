@@ -35,7 +35,11 @@ public:
     static int endSpeciesCount();
     static MobId endSpecies(int index);
 
-    static constexpr int MAX_MOBS = 48;
+    static constexpr int MAX_MOBS = 240;
+    static constexpr int MONSTER_CAP = 70;
+    static constexpr int CREATURE_CAP = 10;
+    static constexpr int AMBIENT_CAP = 15;
+    static constexpr int WATER_CAP = 25;
     static constexpr float SPAWN_MIN_DISTANCE = 22.0f;
     static constexpr float SPAWN_MAX_DISTANCE = 44.0f;
     static constexpr float DESPAWN_DISTANCE = 72.0f;
