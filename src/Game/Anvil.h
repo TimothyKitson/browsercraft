@@ -56,6 +56,7 @@ namespace Anvil
     // for an iron one, leather for a leather cap. Air when nothing
     // mends it.
     StackId repairMaterial(StackId item);
+    bool repairsWith(StackId item, StackId material);
 
     // How long the item lasts when new, or 0 for something that does
     // not wear out at all and so has nothing to mend.

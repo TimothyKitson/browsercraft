@@ -109,6 +109,9 @@ namespace Enchanting
     bool any(Set set);
     uint32_t colourOf(Set set);
     Set withColour(Set set, uint32_t colour);
+    int priorWork(Set set);
+    Set withPriorWork(Set set, int cost);
+    int anvilCost(Kind kind);
 
     // Every kind on the item, for showing it and for saving it.
     std::vector<std::pair<Kind, int>> listOf(Set set);

@@ -4,71 +4,13 @@
 #include "Tools.h"
 #include <algorithm>
 
-namespace
-{
-    // What a book's enchantment costs to move, per level, against what
-    // the same one costs when it comes off another item. Books are the
-    // cheap path in Minecraft, and that is most of why they are worth
-    // keeping rather than using the table on the tool directly.
-    constexpr int COST_PER_LEVEL_FROM_BOOK = 1;
-    constexpr int COST_PER_LEVEL_FROM_ITEM = 2;
-
-    // What joining two worn items costs on top of their enchantments.
-    constexpr int COST_OF_JOINING = 2;
-
-    int repairStep(int max)
-    {
-        // Rounded up, so four units always cover a whole item. Rounding
-        // down left a sliver behind -- an iron pickaxe worn to its last
-        // point wanted a fifth ingot to close the final two.
-        const int step = (max * Anvil::REPAIR_PERCENT + 99) / 100;
-        return std::max(1, step);   // or a one-use item could never be mended
-    }
-
-    // Folds one kind of the right-hand item onto the result, and says
-    // what it added to the bill. Returns false when it does not belong
-    // on this item at all, which costs nothing and changes nothing.
-    bool foldIn(Enchanting::Set& into, StackId target,
-                Enchanting::Kind kind, int rightLevel, int perLevel, int& cost)
-    {
-        if (rightLevel <= 0) return false;
-        if (!Enchanting::appliesTo(kind, target)) return false;
-
-        // Fortune and silk touch undo each other. Whichever is already
-        // there keeps the slot.
-        for (int k = 0; k < static_cast<int>(Enchanting::Kind::Count); ++k)
-        {
-            const Enchanting::Kind other = static_cast<Enchanting::Kind>(k);
-            if (other == kind) continue;
-            if (!Enchanting::has(into, other)) continue;
-            if (Enchanting::conflicts(kind, other)) return false;
-        }
-
-        const int leftLevel = Enchanting::levelOf(into, kind);
-
-        // Two of the same level make the next one up; otherwise the
-        // better of the two wins and the worse is simply absorbed.
-        const int merged = (leftLevel == rightLevel)
-                               ? std::min(leftLevel + 1, Enchanting::maxLevel(kind))
-                               : std::max(leftLevel, rightLevel);
-
-        if (merged == leftLevel && leftLevel > 0)
-        {
-            // Nothing gained -- the right-hand one was weaker, or both
-            // were already at the ceiling. Still consumed, still free.
-            return false;
-        }
-
-        into = Enchanting::withLevel(into, kind, merged);
-        cost += merged * perLevel;
-        return true;
-    }
-}
-
 StackId Anvil::repairMaterial(StackId item)
 {
-    // The boss is iron, so iron is what mends it.
-    if (item == Items::Shield) return Items::IronIngot;
+    if (item == Items::Shield) return Blocks::Planks;
+    if (item == Items::Mace) return Items::BreezeRod;
+    if (item == Items::WolfArmor) return Items::ArmadilloScute;
+    if (item == Items::TurtleHelmet) return Items::TurtleScute;
+    if (item == Items::Elytra) return Items::PhantomMembrane;
 
     switch (Tools::tierOf(item))
     {
@@ -77,11 +19,10 @@ StackId Anvil::repairMaterial(StackId item)
         case Tools::Tier::Iron:    return Items::IronIngot;
         case Tools::Tier::Gold:    return Items::GoldIngot;
         case Tools::Tier::Diamond: return Items::Diamond;
+        case Tools::Tier::Netherite: return Items::NetheriteIngot;
         case Tools::Tier::None:    break;
     }
 
-    if (item == Items::TurtleHelmet) return Items::TurtleScute;
-    if (item == Items::Elytra) return Items::PhantomMembrane;
     switch (Armour::tierOf(item))
     {
         case Armour::Tier::Leather: return Items::Leather;
@@ -89,10 +30,22 @@ StackId Anvil::repairMaterial(StackId item)
         case Armour::Tier::Chainmail: return Items::IronIngot;
         case Armour::Tier::Gold:    return Items::GoldIngot;
         case Armour::Tier::Diamond: return Items::Diamond;
+        case Armour::Tier::Netherite: return Items::NetheriteIngot;
         case Armour::Tier::None:    break;
     }
 
     return Blocks::Air;
+}
+
+bool Anvil::repairsWith(StackId item, StackId material)
+{
+    const StackId wanted = repairMaterial(item);
+    if (wanted == Blocks::Air || material == Blocks::Air) return false;
+    if (wanted == static_cast<StackId>(Blocks::Planks)) return !isItem(material) && isPlanks(asBlock(material));
+    if (wanted == static_cast<StackId>(Blocks::Cobblestone))
+        return material == static_cast<StackId>(Blocks::Cobblestone) || material == static_cast<StackId>(Blocks::Blackstone) ||
+               material == static_cast<StackId>(Blocks::CobbledDeepslate);
+    return material == wanted;
 }
 
 int Anvil::maxDurability(StackId item)
@@ -106,93 +59,82 @@ Anvil::Result Anvil::combine(const Input& left, const Input& right)
     if (left.id == Blocks::Air || left.count <= 0) return out;
     if (right.id == Blocks::Air || right.count <= 0) return out;
 
-    if (isEnchantedBook(left) && isEnchantedBook(right))
-    {
-        out.id = Items::EnchantedBook;
-        out.enchantments = left.enchantments;
-        out.used = 1;
-        int cost = 0;
-        bool changed = false;
-        for (const auto& [kind, level] : Enchanting::listOf(right.enchantments))
-            changed |= foldIn(out.enchantments, out.id, kind, level, COST_PER_LEVEL_FROM_BOOK, cost);
-        if (!changed) return out;
-        out.levelCost = cost;
-        out.tooExpensive = cost >= TOO_EXPENSIVE;
-        out.valid = !out.tooExpensive;
-        return out;
-    }
-
+    const bool leftBook = isEnchantedBook(left) || left.id == Items::EnchantedBook;
+    const bool book = isEnchantedBook(right);
     const int max = maxDurability(left.id);
-    if (max <= 0) return out;   // nothing the anvil knows how to work on
+    const long base = static_cast<long>(Enchanting::priorWork(left.enchantments)) + Enchanting::priorWork(right.enchantments);
 
     out.id = left.id;
     out.damage = left.damage;
     out.enchantments = left.enchantments;
-
     int cost = 0;
-    bool changed = false;
 
-    if (isEnchantedBook(right))
+    if (max > 0 && repairsWith(left.id, right.id))
     {
-        // A book gives up everything on it that the item can take.
-        out.used = 1;
-        for (const auto& [kind, level] : Enchanting::listOf(right.enchantments))
-            changed |= foldIn(out.enchantments, out.id, kind, level,
-                              COST_PER_LEVEL_FROM_BOOK, cost);
-    }
-    else if (right.id == left.id)
-    {
-        // Two of the same thing. What is left of both, plus a little
-        // for the trouble, and the enchantments of each.
-        out.used = 1;
-
-        const int leftLeft = max - left.damage;
-        const int rightLeft = max - right.damage;
-        const int bonus = max * 12 / 100;
-        const int mended = std::min(max, leftLeft + rightLeft + bonus);
-        const int newDamage = std::max(0, max - mended);
-
-        if (newDamage < out.damage)
+        int step = std::min(out.damage, max / 4);
+        if (step <= 0) return out;
+        int units = 0;
+        for (; step > 0 && units < right.count; ++units)
         {
-            out.damage = newDamage;
-            cost += COST_OF_JOINING;
-            changed = true;
+            out.damage -= step;
+            ++cost;
+            step = std::min(out.damage, max / 4);
         }
-
-        for (const auto& [kind, level] : Enchanting::listOf(right.enchantments))
-            changed |= foldIn(out.enchantments, out.id, kind, level,
-                              COST_PER_LEVEL_FROM_ITEM, cost);
-    }
-    else if (right.id == repairMaterial(left.id))
-    {
-        // Raw material. Takes only as many as the damage needs, so
-        // putting a stack of sixty-four against a nearly-whole pickaxe
-        // spends one ingot rather than the lot.
-        if (left.damage <= 0) return out;   // nothing to mend
-
-        const int step = repairStep(max);
-        const int wanted = (left.damage + step - 1) / step;
-        const int units = std::min(wanted, right.count);
-
         out.used = units;
-        out.damage = std::max(0, left.damage - units * step);
-        cost += units;
-        changed = true;
     }
     else
     {
-        return out;   // these two do not go together
+        if (!book && (right.id != left.id || (max <= 0 && !leftBook))) return out;
+        out.used = 1;
+        if (max > 0 && !book)
+        {
+            const int kept = (max - left.damage) + (max - right.damage) + max * 12 / 100;
+            const int worn = std::max(0, max - kept);
+            if (worn < out.damage)
+            {
+                out.damage = worn;
+                cost += 2;
+            }
+        }
+        bool applied = false, refused = false;
+        for (const auto& [kind, level] : Enchanting::listOf(right.enchantments))
+        {
+            const int had = Enchanting::levelOf(out.enchantments, kind);
+            int merged = had == level ? level + 1 : std::max(level, had);
+            bool fits = leftBook || Enchanting::appliesTo(kind, left.id);
+            for (const auto& [other, otherLevel] : Enchanting::listOf(out.enchantments))
+                if (other != kind && Enchanting::conflicts(kind, other))
+                {
+                    fits = false;
+                    ++cost;
+                }
+            if (!fits)
+            {
+                refused = true;
+                continue;
+            }
+            applied = true;
+            merged = std::min(merged, Enchanting::maxLevel(kind));
+            out.enchantments = Enchanting::withLevel(out.enchantments, kind, merged);
+            const int each = book ? std::max(1, Enchanting::anvilCost(kind) / 2) : Enchanting::anvilCost(kind);
+            cost += each * merged;
+            if (left.count > 1) cost = TOO_EXPENSIVE;
+        }
+        if (refused && !applied) return out;
     }
 
-    if (!changed) return out;   // nothing gained: the anvil offers nothing
-
-    out.levelCost = cost;
-    if (cost >= TOO_EXPENSIVE)
+    if (cost <= 0) return out;
+    out.levelCost = static_cast<int>(std::min<long>(base + cost, 1000000L));
+    if (out.levelCost >= TOO_EXPENSIVE)
     {
         out.tooExpensive = true;
         return out;
     }
-
+    if (left.id != Items::Trident)
+    {
+        const int work = std::max(Enchanting::priorWork(left.enchantments), Enchanting::priorWork(right.enchantments));
+        out.enchantments = Enchanting::withPriorWork(out.enchantments, std::min(255, work * 2 + 1));
+    }
     out.valid = true;
     return out;
 }

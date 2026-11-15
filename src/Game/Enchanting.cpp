@@ -80,7 +80,8 @@ namespace Enchanting
         };
 
         constexpr int COLOUR_AT = KIND_COUNT;
-        using Levels = std::array<uint8_t, KIND_COUNT + 4>;
+        constexpr int WORK_AT = KIND_COUNT + 4;
+        using Levels = std::array<uint8_t, KIND_COUNT + 5>;
 
         constexpr uint32_t LIBRARY_MARK = 7u << 21;
         constexpr uint32_t LIBRARY_INDEX = (1u << 21) - 1u;
@@ -115,7 +116,8 @@ namespace Enchanting
 
         Set encode(const Levels& levels, Set top)
         {
-            bool packs = levels[static_cast<size_t>(Kind::FrostWalker)] < 7 && levels[static_cast<size_t>(COLOUR_AT)] == 0;
+            bool packs = levels[static_cast<size_t>(Kind::FrostWalker)] < 7 && levels[static_cast<size_t>(COLOUR_AT)] == 0 &&
+                         levels[static_cast<size_t>(WORK_AT)] == 0;
             for (int k = PACKED_KINDS; k < KIND_COUNT && packs; ++k)
                 if (levels[static_cast<size_t>(k)] != 0) packs = false;
             if (packs)
@@ -320,6 +322,32 @@ namespace Enchanting
         return 0x1000000u | (static_cast<uint32_t>(levels[static_cast<size_t>(COLOUR_AT) + 1]) << 16) |
                (static_cast<uint32_t>(levels[static_cast<size_t>(COLOUR_AT) + 2]) << 8) |
                static_cast<uint32_t>(levels[static_cast<size_t>(COLOUR_AT) + 3]);
+    }
+
+    int priorWork(Set set)
+    {
+        if (!shelved(set)) return 0;
+        return decode(set)[static_cast<size_t>(WORK_AT)];
+    }
+
+    Set withPriorWork(Set set, int cost)
+    {
+        Levels levels = decode(set);
+        levels[static_cast<size_t>(WORK_AT)] = static_cast<uint8_t>(std::clamp(cost, 0, 255));
+        return encode(levels, set);
+    }
+
+    int anvilCost(Kind kind)
+    {
+        switch (kind)
+        {
+            case Kind::Efficiency: case Kind::Sharpness: case Kind::Protection: case Kind::Power: case Kind::Piercing: return 1;
+            case Kind::Unbreaking: case Kind::FireProtection: case Kind::FeatherFalling: case Kind::ProjectileProtection:
+            case Kind::Smite: case Kind::BaneOfArthropods: case Kind::Knockback: case Kind::QuickCharge: case Kind::Density: return 2;
+            case Kind::Thorns: case Kind::SilkTouch: case Kind::BindingCurse: case Kind::SoulSpeed: case Kind::SwiftSneak:
+            case Kind::Infinity: case Kind::VanishingCurse: return 8;
+            default: return 4;
+        }
     }
 
     Set withColour(Set set, uint32_t colour)

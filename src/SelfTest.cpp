@@ -4134,8 +4134,9 @@ namespace
         check(Anvil::maxDurability(Items::Shield) == Shield::MAX_DURABILITY,
               "a shield has a life to spend");
         check(Anvil::wearsOut(Items::Shield), "so the anvil knows it wears out");
-        check(Anvil::repairMaterial(Items::Shield) == Items::IronIngot,
-              "and that iron is what mends it");
+        check(Anvil::repairMaterial(Items::Shield) == static_cast<StackId>(Blocks::Planks) &&
+                  Anvil::repairsWith(Items::Shield, static_cast<StackId>(Blocks::BirchPlanks)),
+              "and any planks mend it, as in 1.21.1");
         check(Shield::WEAR_PER_BLOCK > 0, "every blow it stops costs it something");
 
         // Holding one up slows you down, or it would be worn always.
@@ -4182,7 +4183,7 @@ namespace
 
         const int pickMax = Anvil::maxDurability(Items::IronPickaxe);
         check(pickMax > 0, "an iron pickaxe has a life to spend");
-        const int step = std::max(1, (pickMax * Anvil::REPAIR_PERCENT + 99) / 100);
+        const int step = std::max(1, pickMax / 4);
 
         // --- mending with raw material ---------------------------------
         {
@@ -4193,8 +4194,8 @@ namespace
             check(r.id == Items::IronPickaxe, "and what comes out is still a pickaxe");
             check(r.damage == 0, "and with a stack to hand it comes out whole");
             check(r.levelCost == r.used, "one level an ingot");
-            check(r.used > 0 && r.used <= 4,
-                  "four ingots is the most a whole repair ever takes");
+            check(r.used > 0 && r.used <= 5,
+                  "a quarter of its life an ingot, rounded down as Minecraft does");
         }
         {
             // One ingot and no more: a quarter of its life back.
@@ -4261,8 +4262,9 @@ namespace
                         Enchanting::withLevel(0u, Kind::Efficiency, 4) };
             Input book{ Items::Book, 1, 0,
                         Enchanting::withLevel(0u, Kind::Efficiency, 2) };
-            check(!Anvil::combine(pick, book).valid,
-                  "a weaker book adds nothing and is refused");
+            const Anvil::Result r = Anvil::combine(pick, book);
+            check(r.valid && Enchanting::levelOf(r.enchantments, Kind::Efficiency) == 4 && r.levelCost == 4,
+                  "a weaker book is still taken, as in Minecraft, for the level it leaves times its book cost");
         }
         {
             // The ceiling holds.
@@ -4271,8 +4273,14 @@ namespace
                         Enchanting::withLevel(0u, Kind::Efficiency, top) };
             Input book{ Items::Book, 1, 0,
                         Enchanting::withLevel(0u, Kind::Efficiency, top) };
-            check(!Anvil::combine(pick, book).valid,
+            const Anvil::Result r = Anvil::combine(pick, book);
+            check(r.valid && Enchanting::levelOf(r.enchantments, Kind::Efficiency) == top,
                   "two at the ceiling make nothing higher");
+            Input again{ Items::IronPickaxe, 1, 0, r.enchantments };
+            const Anvil::Result second = Anvil::combine(again, book);
+            check(Enchanting::priorWork(r.enchantments) == 1 && second.levelCost == r.levelCost + 1 &&
+                      Enchanting::priorWork(second.enchantments) == 3,
+                  "and each trip through the anvil adds Minecraft's prior work penalty: 1, then 3, then 7");
         }
         {
             // Fortune and silk touch will not share an item.
