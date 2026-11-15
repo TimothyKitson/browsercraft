@@ -4,4 +4,4 @@
 // changes a build actually contains. __DATE__ and __TIME__ beside it say
 // when it was compiled; together they answer "did it update?" without
 // anyone having to remember what they ran.
-#define BUILD_TAG "2026-11-15.142 vanilla random ticks and crop growth"
+#define BUILD_TAG "2026-11-15.143 vanilla bone meal"

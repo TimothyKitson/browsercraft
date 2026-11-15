@@ -19787,7 +19787,7 @@ void Application::handlePlacement()
             const uint32_t roll = static_cast<uint32_t>(
                 crop.block.x * 73856093 ^ crop.block.y * 19349663 ^ crop.block.z * 83492791 ^
                 static_cast<int>(m_elapsedSeconds * 977.0f));
-            if (roll % 100u < 45u) growSapling(crop.block, roll);
+            if (roll % 1000u < 225u) growSapling(crop.block, roll);
             m_particles.spawnBlockBreak(crop.block, Blocks::TallGrass);
             m_audio.play(Sound::Place, 0.5f, 1.5f);
             if (!m_player.creative())
@@ -19804,13 +19804,13 @@ void Application::handlePlacement()
 
             if (stage < 7)
             {
-                // Two or three stages, so a handful finishes a crop
-                // rather than one pinch doing it.
                 const uint32_t roll = static_cast<uint32_t>(
                     crop.block.x * 73856093 ^ crop.block.y * 19349663 ^
                     crop.block.z * 83492791 ^
                     static_cast<int>(m_elapsedSeconds * 977.0f));
-                const int grown = std::min(7, stage + 2 + static_cast<int>(roll % 2));
+                const int amount = 2 + static_cast<int>(roll % 4u);
+                const int grown = isBeetroot(was) ? (amount / 3 == 0 ? stage : (stage >= 4 ? 7 : (stage / 2 + 1) * 2))
+                                                  : std::min(7, stage + amount);
                 const BlockId now = cropAtStage(was, grown);
 
                 m_world->setBlock(crop.block.x, crop.block.y, crop.block.z, now);
