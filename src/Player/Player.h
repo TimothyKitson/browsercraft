@@ -110,7 +110,7 @@ public:
 
     static constexpr int MAX_HUNGER = 20;
     static constexpr float EXHAUSTION_PER_DRAIN = 4.0f;
-    static constexpr int SPRINT_HUNGER = 7;
+    static constexpr int SPRINT_HUNGER = 6;
     static constexpr int REGEN_HUNGER = 18;
 
     // Air, and running out of it. Fifteen seconds' worth, as in

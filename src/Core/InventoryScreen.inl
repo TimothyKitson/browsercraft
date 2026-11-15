@@ -3269,7 +3269,9 @@ bool Application::inventorySlotKeys()
         {
             m_stats.add(Stats::Custom::Drop);
             m_stats.item(Stats::ItemStat::Dropped, thrown.id, thrown.count);
-            m_drops.spawnStack(m_player.eyePosition() + m_camera.front * 0.9f, thrown);
+            m_drops.spawnStack(m_player.eyePosition() - glm::vec3(0.0f, 0.3f, 0.0f), thrown);
+            m_drops.flingLast(m_camera.front * 6.0f + glm::vec3(0.0f, 2.0f, 0.0f));
+            m_drops.delayLast(DroppedItems::THROWN_DELAY);
             changed = true;
         }
     }
@@ -3299,11 +3301,18 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
     {
         // Clicking outside the panel throws the held stack into the world,
         // which is the only way to get rid of something in survival.
-        if (!m_inventory.cursor().empty())
+        ItemStack& held = m_inventory.cursor();
+        if (!held.empty())
         {
+            ItemStack thrown = held;
+            thrown.count = rightButton ? 1 : held.count;
             m_stats.add(Stats::Custom::Drop);
-            m_stats.item(Stats::ItemStat::Dropped, m_inventory.cursor().id, m_inventory.cursor().count);
-            returnCursorToWorld();
+            m_stats.item(Stats::ItemStat::Dropped, thrown.id, thrown.count);
+            m_drops.spawnStack(m_player.eyePosition() - glm::vec3(0.0f, 0.3f, 0.0f), thrown);
+            m_drops.flingLast(m_camera.front * 6.0f + glm::vec3(0.0f, 2.0f, 0.0f));
+            m_drops.delayLast(DroppedItems::THROWN_DELAY);
+            held.count -= thrown.count;
+            if (held.count <= 0) held.clear();
         }
         return;
     }

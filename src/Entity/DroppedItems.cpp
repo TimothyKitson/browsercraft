@@ -103,7 +103,7 @@ void DroppedItems::snapshot(std::vector<Snap>& out, const std::vector<glm::vec3>
         snap.position = item.position;
         snap.id = item.block;
         snap.count = item.count;
-        snap.ready = item.age > PICKUP_DELAY;
+        snap.ready = item.age > item.delay;
         out.push_back(snap);
     }
 }
@@ -164,7 +164,7 @@ bool DroppedItems::grant(uint32_t serial, const glm::vec3& feet, int room, ItemS
     {
         Item& item = m_items[i];
         if (item.serial != serial || item.mirrored) continue;
-        if (item.age <= PICKUP_DELAY || room <= 0) return false;
+        if (item.age <= item.delay || room <= 0) return false;
         const glm::vec3 apart = item.position - feet;
         if (glm::length(glm::vec2(apart.x, apart.z)) > COLLECT_RADIUS + 1.5f || apart.y < -2.5f || apart.y > Player::HEIGHT + 2.0f) return false;
         out.id = item.block;
@@ -303,7 +303,7 @@ void DroppedItems::update(float deltaTime, const World& world, const Player& pla
         const bool within = reach < COLLECT_RADIUS &&
                             apart.y > -1.0f && apart.y < Player::HEIGHT + 0.5f;
 
-        if (item.age > PICKUP_DELAY && within && !player.spectator())
+        if (item.age > item.delay && within && !player.spectator())
         {
             ItemStack picking;
             picking.id = item.block;

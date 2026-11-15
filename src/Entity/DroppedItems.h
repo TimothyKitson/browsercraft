@@ -29,7 +29,8 @@ public:
     static constexpr float SPRITE_SIZE = 0.42f; // height of a flat item sprite
     static constexpr float HOVER = 0.16f;       // how far it floats above where it rests
     static constexpr float COLLECT_RADIUS = 1.0f;
-    static constexpr float PICKUP_DELAY = 2.0f; // before it can be walked back onto
+    static constexpr float PICKUP_DELAY = 0.5f;
+    static constexpr float THROWN_DELAY = 2.0f;
     static constexpr float MERGE_RADIUS = 0.8f;
     static constexpr float LIFETIME_SECONDS = 300.0f;
 
@@ -80,6 +81,10 @@ public:
     void flingLast(const glm::vec3& velocity)
     {
         if (!m_items.empty()) m_items.back().velocity = velocity;
+    }
+    void delayLast(float seconds)
+    {
+        if (!m_items.empty()) m_items.back().delay = seconds;
     }
     void spawnFromBrokenBlock(const glm::ivec3& blockPosition, StackId drop, int count = 1);
 
@@ -177,6 +182,7 @@ private:
         int damage = 0;
         uint32_t enchantments = 0;
         float age = 0.0f;
+        float delay = PICKUP_DELAY;
         float spin = 0.0f;
         bool resting = false;
         uint32_t serial = 0;

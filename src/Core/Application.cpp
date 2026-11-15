@@ -9779,7 +9779,11 @@ void Application::handleEvents()
         {
             m_stats.add(Stats::Custom::Drop);
             m_stats.item(Stats::ItemStat::Dropped, held.id);
-            m_drops.spawn(m_player.eyePosition() + m_camera.front * 0.9f, held.id, 1);
+            ItemStack one = held;
+            one.count = 1;
+            m_drops.spawnStack(m_player.eyePosition() - glm::vec3(0.0f, 0.3f, 0.0f), one);
+            m_drops.flingLast(m_camera.front * 6.0f + glm::vec3(0.0f, 2.0f, 0.0f));
+            m_drops.delayLast(DroppedItems::THROWN_DELAY);
             held.count -= 1;
             if (held.count <= 0) held.clear();
         }
