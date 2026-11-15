@@ -25,8 +25,14 @@ namespace
     Enchanting::Set cursesOf(Enchanting::Set set, StackId id)
     {
         Enchanting::Set kept = id == Items::Trident ? 0u : (set & ~Enchanting::KIND_BITS);
+        if (Enchanting::colourOf(set) != 0u) kept = Enchanting::withColour(kept, Enchanting::colourOf(set));
+        int curses = 0;
         for (Enchanting::Kind curse : { Enchanting::Kind::BindingCurse, Enchanting::Kind::VanishingCurse })
+        {
             kept = Enchanting::withLevel(kept, curse, Enchanting::levelOf(set, curse));
+            if (Enchanting::levelOf(set, curse) > 0) ++curses;
+        }
+        if (curses > 0 && id != Items::Trident) kept = Enchanting::withPriorWork(kept, (1 << curses) - 1);
         return kept;
     }
 }
