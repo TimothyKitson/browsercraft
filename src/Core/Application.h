@@ -1639,6 +1639,11 @@ private:
     std::vector<Chests::Contents> m_shulkerStore;
     void restoreSavedMobs();
     void saveMobs();
+    bool mobKeeps(const Mob& mob) const;
+    std::string mobRow(const Mob& mob) const;
+    void parkFarMobs();
+    static constexpr float PARK_DISTANCE = 96.0f;
+    static constexpr float RETURN_DISTANCE = 80.0f;
     void placePendingMobs();
     std::vector<std::string> m_pendingMobs;
     bool m_mobsRestored = false;

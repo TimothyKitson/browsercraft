@@ -39,6 +39,8 @@ public:
     static constexpr float SPAWN_MIN_DISTANCE = 22.0f;
     static constexpr float SPAWN_MAX_DISTANCE = 44.0f;
     static constexpr float DESPAWN_DISTANCE = 72.0f;
+    static constexpr float IMMEDIATE_DESPAWN = 128.0f;
+    static constexpr float DESPAWN_START = 32.0f;
     // How many mobs may search for a route in one update. A search is
     // bounded but not free, and nothing looks different if a zombie
     // takes another tenth of a second to work out where to go.
@@ -46,6 +48,7 @@ public:
 
     void setPlayerHidden(bool hidden) { m_playerHidden = hidden; }
     void setOtherPlayers(const std::vector<glm::vec3>& others) { m_others = others; }
+    const std::vector<glm::vec3>& others() const { return m_others; }
     void update(float deltaTime, const World& world, const glm::vec3& playerPosition,
                 float daylight);
 

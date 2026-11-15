@@ -26266,6 +26266,76 @@ void Application::tickCampfires(float deltaTime)
     }
 }
 
+bool Application::mobKeeps(const Mob& mob) const
+{
+    if (!mob.alive() || mob.type().inanimate) return false;
+    if (mob.typeId() == MobId::EnderDragon || mob.typeId() == MobId::Wither) return false;
+    return mob.type().spawnClass == SpawnClass::Passive || mob.tamed() || mob.persistent() || !mob.customName().empty() ||
+           mob.leashed() || mob.noAI() || mob.silent() || mob.invulnerable();
+}
+
+std::string Application::mobRow(const Mob& mob) const
+{
+    std::ostringstream row;
+    const glm::vec3 at = mob.position();
+    std::string name = mob.customName();
+    for (char& c : name) if (c == ' ' || c == '\n') c = '_';
+    row << static_cast<int>(mob.typeId()) << ' ' << at.x << ' ' << at.y << ' ' << at.z << ' ' << mob.yaw() << ' '
+        << mob.health() << ' ' << (mob.baby() ? 1 : 0) << ' ' << mob.birthSeed() << ' ' << mob.variant() << ' '
+        << (mob.tamed() ? 1 : 0) << ' ' << (mob.sitting() ? 1 : 0) << ' ' << (mob.saddled() ? 1 : 0) << ' '
+        << mob.horseArmour() << ' ' << (mob.charged() ? 1 : 0) << ' ' << (name.empty() ? "-" : name);
+    for (int slot = 0; slot < Mob::GearSlots; ++slot) row << ' ' << mob.gear(slot) << ' ' << (mob.gearSure(slot) ? 1 : 0);
+    row << ' ' << (mob.canPickUp() ? 1 : 0);
+    const int flags = (mob.noAI() ? 1 : 0) | (mob.silent() ? 2 : 0) | (mob.invulnerable() ? 4 : 0);
+    if (flags) row << " F " << flags;
+    const auto packed = m_vehicleChests.find(mob.serial());
+    if (packed != m_vehicleChests.end())
+    {
+        row << " C";
+        for (const ItemStack& one : packed->second) row << ' ' << one.id << ' ' << one.count << ' ' << one.damage << ' ' << one.enchantments;
+    }
+    return row.str();
+}
+
+void Application::parkFarMobs()
+{
+    if (!m_world) return;
+    const bool keeping = !m_menuWorld && m_net.role() != Net::Role::Guest;
+    std::vector<glm::vec3> watchers{ m_player.position };
+    for (const glm::vec3& other : m_entities.others()) watchers.push_back(other);
+    auto& mobs = m_entities.mobs();
+    for (size_t i = 0; i < mobs.size();)
+    {
+        const Mob& mob = mobs[i];
+        float nearest = 1.0e9f;
+        for (const glm::vec3& w : watchers)
+            nearest = std::min(nearest, glm::length(glm::vec2(mob.position().x - w.x, mob.position().z - w.z)));
+        if (nearest <= PARK_DISTANCE || !mobKeeps(mob) || mob.ridden() || mob.mount() != 0 || isTechnicalMob(mob.typeId()))
+        {
+            ++i;
+            continue;
+        }
+        bool carrying = false;
+        for (const Mob& other : mobs)
+            if (other.mount() == mob.serial()) carrying = true;
+        if (carrying) { ++i; continue; }
+        if (keeping) m_pendingMobs.push_back(mobRow(mob));
+        m_vehicleChests.erase(mob.serial());
+        mobs.erase(mobs.begin() + static_cast<long>(i));
+    }
+    for (size_t i = 0; m_pendingMobs.size() > 3000 && i < m_pendingMobs.size();)
+    {
+        std::istringstream peek(m_pendingMobs[i]);
+        std::string field;
+        std::vector<std::string> fields;
+        while (fields.size() < 15 && peek >> field) fields.push_back(field);
+        if (fields.size() == 15 && fields[9] == "0" && fields[14] == "-")
+            m_pendingMobs.erase(m_pendingMobs.begin() + static_cast<long>(i));
+        else
+            ++i;
+    }
+}
+
 void Application::saveMobs()
 {
     if (!m_world || m_menuWorld || m_net.role() == Net::Role::Guest) return;
@@ -26274,28 +26344,8 @@ void Application::saveMobs()
     if (mobs)
         for (const Mob& mob : m_entities.mobs())
         {
-            if (!mob.alive() || mob.type().inanimate || written >= 512) continue;
-            const bool keep = mob.type().spawnClass == SpawnClass::Passive || mob.tamed() || mob.persistent() ||
-                              !mob.customName().empty() || mob.leashed() || mob.noAI() || mob.silent() || mob.invulnerable();
-            if (!keep || mob.typeId() == MobId::EnderDragon || mob.typeId() == MobId::Wither) continue;
-            const glm::vec3 at = mob.position();
-            std::string name = mob.customName();
-            for (char& c : name) if (c == ' ' || c == '\n') c = '_';
-            mobs << static_cast<int>(mob.typeId()) << ' ' << at.x << ' ' << at.y << ' ' << at.z << ' ' << mob.yaw() << ' '
-                 << mob.health() << ' ' << (mob.baby() ? 1 : 0) << ' ' << mob.birthSeed() << ' ' << mob.variant() << ' '
-                 << (mob.tamed() ? 1 : 0) << ' ' << (mob.sitting() ? 1 : 0) << ' ' << (mob.saddled() ? 1 : 0) << ' '
-                 << mob.horseArmour() << ' ' << (mob.charged() ? 1 : 0) << ' ' << (name.empty() ? "-" : name);
-            for (int slot = 0; slot < Mob::GearSlots; ++slot) mobs << ' ' << mob.gear(slot) << ' ' << (mob.gearSure(slot) ? 1 : 0);
-            mobs << ' ' << (mob.canPickUp() ? 1 : 0);
-            const int flags = (mob.noAI() ? 1 : 0) | (mob.silent() ? 2 : 0) | (mob.invulnerable() ? 4 : 0);
-            if (flags) mobs << " F " << flags;
-            const auto packed = m_vehicleChests.find(mob.serial());
-            if (packed != m_vehicleChests.end())
-            {
-                mobs << " C";
-                for (const ItemStack& one : packed->second) mobs << ' ' << one.id << ' ' << one.count << ' ' << one.damage << ' ' << one.enchantments;
-            }
-            mobs << '\n';
+            if (!mobKeeps(mob) || written >= 512) continue;
+            mobs << mobRow(mob) << '\n';
             ++written;
         }
     if (mobs)
@@ -26322,6 +26372,10 @@ void Application::placePendingMobs()
         if (!(peek >> kind >> px >> py >> pz)) { m_pendingMobs.erase(m_pendingMobs.begin() + static_cast<long>(i)); continue; }
         const Chunk* home = m_world->chunkAt(static_cast<int>(std::floor(px / 16.0f)), static_cast<int>(std::floor(pz / 16.0f)));
         if (!home || home->state.load() != ChunkState::Lit) { ++i; continue; }
+        bool watched = glm::length(glm::vec2(px - m_player.position.x, pz - m_player.position.z)) < RETURN_DISTANCE;
+        for (const glm::vec3& other : m_entities.others())
+            if (glm::length(glm::vec2(px - other.x, pz - other.z)) < RETURN_DISTANCE) watched = true;
+        if (!watched) { ++i; continue; }
         const std::string row = m_pendingMobs[i];
         m_pendingMobs.erase(m_pendingMobs.begin() + static_cast<long>(i));
         std::istringstream in(row);
@@ -26912,6 +26966,7 @@ void Application::sufferStrike(const MobStrike& strike)
 void Application::updateMobs(float deltaTime)
 {
     if (!m_world || !m_worldReady) return;
+    parkFarMobs();
     if (!m_pendingMobs.empty()) placePendingMobs();
 
     if (m_net.role() == Net::Role::Guest)

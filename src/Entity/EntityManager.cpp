@@ -973,8 +973,14 @@ void EntityManager::update(float deltaTime, const World& world,
             glm::vec3 delta = mob.position() - playerPosition;
             for (const glm::vec3& other : m_others)
                 if (glm::length(mob.position() - other) < glm::length(delta)) delta = mob.position() - other;
-            const float keep = (mob.customName().empty() && !mob.leashed() && !mob.persistent()) ? DESPAWN_DISTANCE : DESPAWN_DISTANCE * 3.0f;
-            return glm::length(glm::vec3(delta.x, 0.0f, delta.z)) > keep;
+            const MobType& kind = mobType(mob.typeId());
+            const bool keeper = kind.spawnClass == SpawnClass::Passive || kind.inanimate || mob.tamed() || mob.persistent() ||
+                                !mob.customName().empty() || mob.leashed() || mob.ridden() || mob.mount() != 0 ||
+                                mob.typeId() == MobId::EnderDragon || mob.typeId() == MobId::Wither;
+            if (keeper) return false;
+            const float distance = glm::length(delta);
+            if (distance > IMMEDIATE_DESPAWN) return true;
+            return distance > DESPAWN_START && random01() < 1.0f - std::pow(799.0f / 800.0f, 20.0f * deltaTime);
         }),
         m_mobs.end());
 
