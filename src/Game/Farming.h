@@ -16,21 +16,10 @@ class World;
 // world.
 namespace Farming
 {
-    // How far from the player crops are ticked. Beyond this a field sits
-    // still, which is the one thing this does differently from Minecraft
-    // and is invisible unless you stand and watch.
-    //
-    // The numbers are chosen together so a crop ripens in a couple of
-    // minutes rather than Minecraft's twenty: a pass samples
-    // TICKS_PER_PASS positions out of a box of (2R)^2 * HEIGHT, which
-    // gives each crop roughly a one-in-thirty-five chance per pass, and
-    // there are two passes a second. Sampling rather than scanning is
-    // what keeps the cost in the hundreds of lookups rather than the
-    // tens of thousands.
-    constexpr int TICK_RADIUS = 24;
-    constexpr int TICK_HEIGHT = 4;          // levels either side of the player
-    constexpr float TICK_INTERVAL = 0.5f;   // seconds between growth passes
-    constexpr int TICKS_PER_PASS = 600;
+    constexpr int TICK_RADIUS = 64;
+    constexpr int TICK_HEIGHT = 16;
+    constexpr float TICK_INTERVAL = 0.5f;
+    constexpr int TICKS_PER_PASS = (2 * TICK_RADIUS) * (2 * TICK_RADIUS) * (2 * TICK_HEIGHT + 1) * 3 * 10 / 4096;
     constexpr int LIGHT_TO_GROW = 9;
 
     // Dirt and grass can be tilled; nothing else can.

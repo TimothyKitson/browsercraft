@@ -19,6 +19,43 @@ namespace
 namespace
 {
     std::vector<std::pair<glm::ivec3, bool>> g_chorusEvents;
+
+    BlockId cropKind(BlockId id)
+    {
+        if (isMelonStem(id)) return Blocks::MelonStem0;
+        if (isPumpkinStem(id)) return Blocks::PumpkinStem0;
+        if (isCrop(id)) return cropAtStage(id, 0);
+        if (isTorchflowerCrop(id)) return Blocks::TorchflowerCrop0;
+        if (isPitcherCrop(id)) return Blocks::PitcherCropFirst;
+        return Blocks::Air;
+    }
+
+    float moistureAt(const World& world, int x, int y, int z)
+    {
+        float total = 1.0f;
+        for (int dx = -1; dx <= 1; ++dx)
+            for (int dz = -1; dz <= 1; ++dz)
+            {
+                const BlockId soil = world.getBlock(x + dx, y - 1, z + dz);
+                float part = 0.0f;
+                if (isFarmland(soil)) part = soil == Blocks::Farmland ? 3.0f : 1.0f;
+                if (dx != 0 || dz != 0) part /= 4.0f;
+                total += part;
+            }
+        const BlockId kind = cropKind(world.getBlock(x, y, z));
+        auto same = [&](int dx, int dz) { return cropKind(world.getBlock(x + dx, y, z + dz)) == kind; };
+        const bool sideways = same(-1, 0) || same(1, 0);
+        const bool along = same(0, -1) || same(0, 1);
+        if (sideways && along) total /= 2.0f;
+        else if (same(-1, -1) || same(1, -1) || same(1, 1) || same(-1, 1)) total /= 2.0f;
+        return total;
+    }
+
+    bool cropTickTakes(const World& world, int x, int y, int z, uint32_t& seed)
+    {
+        const float moisture = moistureAt(world, x, y, z);
+        return nextRandom(seed) % static_cast<uint32_t>(static_cast<int>(25.0f / moisture) + 1) == 0u;
+    }
 }
 
 std::vector<std::pair<glm::ivec3, bool>> Farming::takeChorusEvents()
@@ -310,7 +347,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
         {
             WorldCane around;
             around.world = &world;
-            if (Cane::canGrowAt(around, x, y, z))
+            if (Cane::canGrowAt(around, x, y, z) && nextRandom(seed) % 16u == 0u)
                 world.setBlock(x, y + 1, z, Blocks::SugarCane);
             continue;
         }
@@ -372,7 +409,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             const BlockId pod = world.getBlock(x, y, z);
             if (isCocoa(pod))
             {
-                if (cocoaStage(pod) < COCOA_RIPE)
+                if (cocoaStage(pod) < COCOA_RIPE && nextRandom(seed) % 5u == 0u)
                     world.setBlock(x, y, z, cocoaWith(cocoaFacing(pod), cocoaStage(pod) + 1));
                 continue;
             }
@@ -383,7 +420,9 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             if (isTorchflowerCrop(sprout) || (isPitcherCrop(sprout) && !pitcherCropUpper(sprout)))
             {
                 if (!isFarmland(world.getBlock(x, y - 1, z))) continue;
-                if (nextRandom(seed) % 3u != 0u) continue;
+                if (std::max<int>(world.skyLight(x, y, z), world.blockLightAt(x, y, z)) < LIGHT_TO_GROW) continue;
+                if (isTorchflowerCrop(sprout) && nextRandom(seed) % 3u == 0u) continue;
+                if (!cropTickTakes(world, x, y, z, seed)) continue;
                 if (sprout == Blocks::TorchflowerCrop0) world.setBlock(x, y, z, Blocks::TorchflowerCrop1);
                 else if (sprout == Blocks::TorchflowerCrop1) world.setBlock(x, y, z, Blocks::Torchflower);
                 else
@@ -403,7 +442,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             const BlockId vine = world.getBlock(x, y, z);
             if (caveVineHead(vine))
             {
-                if (nextRandom(seed) % 6u == 0u && world.getBlock(x, y - 1, z) == Blocks::Air && y > 2)
+                if (nextRandom(seed) % 10u == 0u && world.getBlock(x, y - 1, z) == Blocks::Air && y > 2)
                 {
                     world.setBlock(x, y, z, caveVineOf(false, caveVineLit(vine)));
                     world.setBlock(x, y - 1, z, caveVineOf(true, nextRandom(seed) % 100u < 11u));
@@ -438,7 +477,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
         if (isFungus(world.getBlock(x, y, z))) continue;
         if (isSapling(world.getBlock(x, y, z)))
         {
-            if (nextRandom(seed) % 4u == 0u)
+            if (std::max<int>(world.skyLight(x, y + 1, z), world.blockLightAt(x, y + 1, z)) >= LIGHT_TO_GROW && nextRandom(seed) % 14u == 0u)
             {
                 struct WorldCells : Saplings::Cells
                 {
@@ -469,7 +508,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             static const int SX[4] = { 1, -1, 0, 0 }, SZ[4] = { 0, 0, 1, -1 };
             for (int k = 0; k < 4; ++k)
                 if (isSolid(world.getBlock(x + SX[k], y + 1, z + SZ[k]))) clear = false;
-            if (height < 3 && clear && nextRandom(seed) % 8u == 0u) world.setBlock(x, y + 1, z, Blocks::Cactus);
+            if (height < 3 && clear && nextRandom(seed) % 16u == 0u) world.setBlock(x, y + 1, z, Blocks::Cactus);
             continue;
         }
         if (ticked == Blocks::KelpTop && world.getBlock(x, y + 1, z) == Blocks::Water)
@@ -566,7 +605,7 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
             const BlockId wart = world.getBlock(x, y, z);
             if (wart == Blocks::NetherWart0 || wart == Blocks::NetherWart1)
             {
-                if (nextRandom(seed) % 3u == 0u)
+                if (nextRandom(seed) % 10u == 0u)
                     world.setBlock(x, y, z, wart == Blocks::NetherWart0 ? Blocks::NetherWart1
                                                                      : Blocks::NetherWart);
                 continue;
@@ -580,7 +619,8 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
         const BlockId standing = world.getBlock(x, y, z);
         if ((isMelonStem(standing) || isPumpkinStem(standing)) && isCropRipe(standing))
         {
-            growMelonBeside(world, glm::ivec3(x, y, z), seed);
+            if (std::max<int>(world.skyLight(x, y, z), world.blockLightAt(x, y, z)) >= LIGHT_TO_GROW && cropTickTakes(world, x, y, z, seed))
+                growMelonBeside(world, glm::ivec3(x, y, z), seed);
             continue;
         }
         if (isAttachedStem(standing))
@@ -599,6 +639,10 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
         if (!canGrowAt(world, at)) continue;
 
         const BlockId crop = world.getBlock(x, y, z);
-        world.setBlock(x, y, z, cropAtStage(crop, cropStage(crop) + 1));
+        if (isBeetroot(crop) && nextRandom(seed) % 3u == 0u) continue;
+        if (!cropTickTakes(world, x, y, z, seed)) continue;
+        const int stage = cropStage(crop);
+        const int next = isBeetroot(crop) ? (stage >= 4 ? 7 : (stage / 2 + 1) * 2) : stage + 1;
+        world.setBlock(x, y, z, cropAtStage(crop, next));
     }
 }
