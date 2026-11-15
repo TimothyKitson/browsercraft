@@ -8,6 +8,7 @@
 #include "Renderer/Atlas.h"
 #include "Game/Crafting.h"
 #include "Game/RecipeBook.h"
+#include "Game/Tools.h"
 #include "Game/Stonecutting.h"
 #include "Game/Smithing.h"
 #include "Game/Smelting.h"
@@ -554,6 +555,36 @@ namespace
                 ++off;
                 std::printf("hard %s %g %g\n", id.c_str(), static_cast<double>(vanilla), static_cast<double>(ours));
             }
+        }
+        std::printf("%d checked, %d differ\n", checked, off);
+        return 0;
+    }
+
+    int printToolAudit(const char* path)
+    {
+        std::ifstream in(path);
+        if (!in) return 1;
+        std::string id, kind;
+        int checked = 0, off = 0;
+        std::set<StackId> tagged;
+        while (in >> id >> kind)
+        {
+            const StackId stack = RecipeBook::stackNamed(id);
+            if (stack == Blocks::Air || isItem(stack)) continue;
+            tagged.insert(stack);
+            const Tools::Kind want = kind == "axe" ? Tools::Kind::Axe : kind == "pickaxe" ? Tools::Kind::Pickaxe
+                                   : kind == "shovel" ? Tools::Kind::Shovel : Tools::Kind::Hoe;
+            ++checked;
+            const Tools::Kind ours = Tools::preferredTool(asBlock(stack));
+            if (ours != want) { ++off; std::printf("tool %s %s %d\n", id.c_str(), kind.c_str(), static_cast<int>(ours)); }
+        }
+        for (int block = 1; isBlockId(block); block = nextBlockId(block))
+        {
+            const Tools::Kind ours = Tools::preferredTool(static_cast<BlockId>(block));
+            if (ours == Tools::Kind::None || !isObtainable(static_cast<BlockId>(block))) continue;
+            const StackId item = blockDrop(static_cast<BlockId>(block));
+            if (tagged.count(static_cast<StackId>(block)) || tagged.count(item)) continue;
+            std::printf("extra %s %d\n", RecipeBook::vanillaIdOf(static_cast<StackId>(block)).c_str(), static_cast<int>(ours));
         }
         std::printf("%d checked, %d differ\n", checked, off);
         return 0;
@@ -1732,6 +1763,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--hardnessaudit") == 0 && i + 1 < argc)
         {
             return printHardnessAudit(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--toolaudit") == 0 && i + 1 < argc)
+        {
+            return printToolAudit(argv[++i]);
         }
         else if (std::strcmp(argv[i], "--lightaudit") == 0 && i + 1 < argc)
         {

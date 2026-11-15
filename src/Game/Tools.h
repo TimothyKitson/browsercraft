@@ -63,6 +63,7 @@ namespace Tools
     // hardest, an axe nearly as hard, a bare hand barely at all.
     int attackDamage(StackId tool);
     float digSpeed(StackId tool, BlockId block);
+    Kind preferredTool(BlockId block);
     float attackDamageExact(StackId tool);
     float attackSpeed(StackId tool);
 

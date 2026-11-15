@@ -1,4 +1,7 @@
 #include "Tools.h"
+#include "RecipeBook.h"
+#include <string>
+#include <unordered_map>
 #include <algorithm>
 
 namespace
@@ -33,38 +36,22 @@ namespace
         { 9.0f,  2031,    5, 8 },   // Netherite
     };
 
-    // Which tool a block gives way to. A block not listed here comes
-    // apart as readily however you go at it.
     Tools::Kind toolFor(BlockId block)
     {
-        block = axisBase(block);
-        if (isCrop(block)) return Tools::Kind::None;
-        if (const BlockId base = shapeBase(block); base != Blocks::Air && base != block) return toolFor(base);
-
-        if (isLeaves(block)) return Tools::Kind::Sword;
-
-        switch (block)
-        {
-            case Blocks::TallGrass:
-            case Blocks::FlowerRed:
-            case Blocks::FlowerYellow:
-                return Tools::Kind::Sword;
-            case Blocks::Fern:
-            case Blocks::DeadBush:
-                return Tools::Kind::Sword;
-            default: break;
-        }
-
-        switch (blockMaterial(block))
-        {
-            case Material::Stone: return Tools::Kind::Pickaxe;
-            case Material::Wood:  return Tools::Kind::Axe;
-            case Material::Dirt:
-            case Material::Grass:
-            case Material::Sand:
-            case Material::Snow:  return Tools::Kind::Shovel;
-            default:              return Tools::Kind::None;
-        }
+        static const std::unordered_map<BlockId, Tools::Kind> TABLE = [] {
+#include "MineableData.inl"
+            std::unordered_map<std::string, Tools::Kind> byName;
+            for (const auto& entry : MINEABLE) byName.emplace(entry.first, entry.second);
+            std::unordered_map<BlockId, Tools::Kind> out;
+            for (int id = 1; isBlockId(id); id = nextBlockId(id))
+            {
+                const auto found = byName.find(RecipeBook::vanillaIdOf(static_cast<StackId>(id)));
+                if (found != byName.end()) out.emplace(static_cast<BlockId>(id), found->second);
+            }
+            return out;
+        }();
+        const auto found = TABLE.find(block);
+        return found == TABLE.end() ? Tools::Kind::None : found->second;
     }
 }
 
@@ -112,43 +99,27 @@ int Tools::harvestLevel(Tier tier)
 
 int Tools::requiredLevel(BlockId block)
 {
-    block = axisBase(block);
-    block = oreBase(block);
-    if (const BlockId base = shapeBase(block); base != Blocks::Air && base != block) return requiredLevel(base);
-    switch (block)
-    {
-        case Blocks::Obsidian:   return 4;
-
-        // Diamond, like obsidian. Minecraft's rule, and what makes
-        // ancient debris a thing you go back for rather than a thing
-        // you trip over on the way down.
-        case Blocks::AncientDebris: return 4;
-        case Blocks::NetheriteBlock: return 4;
-        case Blocks::CryingObsidian: return 4;
-        case Blocks::RespawnAnchor0: case Blocks::RespawnAnchor1: case Blocks::RespawnAnchor2:
-        case Blocks::RespawnAnchor3: case Blocks::RespawnAnchor4: return 4;
-        case Blocks::DiamondOre: return 3;
-        case Blocks::EmeraldOre: return 3;
-        case Blocks::GoldOre:
-        case Blocks::IronOre:    return 2;
-        case Blocks::LapisOre:   return 2;   // stone, like iron
-        case Blocks::RawIronBlock: return 2;
-        case Blocks::RawGoldBlock: return 2;
-        case Blocks::Snow: return 1;
-        default: break;
-    }
-    if (isSnowLayer(block)) return 1;
-    if (isHead(block) || block == Blocks::WitherSkull) return 0;
-
-    // Everything else made of stone wants a pickaxe of some sort; the
-    // softer materials want nothing in particular.
-    return blockMaterial(block) == Material::Stone ? 1 : 0;
+    static const std::unordered_map<BlockId, int> TABLE = [] {
+#include "HarvestData.inl"
+        std::unordered_map<std::string, int> byName;
+        for (const auto& entry : NEEDS_TOOL) byName.emplace(entry.first, entry.second);
+        std::unordered_map<BlockId, int> out;
+        for (int id = 1; isBlockId(id); id = nextBlockId(id))
+        {
+            const auto found = byName.find(RecipeBook::vanillaIdOf(static_cast<StackId>(id)));
+            if (found != byName.end()) out.emplace(static_cast<BlockId>(id), found->second);
+        }
+        return out;
+    }();
+    const auto found = TABLE.find(block);
+    return found == TABLE.end() ? 0 : found->second;
 }
 
 bool Tools::canHarvest(StackId tool, BlockId block)
 {
     const int needed = requiredLevel(block);
     if (needed == 0) return true;
+    if (block == Blocks::Cobweb) return kindOf(tool) == Kind::Sword || tool == Items::Shears;
 
     // The right kind as well as a good enough tier: an iron shovel is
     // no help at all against stone, however hard it is.
@@ -167,7 +138,20 @@ float Tools::digSpeed(StackId tool, BlockId block)
     }
     if (kindOf(tool) != Kind::None && kindOf(tool) == toolFor(block))
         return TIERS[static_cast<int>(tierOf(tool))].speed;
+    if (kindOf(tool) == Kind::Sword &&
+        (isLeaves(block) || block == Blocks::FloweringAzaleaLeaves || isSapling(block) || isSmallFlower(block) || isCrop(block) ||
+         isDoublePlant(block) || isVine(block) || isGlowLichen(block) || isCocoa(block) || isCarvedPumpkin(block) || isJackOLantern(block) ||
+         isBigDripleaf(block) || isBigDripleafStem(block) || isPinkPetals(block) || isSweetBerryBush(block) || isMushroom(block) ||
+         block == Blocks::Pumpkin || block == Blocks::Melon || block == Blocks::ChorusPlant || block == Blocks::ChorusFlower ||
+         block == Blocks::MossCarpet || block == Blocks::LilyPad || block == Blocks::HangingRoots || block == Blocks::SporeBlossom ||
+         block == Blocks::TallGrass || block == Blocks::Fern || block == Blocks::DeadBush || block == Blocks::SugarCane))
+        return 1.5f;
     return 1.0f;
+}
+
+Tools::Kind Tools::preferredTool(BlockId block)
+{
+    return toolFor(block);
 }
 
 float Tools::breakSeconds(StackId tool, BlockId block)
@@ -175,6 +159,7 @@ float Tools::breakSeconds(StackId tool, BlockId block)
     const float hardness = blockInfo(block).hardness;
     if (hardness < 0.0f) return -1.0f;
     if (hardness == 0.0f) return 0.0f;
+    if ((block == Blocks::Bamboo || block == Blocks::BambooShoot) && kindOf(tool) == Kind::Sword) return 0.0f;
     return hardness * (canHarvest(tool, block) ? 1.5f : 5.0f) / digSpeed(tool, block);
 }
 

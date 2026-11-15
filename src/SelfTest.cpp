@@ -5054,6 +5054,10 @@ namespace
               makes(Blocks::EndRodFirst) && makes(Items::IronNugget), "the soul lights, bars, chain, rod and nuggets are made");
         check(Smelting::resultOf(Items::ChorusFruit) == Items::PoppedChorusFruit, "chorus fruit pops in a furnace");
         check(blockDrop(Blocks::Cobweb) == Items::StringItem && !blockInfo(Blocks::Cobweb).collides, "a cobweb is walked into and cut for string");
+        check(std::abs(Tools::digSpeed(Items::IronSword, Blocks::Pumpkin) - 1.5f) < 0.001f &&
+                  std::abs(Tools::digSpeed(Items::IronSword, Blocks::Leaves) - 1.5f) < 0.001f &&
+                  std::abs(Tools::digSpeed(Items::IronSword, Blocks::Stone) - 1.0f) < 0.001f,
+              "a sword cuts plants, leaves and gourds half as fast again, and nothing else");
         check(Tools::breakSeconds(Items::IronSword, Blocks::Cobweb) < Tools::breakSeconds(Blocks::Air, Blocks::Cobweb) / 4.0f,
               "and a sword goes through it quickly");
         bool anchors = true;
@@ -8968,16 +8972,18 @@ namespace
 
             ++needTool;
 
-            // Whatever wants a tool wants a pickaxe, and the best
-            // pickaxe in the game must be able to get it.
-            const bool snowy = blockMaterial(id) == Material::Snow;
-            const StackId best = snowy ? static_cast<StackId>(Items::DiamondShovel) : static_cast<StackId>(Items::DiamondPickaxe);
-            check(blockMaterial(id) == Material::Stone || snowy, who + ": only stone and snow want a tool");
+            const Tools::Kind wants = Tools::preferredTool(id);
+            if (id == Blocks::Cobweb) continue;
+            const StackId best = wants == Tools::Kind::Shovel ? static_cast<StackId>(Items::DiamondShovel)
+                               : wants == Tools::Kind::Axe ? static_cast<StackId>(Items::DiamondAxe)
+                               : wants == Tools::Kind::Hoe ? static_cast<StackId>(Items::DiamondHoe)
+                               : static_cast<StackId>(Items::DiamondPickaxe);
+            check(wants != Tools::Kind::None, who + ": a block that needs a tool has one it needs");
             check(canHarvest(best, id), who + ": diamond gets all of it");
             check(!canHarvest(Blocks::Air, id), who + ": a bare hand gets none");
 
             // And the right tool is always quicker than the wrong one.
-            check(breakSeconds(best, id) < breakSeconds(Blocks::Air, id),
+            check(blockInfo(id).hardness == 0.0f || breakSeconds(best, id) < breakSeconds(Blocks::Air, id),
                   who + " is quicker with it");
         }
 
