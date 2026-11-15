@@ -541,6 +541,13 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         {
             if (!isSolid(ground) || light > HOSTILE_MAX_LIGHT) continue;
         }
+        else if (mobType(species).spawnClass == SpawnClass::Hostile && species != MobId::Slime && species != MobId::MagmaCube &&
+                 m_dimension != Dimension::Nether)
+        {
+            if (!isSolid(ground) || block > 0 || sky > static_cast<int>(random01() * 32.0f) ||
+                light > static_cast<int>(random01() * 8.0f))
+                continue;
+        }
         else if (!canSpawnOn(species, ground, light)) continue;
         if (m_peaceful && mobType(species).spawnClass == SpawnClass::Hostile) continue;
 
