@@ -245,7 +245,8 @@ public:
     int health() const { return m_health; }
     float spawnPhase() const { return m_spawnPhase; }
     float laserCharge() const { return m_laserCharge; }
-    static constexpr float LASER_SECONDS = 2.0f;
+    static constexpr float LASER_SECONDS = 4.0f;
+    float laserSeconds() const { return m_type == MobId::ElderGuardian ? 3.0f : LASER_SECONDS; }
     float lastRange() const { return m_lastRange; }
     bool aboutToShoot() const
     {
@@ -311,7 +312,7 @@ public:
     // once per egg, on the first call after one is due, for the same
     // reason the death report is: whatever it leaves belongs where it
     // was standing when it laid it.
-    static constexpr float EGG_SECONDS = 180.0f;
+    static constexpr float EGG_SECONDS = 450.0f;
     static constexpr float WITHER_SPAWN_SECONDS = 11.0f;
     static constexpr float WITHER_SPAWN_BLAST = 7.0f;
     bool takeEggReport();
@@ -323,8 +324,8 @@ public:
     // in love and standing close enough pair off, and one of them
     // reports the birth.
     static constexpr float LOVE_SECONDS = 30.0f;
-    static constexpr float BREEDING_COOLDOWN = 60.0f;
-    static constexpr float BABY_SECONDS = 300.0f;   // five minutes to grow up
+    static constexpr float BREEDING_COOLDOWN = 300.0f;
+    static constexpr float BABY_SECONDS = 1200.0f;
     static constexpr float BABY_SCALE = 0.5f;
 
     bool baby() const { return m_babyTimer > 0.0f; }

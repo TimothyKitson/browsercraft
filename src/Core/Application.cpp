@@ -25157,7 +25157,7 @@ void Application::queueBeams()
         if ((mob.typeId() == MobId::Guardian || mob.typeId() == MobId::ElderGuardian) && mob.alive() &&
             mob.laserCharge() > 0.0f)
         {
-            const float progress = mob.laserCharge() / Mob::LASER_SECONDS;
+            const float progress = mob.laserCharge() / mob.laserSeconds();
             const BeamRenderer::Look look = progress < 0.25f ? BeamRenderer::Look::GuardianDim
                                           : progress < 0.5f  ? BeamRenderer::Look::GuardianWarm
                                           : progress < 0.75f ? BeamRenderer::Look::GuardianHot

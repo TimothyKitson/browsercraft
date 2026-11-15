@@ -8122,6 +8122,8 @@ namespace
         // A chicken lays on a clock of its own, which is the only way
         // an egg gets into the game.
         check(Mob::EGG_SECONDS > 0.0f, "a chicken lays on a clock");
+        check(Mob::BABY_SECONDS == 1200.0f && Mob::BREEDING_COOLDOWN == 300.0f && Mob::LOVE_SECONDS == 30.0f,
+              "babies take Minecraft's twenty minutes to grow, parents five minutes to breed again, and love lasts thirty seconds");
     }
 
     // --- the End's leftovers --------------------------------------------

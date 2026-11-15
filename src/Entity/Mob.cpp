@@ -427,7 +427,7 @@ bool Mob::feed(StackId food)
     // does, and it stops you breeding something that is still a baby.
     if (baby())
     {
-        m_babyTimer = std::max(0.0f, m_babyTimer - BABY_SECONDS * 0.1f);
+        m_babyTimer = std::max(0.0f, m_babyTimer - std::floor(m_babyTimer * 0.1f));
         if (m_babyTimer <= 0.0f) m_grewUp = true;
         return true;
     }
@@ -896,7 +896,9 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
     if (m_breedTimer > 0.0f) m_breedTimer = std::max(0.0f, m_breedTimer - deltaTime);
     if (m_huntTimer > 0.0f) m_huntTimer = std::max(0.0f, m_huntTimer - deltaTime);
     if (m_biteTimer > 0.0f) m_biteTimer = std::max(0.0f, m_biteTimer - deltaTime);
-    if (m_babyTimer > 0.0f)
+    const bool foreverYoung = m_type == MobId::Zombie || m_type == MobId::ZombieVillager || m_type == MobId::Husk ||
+                              m_type == MobId::Drowned || m_type == MobId::Piglin || m_type == MobId::ZombiePigman || m_type == MobId::Zoglin;
+    if (m_babyTimer > 0.0f && !foreverYoung)
     {
         m_babyTimer = std::max(0.0f, m_babyTimer - deltaTime);
         if (m_babyTimer <= 0.0f) m_grewUp = true;
@@ -945,8 +947,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
         m_eggTimer -= deltaTime;
         if (m_eggTimer <= 0.0f)
         {
-            m_eggTimer = m_type == MobId::Armadillo ? 300.0f + static_cast<float>((m_birthSeed + static_cast<uint32_t>(m_age)) % 300u)
-                                                    : EGG_SECONDS;
+            m_eggTimer = 300.0f + static_cast<float>((m_birthSeed * 2654435761u + static_cast<uint32_t>(m_age * 20.0f)) % 6000u) / 20.0f;
             m_eggReady = true;
         }
     }
@@ -1544,7 +1545,7 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
             {
                 if (m_laserCharge <= 0.0f) emitNamed("mob/guardian/attack_loop", Sound::MobGuardianSay, 1.0f, 1.0f);
                 m_laserCharge += deltaTime;
-                if (m_laserCharge >= LASER_SECONDS)
+                if (m_laserCharge >= laserSeconds())
                 {
                     MobStrike strike;
                     strike.damage = t.arrowDamage;
