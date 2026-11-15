@@ -13694,7 +13694,8 @@ namespace
         check(Arrows::worthLoosing(1.0f), "a full draw does");
 
         check(Arrows::speedFor(1.0f) > Arrows::speedFor(0.5f), "a fuller draw flies faster");
-        check(Arrows::speedFor(0.0f) >= Arrows::MIN_SPEED, "and never slower than the floor");
+        check(Arrows::damageFor(1.0f) == 6 && std::abs(Arrows::drawFraction(Arrows::DRAW_SECONDS * 0.5f) - 0.41666f) < 0.001f,
+              "a full draw hits for Minecraft's 6 before a crit, and half a second draws (x*x+2x)/3 of it");
         check(Arrows::speedFor(1.0f) <= Arrows::MAX_SPEED, "nor faster than the ceiling");
 
         check(Arrows::damageFor(1.0f) > Arrows::damageFor(0.3f), "and hits harder");

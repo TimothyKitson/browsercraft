@@ -17136,11 +17136,11 @@ void Application::looseArrow(float drawn)
         return;
 
     const glm::vec3 from = m_camera.position + m_camera.front * 0.4f;
-    m_arrows.spawn(from, m_camera.front * Arrows::speedFor(drawn),
-                   Arrows::damageFor(drawn) +
-                       Enchanting::powerBonus(m_inventory.selected().enchantments,
-                                              Arrows::damageFor(drawn)),
-                   true, kind, effect);
+    int hit = Arrows::damageFor(drawn) + Enchanting::powerBonus(m_inventory.selected().enchantments, Arrows::damageFor(drawn));
+    if (drawn >= 1.0f)
+        hit += static_cast<int>(hashCoords(static_cast<int>(from.x * 64.0f), static_cast<int>(m_elapsedSeconds * 20.0f),
+                                           static_cast<int>(from.z * 64.0f), 0xC417u) % static_cast<uint32_t>(hit / 2 + 2));
+    m_arrows.spawn(from, m_camera.front * Arrows::speedFor(drawn), hit, true, kind, effect);
     const bool endlessShot = kind == Arrows::Kind::Shaft && Enchanting::has(bow, Enchanting::Kind::Infinity);
     m_arrows.enchantLast(Enchanting::levelOf(bow, Enchanting::Kind::Punch), Enchanting::has(bow, Enchanting::Kind::Flame), 0,
                          !m_player.creative() && !endlessShot);

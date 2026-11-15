@@ -15,20 +15,19 @@ namespace
 
 float Arrows::drawFraction(float heldSeconds)
 {
-    return std::clamp(heldSeconds / DRAW_SECONDS, 0.0f, 1.0f);
+    const float x = std::max(0.0f, heldSeconds / DRAW_SECONDS);
+    return std::min(1.0f, (x * x + 2.0f * x) / 3.0f);
 }
 
 float Arrows::speedFor(float drawnFraction)
 {
-    const float t = std::clamp(drawnFraction, 0.0f, 1.0f);
-    return MIN_SPEED + (MAX_SPEED - MIN_SPEED) * t * t;
+    return MAX_SPEED * std::clamp(drawnFraction, 0.0f, 1.0f);
 }
 
 int Arrows::damageFor(float drawnFraction)
 {
     const float t = std::clamp(drawnFraction, 0.0f, 1.0f);
-    // One to six, the way Minecraft's bow runs.
-    return std::max(1, static_cast<int>(std::lround(1.0f + 5.0f * t * t)));
+    return std::max(1, static_cast<int>(std::ceil(6.0f * t - 0.0001f)));
 }
 
 void Projectiles::spawn(const glm::vec3& from, const glm::vec3& velocity,
