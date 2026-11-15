@@ -329,37 +329,30 @@ void Player::applyFallDamage(const World& world, float landingY)
     if (exempt() || flying || !fallHurts) return;
 
     const float fallDistance = m_fallStartY - landingY;
-    const float safe = static_cast<float>(attributes.value(Attributes::Kind::SafeFallDistance));
+    const float safe = static_cast<float>(attributes.value(Attributes::Kind::SafeFallDistance)) +
+                       static_cast<float>(effects.amplifier(Effects::Kind::JumpBoost) + 1);
     const float hurtScale = static_cast<float>(attributes.value(Attributes::Kind::FallDamageMultiplier));
-    if (fallDistance <= safe || hurtScale <= 0.0f) return;
+    if (hurtScale <= 0.0f) return;
 
-    // What was landed on can cancel the whole of it.
     const int x = static_cast<int>(std::floor(position.x));
     const int y = static_cast<int>(std::floor(landingY - 0.1f));
     const int z = static_cast<int>(std::floor(position.z));
     const BlockId landed = world.getBlock(x, y, z);
     if (breaksFall(landed)) return;
-    if (landed == Blocks::HoneyBlock || isBed(landed))
+    auto hurt = [&](float distance, float scale, const char* why) {
+        const float points = (distance - safe) * scale * hurtScale;
+        if (points <= 0.0f) return;
+        cause = why;
+        damage(static_cast<int>(std::ceil(points)));
+    };
+    if (isBed(landed)) { hurt(fallDistance * 0.5f, 1.0f, "fall"); return; }
+    if (landed == Blocks::HoneyBlock || landed == Blocks::HayBale || axisBase(landed) == Blocks::HayBale)
     {
-        cause = "fall";
-        damage(static_cast<int>(std::floor((fallDistance - safe) * (landed == Blocks::HoneyBlock ? 0.2f : 0.5f) * hurtScale)));
+        hurt(fallDistance, 0.2f, "fall");
         return;
     }
-    if (landed == Blocks::HayBale || axisBase(landed) == Blocks::HayBale)
-    {
-        cause = "fall";
-        damage(static_cast<int>(std::floor((fallDistance - safe) * 0.2f * hurtScale)));
-        return;
-    }
-    if (landed == Blocks::DripstoneUp)
-    {
-        cause = "stalagmite";
-        damage(static_cast<int>(std::floor((fallDistance + 2.0f - safe) * 2.0f * hurtScale)));
-        return;
-    }
-
-    cause = fallDistance > 5.0f ? "fallHigh" : "fall";
-    damage(static_cast<int>(std::floor((fallDistance - safe) * hurtScale)));
+    if (landed == Blocks::DripstoneUp) { hurt(fallDistance + 2.0f, 2.0f, "stalagmite"); return; }
+    hurt(fallDistance, 1.0f, fallDistance > 5.0f ? "fallHigh" : "fall");
 }
 
 bool Player::onLadder(const World& world) const
