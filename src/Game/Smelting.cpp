@@ -246,7 +246,7 @@ void Furnace::tick(float deltaTime)
     // not eat its coal keeping warm.
     if (burnLeft <= 0.0f && roomForIt && !fuel->empty() && Smelting::isFuel(fuel->id))
     {
-        burnTotal = Smelting::burnSeconds(fuel->id);
+        burnTotal = Smelting::burnSeconds(fuel->id) * (kind == Smelting::Kind::Furnace ? 1.0f : 0.5f);
         burnLeft = burnTotal;
 
         if (fuel->id == Items::LavaBucket)
