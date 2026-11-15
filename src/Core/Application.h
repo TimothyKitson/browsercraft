@@ -1430,6 +1430,7 @@ private:
     void tickFire(float deltaTime);
     bool lightFire(const glm::ivec3& at);
     std::set<std::array<int, 3>> m_fires;
+    std::map<std::array<int, 3>, int> m_fireAge;
     float m_fireClock = 0.0f;
     void tickWiring(float deltaTime);
     void scheduleDiode(const glm::ivec3& at, BlockId now, bool wantLit);

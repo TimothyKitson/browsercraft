@@ -20,6 +20,7 @@
 #include "Game/Cane.h"
 #include "Game/Enchanting.h"
 #include "Game/Composting.h"
+#include "Game/Fire.h"
 #include "World/WallFacing.h"
 #include "World/ChunkMesher.h"
 #include "Game/EndPortal.h"
@@ -12350,7 +12351,7 @@ void Application::tickConduits(float deltaTime)
                     if (found == Blocks::Conduit) m_conduits.insert({ x, y, z });
                     else if (isComparator(found)) m_comparators.insert({ x, y, z });
                     else if (isDaylightDetector(found)) m_daylightDetectors.insert({ x, y, z });
-                    else if (isFire(found) && m_fires.size() < 512) m_fires.insert({ x, y, z });
+                    else if (isFire(found) && m_fires.size() < 4096) m_fires.insert({ x, y, z });
                 }
     }
 
@@ -14735,12 +14736,13 @@ bool Application::lightFire(const glm::ivec3& at)
     bool fuel = isSolid(below);
     static const int AROUND[6][3] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
     for (const auto& d : AROUND)
-        if (isFlammable(m_world->getBlock(at.x + d[0], at.y + d[1], at.z + d[2]))) fuel = true;
+        if (Fire::feeds(m_world->getBlock(at.x + d[0], at.y + d[1], at.z + d[2]))) fuel = true;
     if (!fuel) return false;
     const BlockId flame = (below == Blocks::SoulSand || below == Blocks::SoulSoil) ? Blocks::SoulFire : Blocks::Fire0;
     m_world->setBlock(at.x, at.y, at.z, flame);
     m_net.onLocalBlockChange(at.x, at.y, at.z, flame);
-    if (m_fires.size() < 512) m_fires.insert({ at.x, at.y, at.z });
+    if (m_fires.size() < 4096) m_fires.insert({ at.x, at.y, at.z });
+    m_fireAge[{ at.x, at.y, at.z }] = 0;
     return true;
 }
 
@@ -14755,76 +14757,125 @@ void Application::tickFire(float deltaTime)
     const std::vector<std::array<int, 3>> burning(m_fires.begin(), m_fires.end());
     uint32_t roll = static_cast<uint32_t>(m_elapsedSeconds * 6151.0f) | 1u;
     auto next = [&roll]() { roll ^= roll << 13; roll ^= roll >> 17; roll ^= roll << 5; return roll; };
+    auto chance = [&next]() { return static_cast<float>(next() & 0xFFFFFFu) / 16777216.0f; };
     auto put = [&](int x, int y, int z, BlockId id) {
         m_world->setBlock(x, y, z, id);
         m_net.onLocalBlockChange(x, y, z, id);
     };
+    const bool wet = hasSky() && m_weather.depth > 0.2f && !m_snowing;
+    auto rainAt = [&](int x, int y, int z) { return wet && m_world->skyLight(x, y, z) >= 15; };
+    auto rainAround = [&](int x, int y, int z) {
+        return rainAt(x, y, z) || rainAt(x + 1, y, z) || rainAt(x - 1, y, z) || rainAt(x, y, z + 1) || rainAt(x, y, z - 1);
+    };
+    auto burnOf = [&](int x, int y, int z) { return m_world->waterlogged(x, y, z) ? 0 : Fire::burnChance(m_world->getBlock(x, y, z)); };
+    auto setFire = [&](int x, int y, int z, int age) {
+        const BlockId under = m_world->getBlock(x, y - 1, z);
+        if (under == Blocks::SoulSand || under == Blocks::SoulSoil)
+        {
+            put(x, y, z, Blocks::SoulFire);
+            return;
+        }
+        put(x, y, z, static_cast<BlockId>(Blocks::Fire0 + std::min(3, age / 4)));
+        m_fireAge[{ x, y, z }] = age;
+        if (m_fires.size() < 4096) m_fires.insert({ x, y, z });
+    };
+    auto quench = [&](const std::array<int, 3>& cell) {
+        put(cell[0], cell[1], cell[2], Blocks::Air);
+        m_fires.erase(cell);
+        m_fireAge.erase(cell);
+    };
+    const int difficulty = static_cast<int>(m_worldMeta.difficulty);
 
     for (const auto& cell : burning)
     {
         const int x = cell[0], y = cell[1], z = cell[2];
         const BlockId here = m_world->getBlock(x, y, z);
-        if (!isFire(here)) { m_fires.erase(cell); continue; }
+        if (!isFire(here)) { m_fires.erase(cell); m_fireAge.erase(cell); continue; }
 
         const BlockId below = m_world->getBlock(x, y - 1, z);
-        const bool soulGround = below == Blocks::SoulSand || below == Blocks::SoulSoil;
         if (here == Blocks::SoulFire)
         {
-            if (!soulGround) { put(x, y, z, Blocks::Air); m_fires.erase(cell); }
+            if (below != Blocks::SoulSand && below != Blocks::SoulSoil) quench(cell);
             continue;
         }
-        const bool endless = below == Blocks::Netherrack || below == Blocks::MagmaBlock;
+        if (next() % 7u != 0u) continue;
 
-        if (!endless && hasSky() && m_weather.depth > 0.2f && !m_snowing && m_world->skyLight(x, y, z) >= 15 && next() % 3u == 0u)
+        const bool infiniburn = below == Blocks::Netherrack || below == Blocks::MagmaBlock ||
+                                (m_dimension == Dimension::End && below == Blocks::Bedrock);
+        const auto aged = m_fireAge.find(cell);
+        int age = aged != m_fireAge.end() ? aged->second : (here - Blocks::Fire0) * 4;
+
+        if (!infiniburn && rainAround(x, y, z) && chance() < 0.2f + static_cast<float>(age) * 0.03f)
         {
-            put(x, y, z, Blocks::Air);
-            m_fires.erase(cell);
+            quench(cell);
             continue;
         }
+        const int grown = std::min(15, age + static_cast<int>(next() % 3u) / 2);
+        if (grown != age)
+        {
+            age = grown;
+            m_fireAge[cell] = age;
+            const BlockId stage = static_cast<BlockId>(Blocks::Fire0 + std::min(3, age / 4));
+            if (stage != here) put(x, y, z, stage);
+        }
+        if (!infiniburn)
+        {
+            bool fuel = false;
+            for (const auto& d : AROUND)
+                if (burnOf(x + d[0], y + d[1], z + d[2]) > 0) fuel = true;
+            if (!fuel)
+            {
+                if (!isSolid(below) || age > 3) quench(cell);
+                continue;
+            }
+            if (age == 15 && next() % 4u == 0u && burnOf(x, y - 1, z) == 0)
+            {
+                quench(cell);
+                continue;
+            }
+        }
 
-        bool fuel = false;
+        const Biomes::Kind biome = m_world->generator().kindIn(m_dimension, x, y, z);
+        const bool humid = biome == Biomes::Kind::BambooJungle || biome == Biomes::Kind::MushroomFields || biome == Biomes::Kind::MangroveSwamp ||
+                           biome == Biomes::Kind::SnowySlopes || biome == Biomes::Kind::FrozenPeaks || biome == Biomes::Kind::JaggedPeaks ||
+                           biome == Biomes::Kind::Swamp || biome == Biomes::Kind::Jungle;
+        const int damp = humid ? -50 : 0;
+
         for (const auto& d : AROUND)
         {
             const int nx = x + d[0], ny = y + d[1], nz = z + d[2];
             const BlockId near = m_world->getBlock(nx, ny, nz);
-            if (!isFlammable(near)) continue;
-            fuel = true;
-            if (next() % 10u != 0u) continue;
-            if (near == Blocks::Tnt) { primeTnt(glm::ivec3(nx, ny, nz)); continue; }
-            put(nx, ny, nz, Blocks::Fire0);
-            if (isLog(near)) m_logsGone.push_back(glm::ivec3(nx, ny, nz));
-            if (m_fires.size() < 512) m_fires.insert({ nx, ny, nz });
-        }
-
-        for (int tries = 0; tries < 2; ++tries)
-        {
-            const uint32_t r = next();
-            const glm::ivec3 spot(x + static_cast<int>(r % 3u) - 1, y + static_cast<int>((r >> 4) % 4u) - 1, z + static_cast<int>((r >> 8) % 3u) - 1);
-            if ((r >> 12) % 8u != 0u) continue;
-            bool beside = false;
-            for (const auto& d : AROUND)
-                if (isFlammable(m_world->getBlock(spot.x + d[0], spot.y + d[1], spot.z + d[2]))) beside = true;
-            if (beside) lightFire(spot);
-        }
-
-        if (endless) continue;
-        if (!fuel && !isSolid(below))
-        {
-            put(x, y, z, Blocks::Air);
-            m_fires.erase(cell);
-            continue;
-        }
-        if (next() % 3u != 0u) continue;
-        if (here == Blocks::Fire3)
-        {
-            if (!fuel || next() % 2u == 0u)
+            const int spread = m_world->waterlogged(nx, ny, nz) ? 0 : Fire::spreadChance(near);
+            const int factor = (d[1] != 0 ? 250 : 300) + damp;
+            if (spread <= 0 || static_cast<int>(next() % static_cast<uint32_t>(factor)) >= spread) continue;
+            if (near == Blocks::Tnt)
             {
-                put(x, y, z, Blocks::Air);
-                m_fires.erase(cell);
+                primeTnt(glm::ivec3(nx, ny, nz));
+                continue;
             }
-            continue;
+            if (isLog(near)) m_logsGone.push_back(glm::ivec3(nx, ny, nz));
+            if (static_cast<int>(next() % static_cast<uint32_t>(age + 10)) < 5 && !rainAt(nx, ny, nz))
+                setFire(nx, ny, nz, std::min(15, age + static_cast<int>(next() % 5u) / 4));
+            else
+                put(nx, ny, nz, Blocks::Air);
         }
-        put(x, y, z, static_cast<BlockId>(here + 1));
+
+        for (int dx = -1; dx <= 1; ++dx)
+            for (int dz = -1; dz <= 1; ++dz)
+                for (int dy = -1; dy <= 4; ++dy)
+                {
+                    if (dx == 0 && dy == 0 && dz == 0) continue;
+                    const int px = x + dx, py = y + dy, pz = z + dz;
+                    if (m_world->getBlock(px, py, pz) != Blocks::Air) continue;
+                    int encouragement = 0;
+                    for (const auto& d : AROUND) encouragement = std::max(encouragement, burnOf(px + d[0], py + d[1], pz + d[2]));
+                    if (encouragement <= 0) continue;
+                    int odds = (encouragement + 40 + difficulty * 7) / (age + 30);
+                    if (humid) odds /= 2;
+                    const int range = 100 + (dy > 1 ? (dy - 1) * 100 : 0);
+                    if (odds > 0 && static_cast<int>(next() % static_cast<uint32_t>(range)) <= odds && !rainAround(px, py, pz))
+                        setFire(px, py, pz, std::min(15, age + static_cast<int>(next() % 5u) / 4));
+                }
     }
 }
 

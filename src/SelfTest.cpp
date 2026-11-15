@@ -14,6 +14,7 @@
 #include "World/World.h"
 #include "Game/Beacon.h"
 #include "Game/Hopper.h"
+#include "Game/Fire.h"
 #include "Game/Redstone.h"
 #include "Game/Piston.h"
 #include "Game/Copper.h"
@@ -8126,6 +8127,11 @@ namespace
         // A chicken lays on a clock of its own, which is the only way
         // an egg gets into the game.
         check(Mob::EGG_SECONDS > 0.0f, "a chicken lays on a clock");
+        check(Fire::burnChance(Blocks::Planks) == 5 && Fire::spreadChance(Blocks::Planks) == 20 &&
+                  Fire::burnChance(Blocks::Leaves) == 30 && Fire::spreadChance(Blocks::Leaves) == 60 &&
+                  Fire::burnChance(Blocks::Tnt) == 15 && Fire::spreadChance(Blocks::Tnt) == 100 &&
+                  Fire::burnChance(Blocks::Stone) == 0 && Fire::spreadChance(Blocks::HayBale) == 20,
+              "fire catches and eats each block at Minecraft's own odds");
         check(Mob::BABY_SECONDS == 1200.0f && Mob::BREEDING_COOLDOWN == 300.0f && Mob::LOVE_SECONDS == 30.0f,
               "babies take Minecraft's twenty minutes to grow, parents five minutes to breed again, and love lasts thirty seconds");
     }
