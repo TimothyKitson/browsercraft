@@ -13687,13 +13687,18 @@ void Application::boltStrikes(const glm::vec3& strike)
         m_player.ignite(8.0f);
     }
 
-    if (m_rules.on(GameRules::Rule::DoFireTick) && m_worldMeta.difficulty != Worlds::Difficulty::Peaceful)
+    if (m_rules.on(GameRules::Rule::DoFireTick) &&
+        (m_worldMeta.difficulty == Worlds::Difficulty::Normal || m_worldMeta.difficulty == Worlds::Difficulty::Hard))
     {
         const glm::ivec3 cell(glm::floor(strike));
-        if (m_world->getBlock(cell.x, cell.y, cell.z) == Blocks::Air && isSolid(m_world->getBlock(cell.x, cell.y - 1, cell.z)))
+        lightFire(cell);
+        uint32_t roll = static_cast<uint32_t>(cell.x * 73856093 ^ cell.z * 19349663) ^ static_cast<uint32_t>(m_elapsedSeconds * 977.0f);
+        for (int k = 0; k < 4; ++k)
         {
-            m_world->setBlock(cell.x, cell.y, cell.z, Blocks::Fire0);
-            m_net.onLocalBlockChange(cell.x, cell.y, cell.z, Blocks::Fire0);
+            roll = roll * 1664525u + 1013904223u;
+            const glm::ivec3 near(cell.x + static_cast<int>((roll >> 8) % 3u) - 1, cell.y + static_cast<int>((roll >> 12) % 3u) - 1,
+                                  cell.z + static_cast<int>((roll >> 16) % 3u) - 1);
+            lightFire(near);
         }
     }
 }

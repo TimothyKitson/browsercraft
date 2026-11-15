@@ -118,7 +118,7 @@ public:
     // surface or die. It refills far faster than it empties, so a dive
     // costs you the dive and not the next one as well.
     static constexpr float MAX_AIR_SECONDS = 15.0f;
-    static constexpr float AIR_REFILL_RATE = 5.0f;   // times as fast as it empties
+    static constexpr float AIR_REFILL_RATE = 4.0f;
     static constexpr int DROWN_DAMAGE = 2;
     static constexpr float DROWN_INTERVAL = 1.0f;
 
