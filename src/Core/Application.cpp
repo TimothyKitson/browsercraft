@@ -10477,7 +10477,9 @@ void Application::updateMining(float deltaTime)
                 const float strength = attackStrength();
                 m_attackTicker = 0.0f;
                 const bool charged = strength > 0.9f;
-                const bool critical = charged && m_player.velocity.y < -0.5f && !m_player.onGround;
+                const bool critical = charged && m_player.velocity.y < -0.5f && !m_player.onGround && !m_player.sprinting &&
+                                      !m_player.isInWater(*m_world) && !m_player.onLadder(*m_world) && !m_player.flying &&
+                                      !m_player.effects.has(Effects::Kind::Blindness) && !riddenMob();
                 // A sword hits hardest, an axe nearly as hard, a bare
                 // hand barely at all.
                 const StackId weapon = m_inventory.selected().id;
