@@ -4137,7 +4137,8 @@ namespace
         check(Anvil::repairMaterial(Items::Shield) == static_cast<StackId>(Blocks::Planks) &&
                   Anvil::repairsWith(Items::Shield, static_cast<StackId>(Blocks::BirchPlanks)),
               "and any planks mend it, as in 1.21.1");
-        check(Shield::WEAR_PER_BLOCK > 0, "every blow it stops costs it something");
+        check(Shield::wearFor(2) == 0 && Shield::wearFor(3) == 4 && Shield::wearFor(9) == 10,
+              "a blow under 3 costs the shield nothing, a bigger one 1 more than its damage, as in Minecraft");
 
         // Holding one up slows you down, or it would be worn always.
         check(Shield::RAISED_SPEED > 0.0f && Shield::RAISED_SPEED < 1.0f,

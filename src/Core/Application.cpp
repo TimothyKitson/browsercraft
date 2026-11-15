@@ -10274,6 +10274,8 @@ void Application::updateGameplay(float deltaTime)
         m_shieldCooldown = std::max(0.0f, m_shieldCooldown - deltaTime);
         m_shieldRaise = raising && m_shieldCooldown <= 0.0f ? m_shieldRaise + deltaTime : 0.0f;
         m_player.blocking = raising && m_shieldCooldown <= 0.0f && (m_shieldRaise >= 0.25f || m_startupScreen == "shieldup");
+        m_player.usingItem = (raising && m_shieldCooldown <= 0.0f) || m_bowDrawing || m_eatTimer > 0.0f || m_drinkTimer > 0.0f ||
+                             m_crossbowCharge > 0.0f || m_tridentCharge > 0.0f || m_scoping;
     }
 
     const ItemStack mainBefore = m_inventory.selected();
@@ -17148,6 +17150,7 @@ namespace
         glm::vec3 facing{ 0.0f };
         int shotsBlocked = 0;
         int blockedDamage = 0;
+        int shieldWear = 0;
         int lastShooter = -1;
 
         EntityManager* entities = nullptr;
@@ -17373,6 +17376,7 @@ namespace
             {
                 ++shotsBlocked;
                 blockedDamage += damage;
+                shieldWear += Shield::wearFor(damage);
                 return true;
             }
 
@@ -17525,7 +17529,7 @@ void Application::updateArrows(float deltaTime)
     if (targets.shotsBlocked > 0)
     {
         m_audio.playNamed("item/shield/block", Sound::Click, 0.7f, 1.0f);
-        wearShield(Shield::WEAR_PER_BLOCK * targets.shotsBlocked);
+        wearShield(targets.shieldWear);
     }
 
     updateBow(deltaTime);
@@ -26901,7 +26905,7 @@ void Application::sufferStrike(const MobStrike& strike)
     if (m_player.blocking &&
         Shield::covers(m_camera.front, m_player.position, strike.from))
     {
-        wearShield(strike.damage >= 3 ? 1 + strike.damage : Shield::WEAR_PER_BLOCK);
+        wearShield(Shield::wearFor(strike.damage));
         if (strike.attacker == static_cast<int>(MobId::Vindicator) || strike.attacker == static_cast<int>(MobId::PiglinBrute))
         {
             m_shieldCooldown = 5.0f;

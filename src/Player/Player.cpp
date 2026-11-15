@@ -744,7 +744,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     sneaking = controls.sneak && !flying;
     const bool inWater = isInWater(world);
     const bool climbing = !flying && !inWater && onLadder(world);
-    sprinting = controls.sprint && !sneaking && glm::length(controls.wishDirection) > 0.1f &&
+    sprinting = controls.sprint && !sneaking && !usingItem && !blocking && glm::length(controls.wishDirection) > 0.1f &&
                 (exempt() || hunger > SPRINT_HUNGER);
 
     if (spectator() || flying || gliding) pose = Pose::Standing;
@@ -809,7 +809,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
 
     // A raised shield slows you to a walk. Without that cost it would
     // simply be worn at all times.
-    if (blocking && !flying) targetSpeed *= Shield::RAISED_SPEED;
+    if ((blocking || usingItem) && !gliding) targetSpeed *= Shield::RAISED_SPEED;
 
     inBerryBush = false;
     inPowderSnow = false;

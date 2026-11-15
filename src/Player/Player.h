@@ -155,6 +155,7 @@ public:
     // down; read by the movement, which slows, and by whoever applies
     // a blow, which is where it actually stops anything.
     bool blocking = false;
+    bool usingItem = false;
     bool inBerryBush = false;
     bool inPowderSnow = false;
     bool inCobweb = false;

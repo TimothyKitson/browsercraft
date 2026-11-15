@@ -14,7 +14,7 @@ bool Shield::covers(const glm::vec3& facing, const glm::vec3& defender,
     const float towardLength = glm::length(toward);
     if (lookLength < 0.0001f || towardLength < 0.0001f) return false;
 
-    return glm::dot(look / lookLength, toward / towardLength) >= COVER_COSINE;
+    return glm::dot(look / lookLength, toward / towardLength) > COVER_COSINE;
 }
 
 int Shield::damageThrough(int incoming, bool blocked)
