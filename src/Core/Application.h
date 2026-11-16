@@ -1206,6 +1206,7 @@ private:
     void updateMovementAudio(const glm::vec3& positionBefore, bool jumped);
     void updateMining(float deltaTime);
     void handlePlacement();
+    void useHand();
 
     void render();
     void renderWorld();

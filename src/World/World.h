@@ -58,6 +58,7 @@ public:
     // Player-driven edit: updates light, flags neighbours for remeshing and
     // marks the chunk as needing a save.
     void setBlock(int x, int y, int z, BlockId id);
+    uint64_t edits() const { return m_edits; }
     void recordChanges(bool on) { m_recordChanges = on; if (!on) m_changes.clear(); }
     void takeChanges(std::vector<glm::ivec3>& into) { into.swap(m_changes); m_changes.clear(); }
 
@@ -115,6 +116,7 @@ private:
     double m_chunkBudgetMs = 6.0;
     bool m_recordChanges = true;
     std::vector<glm::ivec3> m_changes;
+    uint64_t m_edits = 0;
 
     WorldGen m_generator;
     ThreadPool m_pool;

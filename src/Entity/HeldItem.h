@@ -80,6 +80,7 @@ public:
     // Only --selftest sets these directly, to stand the hand at a
     // chosen point in a swing or a swap rather than waiting one out.
     void setSwingForTest(float secondsLeft) { m_swing = secondsLeft; }
+    float swingLeft() const { return m_swing; }
     void setEquipForTest(float raised) { m_equip = raised; }
 
     // `stack` is what the hotbar has selected; Blocks::Air draws a bare

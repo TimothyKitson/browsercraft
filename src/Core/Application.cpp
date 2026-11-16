@@ -18432,6 +18432,35 @@ void Application::handlePlacement()
 
     if (!m_keys.pressed(m_input, Action::Use)) return;
 
+    auto mark = [&]() {
+        const ItemStack& main = m_inventory.selected();
+        const ItemStack& off = m_inventory.slot(Inventory::OFFHAND);
+        return std::make_tuple(m_world->edits(), main.id, main.count, main.damage, main.enchantments, off.id, off.count, off.damage,
+                               off.enchantments, m_heldItem.swingLeft(), m_inventoryOpen || overlayOpen(), m_entities.mobs().size(),
+                               m_player.health, m_player.position);
+    };
+    const auto before = mark();
+    useHand();
+    if (mark() != before || m_inventory.slot(Inventory::OFFHAND).empty() || !m_world) return;
+    const StackId mainId = m_inventory.selected().empty() ? static_cast<StackId>(Blocks::Air) : m_inventory.selected().id;
+    if (mainId == Items::Bow || mainId == Items::Crossbow || mainId == Items::Trident || mainId == Items::Shield || mainId == Items::Spyglass ||
+        mainId == Items::GoatHorn || mainId == Items::Brush || mainId == Items::FishingRod || Food::isEdible(mainId) ||
+        mainId == Items::Potion || mainId == Items::MilkBucket || mainId == Items::HoneyBottle)
+        return;
+
+    const float mainSwing = m_heldItem.swingLeft();
+    std::swap(m_inventory.selected(), m_inventory.slot(Inventory::OFFHAND));
+    useHand();
+    std::swap(m_inventory.selected(), m_inventory.slot(Inventory::OFFHAND));
+    if (m_heldItem.swingLeft() != mainSwing)
+    {
+        m_heldItem.setSwingForTest(mainSwing);
+        m_offhandItem.swing();
+    }
+}
+
+void Application::useHand()
+{
     if (useArmorStand()) return;
     if (useCampfire()) return;
     if (!m_player.sneaking)
@@ -24353,6 +24382,34 @@ void Application::renderHand()
 {
     if (!playing() || m_inventoryOpen || m_hudHidden || m_player.spectator()) return;
     if (m_perspective != Perspective::FirstPerson) return;
+
+    const Camera camera = viewCamera();
+    glm::mat4 handProjection = glm::perspective(glm::radians(70.0f), m_window.aspect(), 0.05f, camera.farPlane);
+    if (m_player.damageFlash > 0.0f && m_damageTilt > 0.0f)
+    {
+        const float through = std::clamp(m_player.damageFlash / 0.5f, 0.0f, 1.0f);
+        handProjection = glm::rotate(handProjection, glm::radians(std::sin(through * 3.14159265f) * 9.0f * m_damageTilt), glm::vec3(0.0f, 0.0f, 1.0f));
+    }
+    std::vector<Shader*> handShaders{ &m_chunkShader };
+    if (m_activeShader && m_activeShader != &m_chunkShader) handShaders.push_back(m_activeShader);
+    for (Shader* shader : handShaders)
+    {
+        shader->bind();
+        shader->setMat4("uProjection", handProjection);
+    }
+    struct Restore
+    {
+        std::vector<Shader*> shaders;
+        glm::mat4 projection;
+        ~Restore()
+        {
+            for (Shader* shader : shaders)
+            {
+                shader->bind();
+                shader->setMat4("uProjection", projection);
+            }
+        }
+    } restore{ handShaders, worldProjection(camera) };
 
     const glm::vec3 eye = m_player.eyePosition();
     int lx = static_cast<int>(std::floor(eye.x));

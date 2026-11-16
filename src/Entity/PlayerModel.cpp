@@ -30,8 +30,7 @@ namespace
         const float amount = pose.limbAmount;
         const float halfTurn = PlayerAnimation::PI;
 
-        const float headTurn = glm::radians(
-            -PlayerAnimation::wrapDegrees(pose.headYaw - pose.bodyYaw));
+        const float headTurn = glm::radians(PlayerAnimation::wrapDegrees(pose.headYaw - pose.bodyYaw));
         const float headTilt = glm::radians(-pose.headPitch);
 
         Box head;

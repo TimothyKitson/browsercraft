@@ -29,9 +29,9 @@ namespace
     // comes out mirrored on the figure wearing it.
     const FaceDef FACES[6] = {
         // +x, the figure's right side
-        { { {1,0,0}, {1,1,0}, {1,1,1}, {1,0,1} }, {  1.0f,  0.0f,  0.0f }, 2, -1, 1, -1 },
+        { { {1,0,0}, {1,1,0}, {1,1,1}, {1,0,1} }, {  1.0f,  0.0f,  0.0f }, 2,  1, 1, -1 },
         // -x, its left
-        { { {0,0,0}, {0,0,1}, {0,1,1}, {0,1,0} }, { -1.0f,  0.0f,  0.0f }, 2,  1, 1, -1 },
+        { { {0,0,0}, {0,0,1}, {0,1,1}, {0,1,0} }, { -1.0f,  0.0f,  0.0f }, 2, -1, 1, -1 },
         // +y, the top
         { { {0,1,0}, {0,1,1}, {1,1,1}, {1,1,0} }, {  0.0f,  1.0f,  0.0f }, 0, -1, 2,  1 },
         // -y, the underside
@@ -108,7 +108,8 @@ void BoxMesh::append(std::vector<float>& out, const Box& box, const Frame& frame
         const FaceDef& face = FACES[f];
 
         int px = 0, py = 0, pw = 0, ph = 0;
-        facePatch(f, box.u, box.v, w, h, d, px, py, pw, ph);
+        const int patch = !box.mirror ? f : f == Right ? Left : f == Left ? Right : f;
+        facePatch(patch, box.u, box.v, w, h, d, px, py, pw, ph);
 
         const float u0 = (px + TEXEL_INSET) / frame.textureWidth;
         const float u1 = (px + pw - TEXEL_INSET) / frame.textureWidth;

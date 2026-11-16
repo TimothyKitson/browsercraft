@@ -195,6 +195,7 @@ void World::setWaterlogged(int x, int y, int z, bool on)
     if (chunk->waterlogged(lx, y, lz) == on) return;
     chunk->setWaterlogged(lx, y, lz, on);
     chunk->modified = true;
+    ++m_edits;
     chunk->meshDirty = true;
     if (m_recordChanges)
     {
@@ -230,6 +231,7 @@ void World::setBlock(int x, int y, int z, BlockId id)
     chunk->setBlockRaw(lx, y, lz, static_cast<BlockId>(wet ? (id | WATERLOGGED) : id));
     if (!wet) chunk->setWaterlogged(lx, y, lz, false);
     chunk->modified = true;
+    ++m_edits;
     chunk->meshDirty = true;
     if (m_recordChanges)
     {
