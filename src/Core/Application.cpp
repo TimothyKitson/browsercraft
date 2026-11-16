@@ -3024,6 +3024,14 @@ bool Application::frame()
 
         // Keep streaming terrain even while paused so the world finishes loading.
         m_world->update(m_player.position);
+        {
+            const std::vector<ChunkPos> fresh = m_world->takeFreshChunks();
+            if (!m_menuWorld && m_net.role() != Net::Role::Guest && m_dimension == Dimension::Overworld && m_startupScreen.empty())
+            {
+                m_entities.setNaturalSpawning(m_rules.on(GameRules::Rule::DoMobSpawning));
+                for (const ChunkPos& pos : fresh) m_entities.populateChunk(*m_world, pos.x, pos.z);
+            }
+        }
         m_atlas.update(deltaTime);
 
         if (playing())
@@ -22210,8 +22218,48 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
                     if (factor > 0.0f) made.setVariant(static_cast<int>(std::lround(std::min(factor, 64.0f) * 100.0f)));
                 }
                 const size_t rotation = tags.find("Rotation:[");
+                Mob::DisplayLook look = made.displayLook();
                 if (rotation != std::string::npos)
+                {
                     made.setYaw(static_cast<float>(std::atof(tags.c_str() + rotation + 10)) + 90.0f);
+                    const size_t comma = tags.find(',', rotation + 10);
+                    const size_t shut = tags.find(']', rotation + 10);
+                    if (comma != std::string::npos && comma < shut) look.pitch = static_cast<float>(std::atof(tags.c_str() + comma + 1));
+                }
+                auto valueOf = [&](const char* key) {
+                    const std::string wanted = std::string(key) + ":";
+                    size_t at = tags.find(wanted);
+                    while (at != std::string::npos && at > 0 && (std::isalnum(static_cast<unsigned char>(tags[at - 1])) || tags[at - 1] == '_'))
+                        at = tags.find(wanted, at + 1);
+                    if (at == std::string::npos) return std::string();
+                    size_t from = at + wanted.size();
+                    while (from < tags.size() && tags[from] == ' ') ++from;
+                    if (from < tags.size() && (tags[from] == '"' || tags[from] == '\''))
+                    {
+                        const size_t close = tags.find(tags[from], from + 1);
+                        return close == std::string::npos ? std::string() : tags.substr(from + 1, close - from - 1);
+                    }
+                    const size_t end = tags.find_first_of(",}] ", from);
+                    return tags.substr(from, end == std::string::npos ? std::string::npos : end - from);
+                };
+                auto truthy = [](const std::string& v) { return v == "1b" || v == "1" || v == "true"; };
+                const std::string board = valueOf("billboard");
+                if (board == "fixed") look.billboard = 0;
+                else if (board == "vertical") look.billboard = 1;
+                else if (board == "horizontal") look.billboard = 2;
+                else if (board == "center") look.billboard = 3;
+                const std::string align = valueOf("alignment");
+                if (align == "center") look.align = 0;
+                else if (align == "left") look.align = 1;
+                else if (align == "right") look.align = 2;
+                if (!valueOf("shadow").empty()) look.shadow = truthy(valueOf("shadow"));
+                if (!valueOf("see_through").empty()) look.seeThrough = truthy(valueOf("see_through"));
+                if (!valueOf("default_background").empty()) look.defaultBackground = truthy(valueOf("default_background"));
+                if (!valueOf("line_width").empty()) look.lineWidth = std::clamp(std::atoi(valueOf("line_width").c_str()), 0, 1023);
+                if (!valueOf("text_opacity").empty()) look.opacity = std::atoi(valueOf("text_opacity").c_str()) & 255;
+                if (!valueOf("background").empty())
+                    look.background = static_cast<uint32_t>(std::strtoll(valueOf("background").c_str(), nullptr, 10));
+                made.setDisplayLook(look);
             }
             if (isTechnicalMob(m_entities.mobs().back().typeId())) m_entities.mobs().back().keepFromDespawning();
             break;
@@ -22889,6 +22937,7 @@ void Application::tickHeroGifts(float deltaTime)
     if (!m_world || m_player.spectator() || !m_player.effects.has(Effects::Kind::HeroOfTheVillage))
     {
         m_heroGiftClock.clear();
+        m_heroGiftWalk.clear();
         return;
     }
     static const char* const GIFTS[] = {
@@ -22896,22 +22945,43 @@ void Application::tickHeroGifts(float deltaTime)
         "cleric", "fisherman", "leatherworker", "mason", "", "shepherd", "weaponsmith"
     };
     auto delay = [&](uint32_t salt) {
-        return 30.0f + 300.0f * static_cast<float>(hashCoords(static_cast<int>(salt), static_cast<int>(m_elapsedSeconds * 20.0f), 0, 0x6E1Fu) % 10000u) / 10000.0f;
+        return 30.0f + 300.05f * static_cast<float>(hashCoords(static_cast<int>(salt), static_cast<int>(m_elapsedSeconds * 20.0f), 0, 0x6E1Fu) % 6001u) / 6000.0f;
     };
+    const int ticks = static_cast<int>(m_timeOfDay * 24000.0f) % 24000;
     for (Mob& mob : m_entities.mobs())
     {
         if (!mob.alive() || mob.typeId() != MobId::Villager) continue;
         const glm::vec3 gap = m_player.position - mob.position();
         const float distance = glm::length(gap);
-        if (distance > 16.0f) continue;
-        const auto clock = m_heroGiftClock.find(mob.serial());
-        if (clock == m_heroGiftClock.end())
+        const bool awake = !mob.asleep() && (mob.baby() ? (ticks < 3000 || (ticks >= 6000 && ticks < 10000)) : ticks < 12000);
+        auto clock = m_heroGiftClock.find(mob.serial());
+        if (distance > 16.0f || !awake)
         {
-            m_heroGiftClock[mob.serial()] = delay(mob.serial());
+            if (m_heroGiftWalk.erase(mob.serial()) > 0 && clock != m_heroGiftClock.end()) clock->second = delay(mob.serial() ^ 0x51EDu);
             continue;
         }
-        clock->second -= deltaTime;
-        if (clock->second > 0.0f || distance > 5.0f) continue;
+        if (clock == m_heroGiftClock.end())
+        {
+            m_heroGiftClock[mob.serial()] = 30.0f;
+            continue;
+        }
+        if (clock->second > 0.0f)
+        {
+            clock->second -= deltaTime;
+            continue;
+        }
+        float& walked = m_heroGiftWalk[mob.serial()];
+        walked += deltaTime;
+        const glm::ivec3 here(glm::floor(mob.position())), there(glm::floor(m_player.position));
+        const glm::vec3 cells(static_cast<float>(here.x - there.x), static_cast<float>(here.y - there.y), static_cast<float>(here.z - there.z));
+        if (glm::length(cells) >= 5.0f)
+        {
+            mob.huntTowards(m_player.position);
+            continue;
+        }
+        mob.setYaw(glm::degrees(std::atan2(gap.z, gap.x)));
+        if (walked <= 1.0f) continue;
+        m_heroGiftWalk.erase(mob.serial());
         clock->second = delay(mob.serial() ^ 0x9E37u);
 
         std::vector<ItemStack> gifts;
@@ -22926,13 +22996,15 @@ void Application::tickHeroGifts(float deltaTime)
                 context.seed = hashCoords(static_cast<int>(mob.serial()), static_cast<int>(m_elapsedSeconds * 20.0f), job, 0x61F7u) | 1u;
                 gifts = EntityLoot::roll(std::string("gameplay/hero_of_the_village/") + GIFTS[job] + "_gift", context);
             }
+            else
+                gifts.push_back(ItemStack{ Items::WheatSeeds, 1 });
         }
-        const glm::vec3 from = mob.position() + glm::vec3(0.0f, mob.type().height * 0.8f, 0.0f);
-        const glm::vec3 toward = glm::normalize(glm::vec3(gap.x, 0.0f, gap.z) + glm::vec3(0.0001f, 0.0f, 0.0f));
+        const glm::vec3 from = mob.position() + glm::vec3(0.0f, mob.height() * 0.85f - 0.3f, 0.0f);
+        const glm::vec3 toward = gap / std::max(distance, 0.0001f);
         for (const ItemStack& gift : gifts)
         {
             m_drops.spawnStack(from, gift);
-            m_drops.flingLast(toward * 6.0f + glm::vec3(0.0f, 2.0f, 0.0f));
+            m_drops.flingLast(toward * 6.0f);
         }
     }
 }
@@ -26373,6 +26445,8 @@ std::string Application::mobRow(const Mob& mob) const
     if (flags) row << " F " << flags;
     if (mob.horseStatsSet()) row << " H " << mob.maxHealth() << ' ' << mob.horseSpeedAttribute() << ' ' << mob.horseJumpAttribute();
     if (mob.horseArmour() != 0 && (mob.armourDye() >= 0 || mob.armourWear() > 0)) row << " D " << mob.armourDye() << ' ' << mob.armourWear();
+    if (mob.typeId() == MobId::TextDisplay || mob.typeId() == MobId::ItemDisplay || mob.typeId() == MobId::BlockDisplay)
+        row << " X " << mob.displayLook().packed() << ' ' << mob.displayLook().background << ' ' << mob.displayLook().pitch;
     const auto packed = m_vehicleChests.find(mob.serial());
     if (packed != m_vehicleChests.end())
     {
@@ -26523,6 +26597,20 @@ void Application::placePendingMobs()
             {
                 mob.setArmourDye(dye);
                 mob.setArmourWear(wear);
+            }
+            more = static_cast<bool>(in >> marker);
+        }
+        if (more && marker == "X")
+        {
+            unsigned long long bits = 0, back = 0;
+            float tilt = 0.0f;
+            if (in >> bits >> back >> tilt)
+            {
+                Mob::DisplayLook look;
+                look.unpack(static_cast<uint32_t>(bits));
+                look.background = static_cast<uint32_t>(back);
+                look.pitch = tilt;
+                mob.setDisplayLook(look);
             }
             more = static_cast<bool>(in >> marker);
         }
@@ -26719,6 +26807,13 @@ void Application::shareMobs(float deltaTime)
         snap.horseArmour = mob.horseArmour();
         for (int slot = 0; slot < Mob::GearSlots && slot < 6; ++slot) snap.gear[slot] = mob.gear(slot);
         snap.name = mob.customName();
+        if (mob.typeId() == MobId::TextDisplay || mob.typeId() == MobId::ItemDisplay || mob.typeId() == MobId::BlockDisplay)
+        {
+            snap.displayed = true;
+            snap.displayBits = mob.displayLook().packed();
+            snap.displayBack = mob.displayLook().background;
+            snap.displayPitch = mob.displayLook().pitch;
+        }
         snaps.push_back(snap);
     }
     m_net.broadcastMobs(snaps);
@@ -26861,6 +26956,14 @@ void Application::followHostMobs(float deltaTime)
             mob.setLeashed((snap.flags & Net::MobLeashed) != 0);
             mob.setHorseArmour(snap.horseArmour);
             mob.setCustomName(snap.name);
+            if (snap.displayed)
+            {
+                Mob::DisplayLook look;
+                look.unpack(snap.displayBits);
+                look.background = snap.displayBack;
+                look.pitch = snap.displayPitch;
+                mob.setDisplayLook(look);
+            }
             for (int slot = 0; slot < Mob::GearSlots && slot < 6; ++slot) mob.setGear(slot, snap.gear[slot], true);
             mob.puppet(snap.health, (snap.flags & Net::MobTamed) != 0, (snap.flags & Net::MobSitting) != 0, (snap.flags & Net::MobHurt) != 0,
                        (snap.flags & Net::MobBurning) != 0);
@@ -28237,6 +28340,21 @@ void Application::pinFramedItems()
                 shown.size = size;
                 shown.grip = mob.position();
                 shown.forward = glm::vec3(std::cos(turn), 0.0f, std::sin(turn));
+                const int board = mob.displayLook().billboard;
+                const glm::vec3 flatRight(m_camera.right.x, 0.0f, m_camera.right.z);
+                if (board == 1 && glm::length(flatRight) > 1.0e-4f) shown.forward = glm::normalize(flatRight);
+                if (board == 3)
+                {
+                    shown.forward = m_camera.right;
+                    shown.up = m_camera.up;
+                }
+                if (board == 2)
+                {
+                    const glm::vec3 normal = glm::normalize(glm::cross(shown.forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+                    const float tilt = glm::radians(m_camera.pitch);
+                    shown.up = glm::vec3(0.0f, std::cos(tilt), 0.0f) + normal * std::sin(tilt);
+                }
+                shown.grip = mob.position() - shown.forward * (size * 0.3f);
                 m_drops.hold(shown);
             }
             continue;
@@ -28563,14 +28681,16 @@ void Application::renderWorldText(const glm::mat4& viewProjection)
     {
         if (!mob.alive() || mob.typeId() != MobId::TextDisplay || mob.customName().empty()) continue;
         if (glm::length(mob.position() - m_camera.position) > 64.0f) continue;
+        const Mob::DisplayLook& look = mob.displayLook();
         const float size = mob.variant() > 0 ? static_cast<float>(mob.variant()) / 100.0f : 1.0f;
+        const float wrap = static_cast<float>(std::max(1, look.lineWidth));
         std::vector<std::string> lines;
         {
             std::string current;
             std::string word;
             auto place = [&](const std::string& piece) {
                 const std::string joined = current.empty() ? piece : current + " " + piece;
-                if (!current.empty() && UIRenderer::textWidth(joined, 1.0f) > 200.0f)
+                if (!current.empty() && UIRenderer::textWidth(joined, 1.0f) > wrap)
                 {
                     lines.push_back(current);
                     current = piece;
@@ -28596,20 +28716,42 @@ void Application::renderWorldText(const glm::mat4& viewProjection)
         for (const std::string& line : lines) widest = std::max(widest, UIRenderer::textWidth(line, 1.0f));
         const float tall = static_cast<float>(lines.size()) * 10.0f;
         const float yaw = glm::radians(mob.yaw() - 90.0f);
-        const glm::vec3 forward(-std::sin(yaw), 0.0f, std::cos(yaw));
+        glm::vec3 facing(-std::sin(yaw), 0.0f, std::cos(yaw));
+        float tilt = glm::radians(look.pitch);
+        const glm::vec3 level = glm::vec3(-m_camera.front.x, 0.0f, -m_camera.front.z);
+        if ((look.billboard == 1 || look.billboard == 3) && glm::length(level) > 1.0e-4f) facing = glm::normalize(level);
+        if (look.billboard == 2 || look.billboard == 3) tilt = glm::radians(m_camera.pitch);
+        const glm::vec3 across(facing.z, 0.0f, -facing.x);
+        const glm::vec3 upward = glm::vec3(0.0f, std::cos(tilt), 0.0f) + facing * std::sin(tilt);
+        const glm::vec3 outward = facing * std::cos(tilt) - glm::vec3(0.0f, std::sin(tilt), 0.0f);
+        const float k = 0.025f * size;
+        glm::mat4 model(1.0f);
+        model[0] = glm::vec4(across * k, 0.0f);
+        model[1] = glm::vec4(-upward * k, 0.0f);
+        model[2] = glm::vec4(outward, 0.0f);
+        model[3] = glm::vec4(mob.position(), 1.0f);
         const glm::ivec3 cell(glm::floor(mob.position()));
         const float light = std::max(static_cast<float>(m_world->blockLightAt(cell.x, cell.y, cell.z)),
                                      static_cast<float>(m_world->skyLight(cell.x, cell.y, cell.z)) * viewDaylight()) / 15.0f;
         const float shade = 0.25f + 0.75f * light;
         const float left = 1.0f - widest * 0.5f;
-        m_ui.beginWorld(frame(mob.position(), forward, 0.025f * size));
-        m_ui.quad(left - 1.0f, -tall - 1.0f, widest + 1.0f, tall + 1.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.25f));
+        const uint32_t back = look.defaultBackground ? 0x40000000u : look.background;
+        const float textAlpha = static_cast<float>(look.opacity) / 255.0f;
+        m_ui.beginWorld(viewProjection * model);
+        if (look.seeThrough) glDisable(GL_DEPTH_TEST);
+        if ((back >> 24) != 0u)
+            m_ui.quad(left - 1.0f, -tall - 1.0f, widest + 1.0f, tall + 1.0f,
+                      glm::vec4(rgbOf(back) * shade, static_cast<float>(back >> 24) / 255.0f));
         for (size_t i = 0; i < lines.size(); ++i)
         {
             const float width = UIRenderer::textWidth(lines[i], 1.0f);
-            m_ui.text(lines[i], left + widest * 0.5f - width * 0.5f, -tall + static_cast<float>(i) * 10.0f, 1.0f, glm::vec4(shade, shade, shade, 1.0f));
+            const float x = look.align == 1 ? left : look.align == 2 ? left + widest - width : left + widest * 0.5f - width * 0.5f;
+            const float y = -tall + static_cast<float>(i) * 10.0f;
+            if (look.shadow) m_ui.text(lines[i], x + 1.0f, y + 1.0f, 1.0f, glm::vec4(glm::vec3(shade * 0.25f), textAlpha));
+            m_ui.text(lines[i], x, y, 1.0f, glm::vec4(shade, shade, shade, textAlpha));
         }
         m_ui.endWorld();
+        if (look.seeThrough) glEnable(GL_DEPTH_TEST);
     }
 }
 

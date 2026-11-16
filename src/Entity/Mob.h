@@ -210,6 +210,36 @@ public:
         return true;
     }
     const std::string& customName() const { return m_customName; }
+    struct DisplayLook
+    {
+        int billboard = 0;
+        int align = 0;
+        bool shadow = false;
+        bool seeThrough = false;
+        int lineWidth = 200;
+        int opacity = 255;
+        uint32_t background = 0x40000000u;
+        float pitch = 0.0f;
+        bool defaultBackground = false;
+        uint32_t packed() const
+        {
+            return static_cast<uint32_t>(billboard & 3) | (static_cast<uint32_t>(align & 3) << 2) | (shadow ? 16u : 0u) |
+                   (seeThrough ? 32u : 0u) | (static_cast<uint32_t>(std::clamp(lineWidth, 0, 1023)) << 6) |
+                   (static_cast<uint32_t>(std::clamp(opacity, 0, 255)) << 16) | (defaultBackground ? (1u << 24) : 0u);
+        }
+        void unpack(uint32_t bits)
+        {
+            billboard = static_cast<int>(bits & 3u);
+            align = static_cast<int>((bits >> 2) & 3u);
+            shadow = (bits & 16u) != 0u;
+            seeThrough = (bits & 32u) != 0u;
+            lineWidth = static_cast<int>((bits >> 6) & 1023u);
+            opacity = static_cast<int>((bits >> 16) & 255u);
+            defaultBackground = (bits & (1u << 24)) != 0u;
+        }
+    };
+    const DisplayLook& displayLook() const { return m_displayLook; }
+    void setDisplayLook(const DisplayLook& look) { m_displayLook = look; }
     void setCustomName(const std::string& name) { m_customName = name; }
     void setBaby(bool young) { m_babyTimer = young ? BABY_SECONDS : 0.0f; }
     bool leashed() const { return m_leashed; }
@@ -720,6 +750,7 @@ private:
     int m_horns = 2;
     float m_ramTimer = 20.0f;
     std::string m_customName;
+    DisplayLook m_displayLook;
     bool m_leashed = false;
     float m_rideBoost = 0.0f;
     float m_rideBoostLength = 0.0f;

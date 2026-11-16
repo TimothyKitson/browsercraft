@@ -14,6 +14,7 @@ namespace
     constexpr int WORLD_TOP = 120;
     constexpr int HOSTILE_MAX_LIGHT = 7;    // dark enough for monsters
     constexpr int PASSIVE_MIN_LIGHT = 9;
+    constexpr float CREATURE_WAVE_SECONDS = 20.0f;
 
     const MobId PASSIVE_SPECIES[] = { MobId::Sheep, MobId::Pig, MobId::Cow, MobId::Chicken };
 
@@ -89,10 +90,119 @@ bool EntityManager::canSpawnOn(MobId type, BlockId ground, int light)
     if (mobType(type).spawnClass == SpawnClass::Hostile)
         return light <= HOSTILE_MAX_LIGHT;
 
-    // Animals want daylight and something growing underfoot, which is
-    // what keeps them out of caves and off the bare stone of a mountain.
-    return light >= PASSIVE_MIN_LIGHT &&
-           (ground == Blocks::Grass || ground == Blocks::SnowGrass || ground == Blocks::Sand || ground == Blocks::RedSand);
+    return light >= PASSIVE_MIN_LIGHT && groundSuits(type, ground);
+}
+
+bool EntityManager::groundSuits(MobId type, BlockId ground)
+{
+    const bool grass = ground == Blocks::Grass || ground == Blocks::SnowGrass;
+    const bool snow = ground == Blocks::Snow || isSnowLayer(ground);
+    switch (type)
+    {
+        case MobId::Mooshroom: return ground == Blocks::Mycelium;
+        case MobId::Goat: return grass || snow || ground == Blocks::Stone || ground == Blocks::PackedIce || ground == Blocks::Gravel;
+        case MobId::Rabbit: return grass || snow || ground == Blocks::Sand;
+        case MobId::Fox:
+        case MobId::Wolf: return grass || snow || ground == Blocks::Podzol || ground == Blocks::CoarseDirt;
+        case MobId::Frog: return grass || ground == Blocks::Mud || ground == Blocks::MangroveRoots || ground == Blocks::MuddyMangroveRoots;
+        case MobId::Parrot: return grass || ground == Blocks::Air || isLeaves(ground) || isLog(ground);
+        case MobId::Ocelot: return grass || isLeaves(ground);
+        case MobId::Armadillo:
+            return grass || ground == Blocks::RedSand || ground == Blocks::CoarseDirt || ground == Blocks::Terracotta || isColouredTerracotta(ground);
+        case MobId::PolarBear: return grass || ground == Blocks::Ice;
+        case MobId::Turtle: return ground == Blocks::Sand;
+        case MobId::Camel: return grass || ground == Blocks::Sand;
+        default: return grass;
+    }
+}
+
+void EntityManager::populateChunk(const World& world, int chunkX, int chunkZ)
+{
+    if (m_dimension != Dimension::Overworld || !m_naturalSpawning) return;
+    uint32_t state = world.seed() ^ (static_cast<uint32_t>(chunkX) * 0x9E3779B1u) ^ (static_cast<uint32_t>(chunkZ) * 0x85EBCA77u);
+    if (state == 0u) state = 0x6A09E667u;
+    auto next = [&]() {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        return state;
+    };
+    auto unit = [&]() { return static_cast<float>(next() & 0xFFFFFF) / static_cast<float>(0x1000000); };
+    auto below = [&](int n) { return n <= 0 ? 0 : static_cast<int>(next() % static_cast<uint32_t>(n)); };
+
+    const int x0 = chunkX * 16, z0 = chunkZ * 16;
+    const Biomes::Kind kind = world.generator().kindAt(x0, z0);
+    const float chance = kind == Biomes::Kind::Badlands || kind == Biomes::Kind::ErodedBadlands ? 0.03f
+                       : kind == Biomes::Kind::WoodedBadlands ? 0.04f
+                       : kind == Biomes::Kind::IceSpikes || kind == Biomes::Kind::SnowyPlains ? 0.07f : 0.1f;
+
+    int count = 0;
+    const Biomes::Spawn* rows = Biomes::spawns(count);
+    std::vector<const Biomes::Spawn*> pool;
+    int total = 0;
+    for (int i = 0; i < count; ++i)
+        if (rows[i].kind == kind && rows[i].group == static_cast<uint8_t>(Biomes::Group::Creature) && rows[i].weight > 0 &&
+            mobFromId(rows[i].mob) != MobId::Count)
+        {
+            pool.push_back(&rows[i]);
+            total += rows[i].weight;
+        }
+    if (pool.empty() || total <= 0) return;
+
+    while (unit() < chance)
+    {
+        int pick = below(total);
+        const Biomes::Spawn* entry = pool.back();
+        for (const Biomes::Spawn* row : pool)
+        {
+            if (pick < row->weight)
+            {
+                entry = row;
+                break;
+            }
+            pick -= row->weight;
+        }
+        const MobId species = mobFromId(entry->mob);
+        const int group = entry->minCount + below(1 + entry->maxCount - entry->minCount);
+        int x = x0 + below(16), z = z0 + below(16);
+        const int startX = x, startZ = z;
+        int made = 0;
+        for (int member = 0; member < group; ++member)
+        {
+            bool placed = false;
+            for (int tries = 0; !placed && tries < 4; ++tries)
+            {
+                int y = -1;
+                for (int down = WORLD_TOP; down > 1; --down)
+                {
+                    const BlockId here = world.getBlock(x, down, z);
+                    if (isLiquid(here)) break;
+                    if (isLeaves(here) || !isSolid(here)) continue;
+                    if (!isSolid(world.getBlock(x, down + 1, z)) && !isSolid(world.getBlock(x, down + 2, z))) y = down + 1;
+                    break;
+                }
+                if (y > 0)
+                {
+                    const BlockId ground = world.getBlock(x, y - 1, z);
+                    const int light = std::max(static_cast<int>(world.blockLightAt(x, y, z)), static_cast<int>(world.skyLight(x, y, z)));
+                    if (!isLiquid(world.getBlock(x, y, z)) && canSpawnOn(species, ground, light) &&
+                        spawnAt(species, glm::vec3(static_cast<float>(x) + 0.5f, static_cast<float>(y), static_cast<float>(z) + 0.5f), world,
+                                made > 0 && mobType(species).breedingFood != Blocks::Air && unit() < 0.05f))
+                    {
+                        placed = true;
+                        ++made;
+                    }
+                }
+                x += below(5) - below(5);
+                z += below(5) - below(5);
+                while (x < x0 || x >= x0 + 16 || z < z0 || z >= z0 + 16)
+                {
+                    x = startX + below(5) - below(5);
+                    z = startZ + below(5) - below(5);
+                }
+            }
+        }
+    }
 }
 
 float EntityManager::random01()
@@ -512,6 +622,9 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                         : roll < 0.035f ? MobId::Villager
                                         : pickSpawn(world.generator().kindAt(x, z), Biomes::Group::Creature, random01());
                 if (species == MobId::Count) continue;
+                if (mobType(species).spawnClass == SpawnClass::Passive && species != MobId::Villager && species != MobId::WanderingTrader &&
+                    m_creatureWait > 0.0f)
+                    continue;
             }
         }
 
@@ -577,6 +690,8 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
                                (mobType(species).spawnClass == SpawnClass::Passive && mobType(species).breedingFood != Blocks::Air &&
                                 species != MobId::Villager && random01() < 0.05f);
         if (!spawnAt(species, mobFeet, world, youngster)) continue;
+        if (!night && mobType(species).spawnClass == SpawnClass::Passive && species != MobId::Bat && !mobType(species).aquatic)
+            m_creatureWait = CREATURE_WAVE_SECONDS;
         {
             const MobType& kindType = mobType(species);
             const bool herd = (kindType.spawnClass == SpawnClass::Hostile || kindType.spawnClass == SpawnClass::Passive) &&
@@ -1097,6 +1212,7 @@ void EntityManager::update(float deltaTime, const World& world,
     pairOffLovers(world);
     if (!m_playerHidden) routeChasers(world, playerPosition);
 
+    m_creatureWait = std::max(0.0f, m_creatureWait - deltaTime);
     m_spawnTimer -= deltaTime;
     if (m_spawnTimer <= 0.0f)
     {

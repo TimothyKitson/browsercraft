@@ -76,6 +76,10 @@ namespace Net
         uint16_t horseArmour = 0;
         uint16_t gear[6] = { 0, 0, 0, 0, 0, 0 };
         std::string name;
+        bool displayed = false;
+        uint32_t displayBits = 0;
+        uint32_t displayBack = 0;
+        float displayPitch = 0.0f;
     };
 
     enum MobFlags : uint16_t

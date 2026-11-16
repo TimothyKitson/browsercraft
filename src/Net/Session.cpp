@@ -862,6 +862,13 @@ void Session::handleAsGuest(const Packet& packet, World* world)
                 mob.horseArmour = reader.u16();
                 for (uint16_t& slot : mob.gear) slot = reader.u16();
                 mob.name = reader.str();
+                mob.displayed = reader.u8() != 0;
+                if (mob.displayed)
+                {
+                    mob.displayBits = reader.u32();
+                    mob.displayBack = reader.u32();
+                    mob.displayPitch = reader.f32();
+                }
                 mobs.push_back(mob);
             }
             if (!reader.ok()) break;
@@ -1022,6 +1029,13 @@ void Session::broadcastMobs(const std::vector<MobSnap>& mobs)
         out.u16(mob.horseArmour);
         for (uint16_t slot : mob.gear) out.u16(slot);
         out.str(mob.name);
+        out.u8(mob.displayed ? 1 : 0);
+        if (mob.displayed)
+        {
+            out.u32(mob.displayBits);
+            out.u32(mob.displayBack);
+            out.f32(mob.displayPitch);
+        }
     }
     m_transport->broadcast(out.bytes());
 }

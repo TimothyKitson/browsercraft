@@ -189,6 +189,8 @@ public:
 
     // Which species may appear given the light and the block underfoot.
     static bool canSpawnOn(MobId type, BlockId ground, int light);
+    static bool groundSuits(MobId type, BlockId ground);
+    void populateChunk(const World& world, int chunkX, int chunkZ);
 
     // What the underground has in it. Asked of the game rather than
     // copied into a test, which is the lesson the ghast taught: a
@@ -285,6 +287,7 @@ private:
     // more than a handful a pass.
     void routeChasers(const World& world, const glm::vec3& playerPosition);
     float m_spawnTimer = 2.0f;
+    float m_creatureWait = 0.0f;
     uint32_t m_rng = 0x9E3779B9u;
     std::vector<glm::vec3> m_others;
 };

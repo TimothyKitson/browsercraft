@@ -4,6 +4,7 @@
 #include "WorldGen.h"
 #include "Core/ThreadPool.h"
 #include <unordered_map>
+#include <unordered_set>
 #include <set>
 #include <memory>
 #include <deque>
@@ -95,6 +96,12 @@ public:
     // menus, where there is no gameplay to protect.
     void setStreamingBudget(double milliseconds) { m_chunkBudgetMs = milliseconds; }
     const std::string& saveDirectory() const { return m_saveDirectory; }
+    std::vector<ChunkPos> takeFreshChunks()
+    {
+        std::vector<ChunkPos> out;
+        out.swap(m_fresh);
+        return out;
+    }
 
     static int floorDiv(int value, int size) { return (value >= 0) ? (value / size) : ((value - size + 1) / size); }
     void remeshChunk(int chunkX, int chunkZ) { markDirty(chunkX, chunkZ); }
@@ -113,6 +120,9 @@ private:
     ThreadPool m_pool;
 
     std::unordered_map<ChunkPos, std::unique_ptr<Chunk>, ChunkPosHash> m_chunks;
+    std::unordered_set<ChunkPos, ChunkPosHash> m_populated;
+    std::vector<ChunkPos> m_fresh;
+    bool m_populatedDirty = false;
 
     std::mutex m_completedMutex;
     std::vector<MeshResult> m_completedMeshes;

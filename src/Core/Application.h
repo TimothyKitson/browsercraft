@@ -1091,6 +1091,7 @@ private:
     void renderSubtitles();
     float m_gearPickupClock = 0.0f;
     std::unordered_map<uint32_t, float> m_heroGiftClock;
+    std::unordered_map<uint32_t, float> m_heroGiftWalk;
     void tickHeroGifts(float deltaTime);
     void tickPandaSneezes(float deltaTime);
     float m_sneezeClock = 0.0f;

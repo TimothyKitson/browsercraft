@@ -6,6 +6,7 @@
 #include <chrono>
 #include <thread>
 #include <limits>
+#include <cstdio>
 
 namespace
 {
@@ -67,6 +68,12 @@ World::World(uint32_t seed, std::string saveDirectory, int renderDistance, Dimen
     , m_pool(std::max(2u, std::thread::hardware_concurrency() > 2 ? std::thread::hardware_concurrency() - 1 : 2u))
 {
     WorldSave::ensureDirectories(m_saveDirectory);
+    if (FILE* file = std::fopen((m_saveDirectory + "/populated.dat").c_str(), "rb"))
+    {
+        int32_t pair[2];
+        while (std::fread(pair, sizeof(int32_t), 2, file) == 2) m_populated.insert(ChunkPos{ pair[0], pair[1] });
+        std::fclose(file);
+    }
 }
 
 World::~World()
@@ -624,6 +631,11 @@ void World::finishGeneratedChunks()
 
         seedChunkLight(*chunk);
         chunk->state.store(ChunkState::Lit);
+        if (!chunk->loadedFromDisk && m_populated.insert(pos).second)
+        {
+            m_fresh.push_back(pos);
+            m_populatedDirty = true;
+        }
         chunk->meshDirty = true;
         markNeighboursDirty(pos);
         ++processed;
@@ -776,6 +788,19 @@ void World::saveAll()
     {
         if (chunk->modified)
             WorldSave::saveChunk(m_saveDirectory, *chunk);
+    }
+    if (m_populatedDirty)
+    {
+        if (FILE* file = std::fopen((m_saveDirectory + "/populated.dat").c_str(), "wb"))
+        {
+            for (const ChunkPos& pos : m_populated)
+            {
+                const int32_t pair[2] = { pos.x, pos.z };
+                std::fwrite(pair, sizeof(int32_t), 2, file);
+            }
+            std::fclose(file);
+            m_populatedDirty = false;
+        }
     }
 }
 

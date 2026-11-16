@@ -5758,6 +5758,26 @@ namespace
         ball.damage(5, glm::vec3(1.0f, 0.0f, 0.0f));
         check(ball.health() == full - 4, "and rolled up it takes half of a blow less one");
 
+        {
+            Mob::DisplayLook look;
+            look.billboard = 3;
+            look.align = 2;
+            look.shadow = true;
+            look.seeThrough = true;
+            look.lineWidth = 321;
+            look.opacity = 128;
+            look.defaultBackground = true;
+            Mob::DisplayLook back;
+            back.unpack(look.packed());
+            check(back.billboard == 3 && back.align == 2 && back.shadow && back.seeThrough && back.lineWidth == 321 && back.opacity == 128 &&
+                      back.defaultBackground,
+                  "a text display's billboard, alignment, shadow, see-through, width and opacity survive saving");
+            check(EntityManager::groundSuits(MobId::Mooshroom, Blocks::Mycelium) && !EntityManager::groundSuits(MobId::Mooshroom, Blocks::Grass) &&
+                      EntityManager::groundSuits(MobId::Goat, Blocks::Stone) && EntityManager::groundSuits(MobId::Wolf, Blocks::Podzol) &&
+                      !EntityManager::groundSuits(MobId::Cow, Blocks::Sand) && EntityManager::groundSuits(MobId::Rabbit, Blocks::Sand) &&
+                      EntityManager::groundSuits(MobId::Armadillo, Blocks::RedSand) && EntityManager::groundSuits(MobId::Frog, Blocks::Mud),
+                  "each animal spawns on 1.21.1's own ground: mooshrooms on mycelium, goats on stone, wolves on podzol, cows on grass only");
+        }
         Mob wolf(MobId::Wolf, glm::vec3(0.0f), 5u);
         wolf.setHorseArmour(Items::WolfArmor);
         const int before = wolf.health();
