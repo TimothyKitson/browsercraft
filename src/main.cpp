@@ -7,6 +7,7 @@
 #include "Game/Discs.h"
 #include "Renderer/Atlas.h"
 #include "Game/Crafting.h"
+#include <sstream>
 #include "Game/RecipeBook.h"
 #include "Game/Tools.h"
 #include "Game/Stonecutting.h"
@@ -622,6 +623,52 @@ namespace
             }
         }
         std::printf("%d checked, %d differ\n", checked, off);
+        return 0;
+    }
+
+    int printRecipeAudit(const char* path)
+    {
+        std::ifstream in(path);
+        if (!in) return 1;
+        std::string line;
+        int checked = 0, missingParts = 0, wrong = 0, right = 0;
+        while (std::getline(in, line))
+        {
+            std::istringstream row(line);
+            std::string name, result;
+            int count = 0, width = 0, height = 0;
+            if (!(row >> name >> result >> count >> width >> height)) continue;
+            std::vector<std::string> cells;
+            std::string cell;
+            auto bare = [](std::string id) { return id.rfind("minecraft:", 0) == 0 ? id.substr(10) : id; };
+            while (row >> cell) cells.push_back(bare(cell));
+            result = bare(result);
+            const StackId wanted = RecipeBook::stackNamed(result);
+            ItemStack grid[9];
+            bool usable = wanted != Blocks::Air;
+            for (size_t k = 0; k < cells.size() && usable; ++k)
+            {
+                if (cells[k] == "-") continue;
+                const StackId part = RecipeBook::stackNamed(cells[k]);
+                if (part == Blocks::Air) { usable = false; break; }
+                const int x = width > 0 ? static_cast<int>(k) % width : static_cast<int>(k) % 3;
+                const int y = width > 0 ? static_cast<int>(k) / width : static_cast<int>(k) / 3;
+                grid[y * 3 + x] = ItemStack{ part, 1 };
+            }
+            if (!usable)
+            {
+                ++missingParts;
+                std::printf("skip %s\n", name.c_str());
+                continue;
+            }
+            ++checked;
+            const CraftOutput made = Crafting::match(grid, 3);
+            if (made.id == wanted && made.count == count) { ++right; continue; }
+            ++wrong;
+            std::printf("wrong %s gives %s x%d, wants %s x%d\n", name.c_str(),
+                        made.id == Blocks::Air ? "nothing" : RecipeBook::vanillaIdOf(made.id).c_str(), made.count, result.c_str(), count);
+        }
+        std::printf("%d checked, %d right, %d wrong, %d skipped\n", checked, right, wrong, missingParts);
         return 0;
     }
 
@@ -1771,6 +1818,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--lightaudit") == 0 && i + 1 < argc)
         {
             return printLightAudit(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--recipeaudit") == 0 && i + 1 < argc)
+        {
+            return printRecipeAudit(argv[++i]);
         }
         else if (std::strcmp(argv[i], "--stackaudit") == 0 && i + 1 < argc)
         {
