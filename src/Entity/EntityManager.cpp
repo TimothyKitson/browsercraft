@@ -1577,8 +1577,30 @@ void EntityManager::pairOffLovers(const World& world)
                 const glm::vec3 parentHome = m_mobs[a].home();
 
                 const int woolA = m_mobs[a].woolColour(), woolB = m_mobs[b].woolColour();
+                const MobId parentKind = m_mobs[a].typeId();
+                const bool equine = isHorseKind(parentKind) || parentKind == MobId::Llama || parentKind == MobId::TraderLlama;
+                const float healthA = static_cast<float>(m_mobs[a].maxHealth()), healthB = static_cast<float>(m_mobs[b].maxHealth());
+                const float speedA = m_mobs[a].horseSpeedAttribute(), speedB = m_mobs[b].horseSpeedAttribute();
+                const float jumpA = m_mobs[a].horseJumpAttribute(), jumpB = m_mobs[b].horseJumpAttribute();
                 m_mobs.emplace_back(mule ? MobId::Mule : m_mobs[a].typeId(), between,
                                     m_rng ^ static_cast<uint32_t>(m_mobs.size() * 40503u), true);
+                if (equine)
+                {
+                    auto inherit = [this](float one, float other, float low, float high) {
+                        one = std::clamp(one, low, high);
+                        other = std::clamp(other, low, high);
+                        const float spread = std::abs(one - other) + 0.3f * (high - low);
+                        const float middle = (one + other) * 0.5f;
+                        const float roll = (random01() + random01() + random01()) / 3.0f - 0.5f;
+                        float value = middle + spread * roll;
+                        if (value > high) value = high - (value - high);
+                        else if (value < low) value = low + (low - value);
+                        return value;
+                    };
+                    const int health = static_cast<int>(std::lround(inherit(healthA, healthB, 15.0f, 30.0f)));
+                    m_mobs.back().setHorseStats(health, inherit(speedA, speedB, 0.1125f, 0.3375f), inherit(jumpA, jumpB, 0.4f, 1.0f));
+                    m_mobs.back().setHealth(health);
+                }
                 if (m_mobs.back().typeId() == MobId::Sheep) m_mobs.back().setWool(random01() < 0.5f ? woolA : woolB, false);
 
                 // A child belongs where its parents do, and takes up

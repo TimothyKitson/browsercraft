@@ -498,6 +498,8 @@ public:
     int temper() const { return m_temper; }
     bool roosting() const { return m_roosting; }
     float horseSpeedAttribute() const;
+    void setHorseStats(int health, float speed, float jump) { m_healthSet = health; m_speedSet = speed; m_jumpSet = jump; }
+    bool horseStatsSet() const { return m_healthSet > 0; }
     float horseJumpAttribute() const;
     void addTemper(int amount) { m_temper = std::clamp(m_temper + amount, 0, 100); }
     void becomeTamed() { m_tamed = true; m_panicTimer = 0.0f; if (m_type == MobId::Wolf) m_health = maxHealth(); }
@@ -759,6 +761,9 @@ private:
 
     uint32_t m_rng = 1;
     uint32_t m_birthSeed = 1;
+    int m_healthSet = 0;
+    float m_speedSet = 0.0f;
+    float m_jumpSet = 0.0f;
     bool m_persistent = false;
     float m_growthBoost = 0.0f;
     bool m_provoked = false;

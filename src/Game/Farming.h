@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+#include <vector>
 #include "Items.h"
 #include "World/Block.h"
 #include <cstdint>
@@ -24,6 +26,9 @@ namespace Farming
 
     // Dirt and grass can be tilled; nothing else can.
     bool isTillable(BlockId id);
+    bool advanceSapling(const glm::ivec3& at);
+    std::vector<std::array<int, 3>> primedSaplings();
+    void setPrimedSaplings(const std::vector<std::array<int, 3>>& primed);
 
     // What a crop leaves when it is broken, which depends on how far
     // along it was. A ripe one gives wheat and seed to sow again.

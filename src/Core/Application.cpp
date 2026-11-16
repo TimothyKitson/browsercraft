@@ -1193,6 +1193,13 @@ void Application::loadLevel()
         std::array<int, 4> key{};
         while (leaves >> key[0] >> key[1] >> key[2] >> key[3]) m_placedLeaves.insert(key);
     }
+    {
+        std::ifstream saplings(m_savePath + "/saplings.txt");
+        std::vector<std::array<int, 3>> primed;
+        std::array<int, 3> key{};
+        while (saplings >> key[0] >> key[1] >> key[2]) primed.push_back(key);
+        Farming::setPrimedSaplings(primed);
+    }
 
     int spawnX = 0, spawnY = 80, spawnZ = 0;
     m_world->generator().findSpawn(spawnX, spawnY, spawnZ);
@@ -1689,6 +1696,11 @@ void Application::saveLevel()
         std::ofstream leaves(m_savePath + "/placed_leaves.txt");
         if (leaves)
             for (const auto& key : m_placedLeaves) leaves << key[0] << ' ' << key[1] << ' ' << key[2] << ' ' << key[3] << '\n';
+    }
+    {
+        std::ofstream saplings(m_savePath + "/saplings.txt");
+        if (saplings)
+            for (const auto& key : Farming::primedSaplings()) saplings << key[0] << ' ' << key[1] << ' ' << key[2] << '\n';
     }
     saveAdvancements();
     writeWorldMeta();
@@ -16948,7 +16960,22 @@ void Application::applyBlast(const glm::vec3& at, float radius, int damage)
                 if (isLeaves(block)) m_placedLeaves.erase({ static_cast<int>(m_dimension), where.x, where.y, where.z });
 
                 const uint32_t roll = hashCoords(where.x, where.y, where.z, blastSeed + 77u);
-                if (radius <= 1.0f || static_cast<float>(roll % 10000u) / 10000.0f < 1.0f / radius)
+                if (BlockDrops::handles(block))
+                {
+                    BlockDrops::Breaker bare;
+                    uint32_t decay = roll | 1u;
+                    for (const BlockDrops::Drop& fell : BlockDrops::roll(block, bare, roll))
+                    {
+                        int kept = 0;
+                        for (int k = 0; k < fell.count; ++k)
+                        {
+                            decay = decay * 1664525u + 1013904223u;
+                            if (radius <= 1.0f || static_cast<float>((decay >> 8) % 10000u) / 10000.0f < 1.0f / radius) ++kept;
+                        }
+                        if (kept > 0) m_drops.spawnFromBrokenBlock(where, fell.id, kept);
+                    }
+                }
+                else if (radius <= 1.0f || static_cast<float>(roll % 10000u) / 10000.0f < 1.0f / radius)
                 {
                     const StackId drop = blockDrop(block);
                     if (drop != Blocks::Air) m_drops.spawnFromBrokenBlock(where, drop);
@@ -19853,7 +19880,7 @@ void Application::handlePlacement()
             const uint32_t roll = static_cast<uint32_t>(
                 crop.block.x * 73856093 ^ crop.block.y * 19349663 ^ crop.block.z * 83492791 ^
                 static_cast<int>(m_elapsedSeconds * 977.0f));
-            if (roll % 1000u < 225u) growSapling(crop.block, roll);
+            if (roll % 100u < 45u && Farming::advanceSapling(crop.block)) growSapling(crop.block, roll);
             m_particles.spawnBlockBreak(crop.block, Blocks::TallGrass);
             m_audio.play(Sound::Place, 0.5f, 1.5f);
             if (!m_player.creative())
@@ -26303,6 +26330,7 @@ std::string Application::mobRow(const Mob& mob) const
     row << ' ' << (mob.canPickUp() ? 1 : 0);
     const int flags = (mob.noAI() ? 1 : 0) | (mob.silent() ? 2 : 0) | (mob.invulnerable() ? 4 : 0);
     if (flags) row << " F " << flags;
+    if (mob.horseStatsSet()) row << " H " << mob.maxHealth() << ' ' << mob.horseSpeedAttribute() << ' ' << mob.horseJumpAttribute();
     const auto packed = m_vehicleChests.find(mob.serial());
     if (packed != m_vehicleChests.end())
     {
@@ -26432,6 +26460,17 @@ void Application::placePendingMobs()
                 mob.setNoAI((flags & 1) != 0);
                 mob.setSilent((flags & 2) != 0);
                 mob.setInvulnerable((flags & 4) != 0);
+            }
+            more = static_cast<bool>(in >> marker);
+        }
+        if (more && marker == "H")
+        {
+            int bred = 0;
+            float pace = 0.0f, spring = 0.0f;
+            if (in >> bred >> pace >> spring)
+            {
+                mob.setHorseStats(bred, pace, spring);
+                mob.setHealth(std::max(1, health));
             }
             more = static_cast<bool>(in >> marker);
         }

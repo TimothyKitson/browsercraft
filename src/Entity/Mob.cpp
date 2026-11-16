@@ -623,6 +623,7 @@ int Mob::maxHealth() const
     switch (m_type)
     {
         case MobId::Horse: case MobId::Donkey: case MobId::Mule: case MobId::Llama: case MobId::TraderLlama:
+            if (m_healthSet > 0) return m_healthSet;
             return 15 + static_cast<int>((seed >> 8) % 8u) + static_cast<int>((seed >> 16) % 9u);
         case MobId::Wolf:
             return m_tamed ? 40 : type().maxHealth;
@@ -633,6 +634,7 @@ int Mob::maxHealth() const
 
 float Mob::horseSpeedAttribute() const
 {
+    if (m_speedSet > 0.0f) return m_speedSet;
     switch (m_type)
     {
         case MobId::Horse:
@@ -649,6 +651,7 @@ float Mob::horseSpeedAttribute() const
 
 float Mob::horseJumpAttribute() const
 {
+    if (m_jumpSet > 0.0f) return m_jumpSet;
     switch (m_type)
     {
         case MobId::Horse: case MobId::SkeletonHorse: case MobId::ZombieHorse:

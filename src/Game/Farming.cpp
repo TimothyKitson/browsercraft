@@ -4,6 +4,7 @@
 #include "Cane.h"
 #include "World/World.h"
 #include <cmath>
+#include <set>
 
 namespace
 {
@@ -19,6 +20,7 @@ namespace
 namespace
 {
     std::vector<std::pair<glm::ivec3, bool>> g_chorusEvents;
+    std::set<std::array<int, 3>> g_primedSaplings;
 
     BlockId cropKind(BlockId id)
     {
@@ -56,6 +58,24 @@ namespace
         const float moisture = moistureAt(world, x, y, z);
         return nextRandom(seed) % static_cast<uint32_t>(static_cast<int>(25.0f / moisture) + 1) == 0u;
     }
+}
+
+bool Farming::advanceSapling(const glm::ivec3& at)
+{
+    const std::array<int, 3> key{ at.x, at.y, at.z };
+    if (g_primedSaplings.erase(key) > 0) return true;
+    g_primedSaplings.insert(key);
+    return false;
+}
+
+std::vector<std::array<int, 3>> Farming::primedSaplings()
+{
+    return std::vector<std::array<int, 3>>(g_primedSaplings.begin(), g_primedSaplings.end());
+}
+
+void Farming::setPrimedSaplings(const std::vector<std::array<int, 3>>& primed)
+{
+    g_primedSaplings = std::set<std::array<int, 3>>(primed.begin(), primed.end());
 }
 
 std::vector<std::pair<glm::ivec3, bool>> Farming::takeChorusEvents()
@@ -477,7 +497,8 @@ void Farming::grow(World& world, const glm::vec3& around, uint32_t& seed, std::v
         if (isFungus(world.getBlock(x, y, z))) continue;
         if (isSapling(world.getBlock(x, y, z)))
         {
-            if (std::max<int>(world.skyLight(x, y + 1, z), world.blockLightAt(x, y + 1, z)) >= LIGHT_TO_GROW && nextRandom(seed) % 14u == 0u)
+            if (std::max<int>(world.skyLight(x, y + 1, z), world.blockLightAt(x, y + 1, z)) >= LIGHT_TO_GROW && nextRandom(seed) % 7u == 0u &&
+                advanceSapling(at))
             {
                 struct WorldCells : Saplings::Cells
                 {

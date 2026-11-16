@@ -4155,6 +4155,10 @@ namespace
             check(tank.damage(1) && tank.health == before,
                   "a 1-point hit on full diamond takes a fraction of a point, kept until the fractions add up, as Minecraft's float health does");
         }
+        check(!Farming::advanceSapling(glm::ivec3(901, 70, 901)) && Farming::advanceSapling(glm::ivec3(901, 70, 901)) &&
+                  !Farming::advanceSapling(glm::ivec3(901, 70, 901)),
+              "a sapling takes two growth steps like Minecraft's stage 0 and 1");
+        Farming::advanceSapling(glm::ivec3(901, 70, 901));
         check(Shield::wearFor(2) == 0 && Shield::wearFor(3) == 4 && Shield::wearFor(9) == 10,
               "a blow under 3 costs the shield nothing, a bigger one 1 more than its damage, as in Minecraft");
 
