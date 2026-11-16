@@ -1589,7 +1589,7 @@ void WorldGen::dressCaves(Chunk& chunk) const
             const int top = std::min(surfaceHeight(wx, wz) - 3, Chunk::MAX_Y - 2);
             if (kind != CaveKind::Lush && hashToFloat(hashCoords(wx, 2, wz, m_seed + 7705)) < 0.04f)
             {
-                for (int y = 8; y <= top; ++y)
+                for (int y = Chunk::MIN_Y + 8; y <= top; ++y)
                 {
                     if (chunk.getBlock(lx, y, lz) != Blocks::Air) continue;
                     if (y + 1 < Chunk::MAX_Y && isOpaque(chunk.getBlock(lx, y + 1, lz)))
@@ -1607,7 +1607,7 @@ void WorldGen::dressCaves(Chunk& chunk) const
             if (kind == CaveKind::Plain)
             {
                 if (hashToFloat(hashCoords(wx, 1, wz, m_seed + 7701)) > 0.05f) continue;
-                for (int y = 8; y <= top; ++y)
+                for (int y = Chunk::MIN_Y + 8; y <= top; ++y)
                 {
                     if (chunk.getBlock(lx, y, lz) != Blocks::Air) continue;
                     const BlockId under = chunk.getBlock(lx, y - 1, lz);
@@ -1619,7 +1619,7 @@ void WorldGen::dressCaves(Chunk& chunk) const
                 continue;
             }
 
-            for (int y = 5; y <= top; ++y)
+            for (int y = Chunk::MIN_Y + 5; y <= top; ++y)
             {
                 if (chunk.getBlock(lx, y, lz) != Blocks::Air) continue;
 
@@ -6457,7 +6457,7 @@ void WorldGen::growLargeDripstone(Chunk& chunk) const
             if (caveKindAt(wx, wz) != CaveKind::Dripstone) continue;
             if (hashToFloat(hashCoords(wx, 31, wz, m_seed + 7711)) >= 0.012f) continue;
             const int top = std::min(surfaceHeight(wx, wz) - 6, Chunk::MAX_Y - 2);
-            for (int y = 6; y < top; ++y)
+            for (int y = Chunk::MIN_Y + 6; y < top; ++y)
             {
                 if (chunk.getBlock(lx, y, lz) != Blocks::Air || !isSolid(chunk.getBlock(lx, y - 1, lz))) continue;
                 int ceiling = y;

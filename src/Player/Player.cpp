@@ -540,7 +540,8 @@ bool Player::damageMixed(int magic, int physical)
 
 bool Player::damage(int amount, bool throughArmour)
 {
-    if (exempt() || amount <= 0 || m_hurtCooldown > 0.0f) return false;
+    const bool fromVoid = cause && std::strcmp(cause, "outOfWorld") == 0 && !spectator();
+    if ((exempt() && !fromVoid) || amount <= 0 || m_hurtCooldown > 0.0f) return false;
 
     float exact = static_cast<float>(amount);
     if (!throughArmour)
@@ -1060,10 +1061,10 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     }
 
     // Falling out of the world shouldn't trap you forever.
-    if (position.y < static_cast<float>(Chunk::MIN_Y - 64) && !exempt())
+    if (position.y < voidBelow && !spectator())
     {
         cause = "outOfWorld";
-        damage(2);
+        damage(4, true);
     }
 
     if (onGround && !flying && !inWater)

@@ -157,6 +157,7 @@ public:
     // a blow, which is where it actually stops anything.
     bool blocking = false;
     bool usingItem = false;
+    float voidBelow = -128.0f;
     bool inBerryBush = false;
     bool inPowderSnow = false;
     bool inCobweb = false;

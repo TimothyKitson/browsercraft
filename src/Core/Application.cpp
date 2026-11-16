@@ -27230,6 +27230,7 @@ void Application::updateMobs(float deltaTime)
             !m_entities.peaceful() && hashCoords(m_dayNumber, static_cast<int>(m_elapsedSeconds), 7, 0x9A7Fu) % 5u == 0u)
             m_entities.spawnPatrol(*m_world, m_player.position);
     }
+    m_player.voidBelow = static_cast<float>((m_dimension == Dimension::Overworld ? Chunk::MIN_Y : 0) - 64);
     m_entities.setPlayerHidden(m_player.spectator());
     m_entities.setPlayerQuiet(m_player.sneaking);
     m_entities.setMoonPhase(m_dayNumber % 8);
