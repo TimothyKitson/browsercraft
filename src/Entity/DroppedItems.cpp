@@ -107,6 +107,7 @@ void DroppedItems::snapshot(std::vector<Snap>& out, const std::vector<glm::vec3>
         snap.id = item.block;
         snap.count = item.count;
         snap.ready = item.age > item.delay;
+        snap.enchantments = item.enchantments;
         out.push_back(snap);
     }
 }
@@ -137,6 +138,7 @@ void DroppedItems::mirror(const std::vector<Snap>& snaps)
         item.block = snap.id;
         item.count = snap.count;
         item.ready = snap.ready;
+        item.enchantments = snap.enchantments;
         kept.push_back(item);
     }
     for (const Item& old : m_items)

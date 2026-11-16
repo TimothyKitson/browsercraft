@@ -1780,7 +1780,7 @@ private:
     glm::vec3 rodTip() const;
     bool holdingRod() const;
     void wearHeld(StackId id, int points);
-    std::vector<std::string> m_itemNames;
+    std::vector<std::string>& m_itemNames = Enchanting::names();
     std::vector<std::array<int, 4>> m_lodestones;
     bool m_hasDeathPoint = false;
     glm::vec3 m_deathPoint{ 0.0f };
@@ -1803,6 +1803,7 @@ private:
     int nameIdOf(const std::string& name);
     std::string m_anvilName;
     bool m_anvilNameEdited = false;
+    ItemStack m_anvilNameSource;
     struct Leash
     {
         uint32_t mob = 0;

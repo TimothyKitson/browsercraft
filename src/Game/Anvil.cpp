@@ -53,23 +53,27 @@ int Anvil::maxDurability(StackId item)
     return itemDurability(item);
 }
 
-Anvil::Result Anvil::combine(const Input& left, const Input& right)
+Anvil::Result Anvil::combine(const Input& left, const Input& right, int rename)
 {
     Result out;
     if (left.id == Blocks::Air || left.count <= 0) return out;
-    if (right.id == Blocks::Air || right.count <= 0) return out;
+    const bool hasRight = right.id != Blocks::Air && right.count > 0;
+    const bool renaming = rename != KEEP_NAME && rename != Enchanting::nameOf(left.enchantments) &&
+                          (isItem(left.id) || !isDecoratedPot(asBlock(left.id)));
+    if (!hasRight && !renaming) return out;
 
     const bool leftBook = isEnchantedBook(left) || left.id == Items::EnchantedBook;
     const bool book = isEnchantedBook(right);
     const int max = maxDurability(left.id);
-    const long base = static_cast<long>(Enchanting::priorWork(left.enchantments)) + Enchanting::priorWork(right.enchantments);
+    const long base = static_cast<long>(Enchanting::priorWork(left.enchantments)) + (hasRight ? Enchanting::priorWork(right.enchantments) : 0);
 
     out.id = left.id;
     out.damage = left.damage;
     out.enchantments = left.enchantments;
+    out.count = left.count;
     int cost = 0;
 
-    if (max > 0 && repairsWith(left.id, right.id))
+    if (hasRight && max > 0 && repairsWith(left.id, right.id))
     {
         int step = std::min(out.damage, max / 4);
         if (step <= 0) return out;
@@ -82,7 +86,7 @@ Anvil::Result Anvil::combine(const Input& left, const Input& right)
         }
         out.used = units;
     }
-    else
+    else if (hasRight)
     {
         if (!book && (right.id != left.id || (max <= 0 && !leftBook))) return out;
         out.used = 1;
@@ -148,17 +152,21 @@ Anvil::Result Anvil::combine(const Input& left, const Input& right)
         if (refused && !applied) return out;
     }
 
+    const int worked = cost;
+    if (renaming)
+    {
+        out.enchantments = Enchanting::withName(out.enchantments, rename);
+        ++cost;
+    }
     if (cost <= 0) return out;
     out.levelCost = static_cast<int>(std::min<long>(base + cost, 1000000L));
-    if (out.levelCost >= TOO_EXPENSIVE)
+    if (renaming && worked == 0 && out.levelCost >= TOO_EXPENSIVE) out.levelCost = TOO_EXPENSIVE - 1;
+    if (worked > 0)
     {
-        out.tooExpensive = true;
-        return out;
-    }
-    {
-        const int work = std::max(Enchanting::priorWork(left.enchantments), Enchanting::priorWork(right.enchantments));
+        const int work = std::max(Enchanting::priorWork(left.enchantments), hasRight ? Enchanting::priorWork(right.enchantments) : 0);
         out.enchantments = Enchanting::withPriorWork(out.enchantments, std::min(255, work * 2 + 1));
     }
-    out.valid = true;
+    out.tooExpensive = out.levelCost >= TOO_EXPENSIVE;
+    out.valid = !out.tooExpensive;
     return out;
 }

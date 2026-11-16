@@ -111,6 +111,21 @@ namespace Enchanting
     Set withColour(Set set, uint32_t colour);
     int priorWork(Set set);
     Set withPriorWork(Set set, int cost);
+    constexpr int PREVIEW_NAME = 65535;
+    std::vector<std::string>& names();
+    std::string& previewName();
+    int findName(const std::string& text);
+    int nameIdOf(const std::string& text);
+    int nameOf(Set set);
+    Set withName(Set set, int id);
+    std::string nameText(Set set);
+    struct Portable
+    {
+        std::vector<uint8_t> levels;
+        std::string name;
+    };
+    Portable portable(Set set);
+    Set fromPortable(Set raw, const Portable& carried);
     int anvilCost(Kind kind);
 
     // Every kind on the item, for showing it and for saving it.

@@ -4244,6 +4244,45 @@ namespace
                   "a pickaxe with nothing wrong with it is refused");
         }
         {
+            const int excalibur = Enchanting::nameIdOf("Excalibur");
+            Input sword{ Items::DiamondSword, 1, 0, Enchanting::withLevel(0u, Enchanting::Kind::Sharpness, 3) };
+            const Anvil::Result named = Anvil::combine(sword, Input{}, excalibur);
+            check(named.valid && named.levelCost == 1 && Enchanting::nameText(named.enchantments) == "Excalibur" &&
+                      Enchanting::levelOf(named.enchantments, Enchanting::Kind::Sharpness) == 3 && Enchanting::priorWork(named.enchantments) == 0,
+                  "the anvil renames any item for one level, keeping its enchantments and its prior work");
+            check(!Anvil::combine(sword, Input{}).valid && !Anvil::combine(Input{ Items::DiamondSword, 1, 0, named.enchantments }, Input{}, excalibur).valid,
+                  "and an unchanged name is no work at all");
+            const Anvil::Result cleared = Anvil::combine(Input{ Items::DiamondSword, 1, 0, named.enchantments }, Input{}, 0);
+            check(cleared.valid && cleared.levelCost == 1 && Enchanting::nameOf(cleared.enchantments) == 0,
+                  "clearing the field takes a name off for one level");
+            Input worked{ Items::DiamondSword, 1, 0, Enchanting::withPriorWork(0u, 63) };
+            const Anvil::Result capped = Anvil::combine(worked, Input{}, excalibur);
+            check(capped.valid && !capped.tooExpensive && capped.levelCost == 39,
+                  "a rename alone is never Too Expensive: Minecraft caps it at 39");
+            Input worn{ Items::IronPickaxe, 1, pickMax - 1, 0 };
+            Input iron{ Items::IronIngot, 1, 0, 0 };
+            const Anvil::Result both = Anvil::combine(worn, iron, excalibur);
+            check(both.valid && both.levelCost == 2 && Enchanting::nameText(both.enchantments) == "Excalibur" && Enchanting::priorWork(both.enchantments) == 1,
+                  "a repair and a rename together cost one more and add to the prior work");
+            const Anvil::Result dirt = Anvil::combine(Input{ Blocks::Dirt, 64, 0, 0u }, Input{}, Enchanting::nameIdOf("Soil"));
+            check(dirt.valid && dirt.count == 64 && dirt.levelCost == 1, "a whole stack is renamed at once");
+            ItemStack plain{ Blocks::Dirt, 1 };
+            ItemStack soil{ Blocks::Dirt, 1, 0, dirt.enchantments };
+            check(!plain.sameAs(soil) && soil.sameAs(ItemStack{ Blocks::Dirt, 5, 0, dirt.enchantments }),
+                  "and renamed dirt stacks only with dirt of the same name");
+            const StackId pot = static_cast<StackId>(Blocks::DecoratedPotFirst + 2);
+            check(!Anvil::combine(Input{ pot, 1, 0, 5u }, Input{}, excalibur).valid, "a decorated pot keeps its sherds rather than take a name");
+            const Grindstone::Result ground = Grindstone::combine(Input{ Items::DiamondSword, 1, 0, named.enchantments }, Input{});
+            check(Enchanting::nameText(ground.enchantments) == "Excalibur" && !Enchanting::any(ground.enchantments),
+                  "a grindstone takes the enchantments and leaves the name");
+            const Enchanting::Set rich = Enchanting::withColour(Enchanting::withName(Enchanting::withLevel(0u, Enchanting::Kind::Unbreaking, 3), excalibur), 0x1B02E26u);
+            const Enchanting::Portable carried = Enchanting::portable(rich);
+            const Enchanting::Set landed = Enchanting::fromPortable((rich & ~Enchanting::KIND_BITS) | (7u << 21) | 123456u, carried);
+            check(Enchanting::nameText(landed) == "Excalibur" && (Enchanting::colourOf(landed) & 0xFFFFFFu) == 0xB02E26u &&
+                      Enchanting::levelOf(landed, Enchanting::Kind::Unbreaking) == 3,
+                  "a name, a colour and enchantments survive the trip to another player whatever their shelf numbers");
+        }
+        {
             Input worn{ Items::IronPickaxe, 1, pickMax - 1, 0 };
             Input gold{ Items::GoldIngot, 64, 0, 0 };
             check(!Anvil::combine(worn, gold).valid, "the wrong metal is refused");

@@ -66,6 +66,7 @@ public:
         StackId id = Blocks::Air;
         int count = 1;
         bool ready = false;
+        uint32_t enchantments = 0;
     };
     void snapshot(std::vector<Snap>& out, const std::vector<glm::vec3>& near, float range) const;
     void mirror(const std::vector<Snap>& snaps);

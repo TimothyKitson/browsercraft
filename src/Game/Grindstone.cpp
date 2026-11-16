@@ -33,6 +33,7 @@ namespace
             if (Enchanting::levelOf(set, curse) > 0) ++curses;
         }
         if (curses > 0 && id != Items::Trident) kept = Enchanting::withPriorWork(kept, (1 << curses) - 1);
+        if (Enchanting::nameOf(set) > 0) kept = Enchanting::withName(kept, Enchanting::nameOf(set));
         return kept;
     }
 }

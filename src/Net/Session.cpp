@@ -1,6 +1,7 @@
 #include "Session.h"
 #include "World/World.h"
 #include "World/WorldSave.h"
+#include "Game/Enchanting.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -14,6 +15,26 @@ namespace Net
 {
 namespace
 {
+    void writeSet(Writer& out, uint32_t set)
+    {
+        out.u32(set);
+        const Enchanting::Portable carried = Enchanting::portable(set);
+        out.u8(static_cast<uint8_t>(std::min<size_t>(carried.levels.size(), 255)));
+        for (size_t k = 0; k < carried.levels.size() && k < 255; ++k) out.u8(carried.levels[k]);
+        out.str(carried.name);
+    }
+
+    uint32_t readSet(Reader& in)
+    {
+        const uint32_t raw = in.u32();
+        Enchanting::Portable carried;
+        const int bytes = in.u8();
+        for (int k = 0; k < bytes; ++k) carried.levels.push_back(in.u8());
+        carried.name = in.str();
+        if (!in.ok()) return 0u;
+        return Enchanting::fromPortable(raw, carried);
+    }
+
     constexpr float MOVE_INTERVAL = 1.0f / 20.0f;   // 20 position updates a second
     constexpr float TIME_SYNC_INTERVAL = 10.0f;
     constexpr float RETRY_INTERVAL = 1.0f;
@@ -632,7 +653,7 @@ void Session::handleAsHost(const Packet& packet, World* world)
             drop.id = reader.u16();
             drop.count = static_cast<int>(reader.u16());
             drop.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
-            drop.enchantments = reader.u32();
+            drop.enchantments = readSet(reader);
             if (reader.ok() && drop.count > 0 && m_drops.size() < 512) m_drops.push_back(drop);
             break;
         }
@@ -881,6 +902,7 @@ void Session::handleAsGuest(const Packet& packet, World* world)
                 item.id = reader.u16();
                 item.count = static_cast<int>(reader.u8());
                 item.ready = reader.u8() != 0;
+                item.enchantments = readSet(reader);
                 items.push_back(item);
             }
             if (reader.ok())
@@ -897,7 +919,7 @@ void Session::handleAsGuest(const Packet& packet, World* world)
             gift.id = reader.u16();
             gift.count = static_cast<int>(reader.u16());
             gift.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
-            gift.enchantments = reader.u32();
+            gift.enchantments = readSet(reader);
             if (reader.ok() && gift.count > 0 && m_gifts.size() < 256) m_gifts.push_back(gift);
             break;
         }
@@ -948,7 +970,7 @@ void Session::handleAsGuest(const Packet& packet, World* world)
                 item.id = reader.u16();
                 item.count = static_cast<int>(static_cast<int32_t>(reader.u32()));
                 item.damage = static_cast<int>(static_cast<int32_t>(reader.u32()));
-                item.enchantments = reader.u32();
+                item.enchantments = readSet(reader);
                 loot.items.push_back(item);
             }
             loot.orbsAt = reader.vec3();
@@ -1104,7 +1126,7 @@ void Session::sendLoot(uint32_t peer, const LootEvent& loot)
         out.u16(loot.items[k].id);
         out.i32(loot.items[k].count);
         out.i32(loot.items[k].damage);
-        out.u32(loot.items[k].enchantments);
+        writeSet(out, loot.items[k].enchantments);
     }
     out.vec3(loot.orbsAt);
     out.i32(loot.experience);
@@ -1124,6 +1146,7 @@ void Session::broadcastItems(const std::vector<ItemSnap>& items)
         out.u16(items[k].id);
         out.u8(static_cast<uint8_t>(std::clamp(items[k].count, 1, 255)));
         out.u8(items[k].ready ? 1 : 0);
+        writeSet(out, items[k].enchantments);
     }
     m_transport->broadcast(out.bytes());
 }
@@ -1146,7 +1169,7 @@ void Session::sendDrop(const ItemDrop& drop)
     out.u16(drop.id);
     out.u16(static_cast<uint16_t>(std::clamp(drop.count, 1, 65535)));
     out.i32(drop.damage);
-    out.u32(drop.enchantments);
+    writeSet(out, drop.enchantments);
     m_transport->send(HOST_PEER, out.bytes());
 }
 
@@ -1166,7 +1189,7 @@ void Session::giveItem(uint32_t peer, const ItemGift& gift)
     out.u16(gift.id);
     out.u16(static_cast<uint16_t>(std::clamp(gift.count, 1, 65535)));
     out.i32(gift.damage);
-    out.u32(gift.enchantments);
+    writeSet(out, gift.enchantments);
     m_transport->send(peer, out.bytes());
 }
 

@@ -298,6 +298,11 @@ namespace
 
     std::string stackName(const ItemStack& stack)
     {
+        if (Enchanting::nameOf(stack.enchantments) > 0 && !(!isItem(stack.id) && isDecoratedPot(asBlock(stack.id))))
+        {
+            const std::string custom = Enchanting::nameText(stack.enchantments);
+            if (!custom.empty()) return custom;
+        }
         if (stack.id == Items::NameTag && g_itemNames && stack.damage > 0 && stack.damage <= static_cast<int>(g_itemNames->size()))
             return (*g_itemNames)[static_cast<size_t>(stack.damage - 1)];
         if (stack.id == Items::Potion) return Brewing::fullName(Brewing::decode(stack.damage), Brewing::Form::Drink);
@@ -343,7 +348,7 @@ namespace
         else if (id == Items::TotemOfUndying || id == Items::HeartOfTheSea || id == Items::ExperienceBottle || id == Items::DragonsBreath ||
                  id == Items::EnchantedBook || isHead(block) || block == Blocks::WitherSkull)
             rarity = 1;
-        if (id != Items::EnchantedBook && (stack.enchantments & Enchanting::KIND_BITS) != 0u) rarity = rarity <= 1 ? 2 : 3;
+        if (id != Items::EnchantedBook && (Enchanting::any(stack.enchantments) || (id == Items::Trident && Enchanting::anyAtAll(stack.enchantments)))) rarity = rarity <= 1 ? 2 : 3;
         static const char* CODES[4] = { "", "\u00a7e", "\u00a7b", "\u00a7d" };
         return CODES[rarity];
     }
@@ -2460,17 +2465,11 @@ void Application::renderContainerScreen(float w, float h)
             guiSprite(working.empty() ? "sprites/container/anvil/text_field_disabled"
                                       : "sprites/container/anvil/text_field",
                       panelX + 59.0f, panelY + 20.0f, 110.0f, 16.0f);
-            if (working.id == Items::NameTag)
+            if (!working.empty())
             {
                 std::string name = m_anvilNameEdited ? m_anvilName : stackName(working);
                 if (static_cast<int>(m_elapsedSeconds * 2.0f) % 2 == 0) name += "_";
                 m_ui.textWithShadow(name, panelX + 62.0f, panelY + 24.0f, 1.0f, glm::vec4(0.878f, 0.878f, 0.878f, 1.0f));
-            }
-            else if (!working.empty())
-            {
-                const std::string name = stackName(made.empty() ? working : made);
-                m_ui.textWithShadow(name, panelX + 62.0f, panelY + 24.0f, 1.0f,
-                                    glm::vec4(0.878f, 0.878f, 0.878f, 1.0f));
             }
 
             for (int i = 0; i < 3; ++i)
@@ -2493,7 +2492,7 @@ void Application::renderContainerScreen(float w, float h)
                 price = "Too Expensive!";
                 colour = glm::vec4(1.0f, 0.376f, 0.376f, 1.0f);
             }
-            else if (result.valid)
+            else if (result.valid || result.tooExpensive)
             {
                 price = "Enchantment Cost: " + std::to_string(result.levelCost);
                 if (!m_player.creative() && level < result.levelCost)
@@ -2545,7 +2544,7 @@ void Application::renderContainerScreen(float w, float h)
                 price = "Too Expensive!";
                 colour = glm::vec4(1.0f, 0.376f, 0.376f, 1.0f);
             }
-            else if (result.valid)
+            else if (result.valid || result.tooExpensive)
             {
                 price = "Cost: " + std::to_string(result.levelCost) +
                         (result.levelCost == 1 ? " level" : " levels");
@@ -4370,21 +4369,21 @@ Anvil::Result Application::anvilResult() const
     const ItemStack& left = m_inventory.slot(Inventory::ANVIL_LEFT);
     const ItemStack& right = m_inventory.slot(Inventory::ANVIL_RIGHT);
 
-    if (left.id == Items::NameTag && right.empty())
+    int rename = Anvil::KEEP_NAME;
+    if (m_anvilNameEdited && !left.empty())
     {
-        Anvil::Result renamed;
-        const bool fresh = m_anvilNameEdited && !m_anvilName.empty() && m_anvilName != stackName(left);
-        if (!fresh) return renamed;
-        renamed.valid = true;
-        renamed.id = Items::NameTag;
-        renamed.damage = -1;
-        renamed.levelCost = 1;
-        renamed.used = 0;
-        return renamed;
+        const bool blank = m_anvilName.find_first_not_of(" \t") == std::string::npos;
+        if (blank) rename = Enchanting::nameOf(left.enchantments) > 0 ? 0 : Anvil::KEEP_NAME;
+        else if (m_anvilName != stackName(left))
+        {
+            const int known = Enchanting::findName(m_anvilName);
+            Enchanting::previewName() = m_anvilName;
+            rename = known > 0 ? known : Enchanting::PREVIEW_NAME;
+        }
     }
 
     return Anvil::combine({ left.id, left.count, left.damage, left.enchantments },
-                          { right.id, right.count, right.damage, right.enchantments });
+                          { right.id, right.count, right.damage, right.enchantments }, rename);
 }
 
 void Application::refreshAnvilResult()
@@ -4394,14 +4393,14 @@ void Application::refreshAnvilResult()
     ItemStack& preview = m_inventory.slot(Inventory::ANVIL_RESULT);
     const Anvil::Result made = anvilResult();
 
-    if (!made.valid)
+    if (!made.valid && !(made.tooExpensive && m_player.creative()))
     {
         preview.clear();
         return;
     }
 
     preview.id = made.id;
-    preview.count = 1;
+    preview.count = made.count;
     preview.damage = made.damage;
     preview.enchantments = made.enchantments;
 }
@@ -4414,29 +4413,22 @@ void Application::takeAnvilResult()
     if (!m_inventory.cursor().empty()) return;   // hands full
 
     const Anvil::Result made = anvilResult();
-    if (!made.valid) return;
+    if (!made.valid && !(made.tooExpensive && m_player.creative())) return;
 
     const int level = Experience::levelFor(m_player.experience);
     if (!m_player.creative() && level < made.levelCost) return;
 
     ItemStack taken;
     taken.id = made.id;
-    taken.count = 1;
+    taken.count = made.count;
     taken.damage = made.damage;
     taken.enchantments = made.enchantments;
-    if (made.id == Items::NameTag && made.damage < 0) taken.damage = nameIdOf(m_anvilName);
+    if (Enchanting::nameOf(taken.enchantments) == Enchanting::PREVIEW_NAME)
+        taken.enchantments = Enchanting::withName(taken.enchantments, nameIdOf(m_anvilName));
     m_inventory.cursor() = taken;
+    m_anvilName.clear();
+    m_anvilNameEdited = false;
 
-    if (made.id == Items::NameTag && made.damage < 0)
-    {
-        ItemStack& tags = m_inventory.slot(Inventory::ANVIL_LEFT);
-        if (--tags.count <= 0) tags.clear();
-        m_anvilName.clear();
-        m_anvilNameEdited = false;
-    }
-    else
-    // The left-hand item is always consumed whole; the right-hand one
-    // only by as many as the work actually took.
     m_inventory.slot(Inventory::ANVIL_LEFT).clear();
 
     ItemStack& right = m_inventory.slot(Inventory::ANVIL_RIGHT);

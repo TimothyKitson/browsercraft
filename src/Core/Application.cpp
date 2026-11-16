@@ -5955,8 +5955,9 @@ bool Application::frame()
                         const glm::ivec3 anvil(px + 2, py, pz);
                         m_world->setBlock(anvil.x, anvil.y, anvil.z, Blocks::Anvil);
                         openAnvil(anvil);
-                        m_inventory.slot(Inventory::ANVIL_LEFT) = ItemStack{ Items::NameTag, 1 };
-                        m_anvilName = "Shaun";
+                        m_inventory.slot(Inventory::ANVIL_LEFT) = ItemStack{ Items::DiamondSword, 1, 0, Enchanting::withLevel(0u, Enchanting::Kind::Sharpness, 3) };
+                        m_anvilNameSource = m_inventory.slot(Inventory::ANVIL_LEFT);
+                        m_anvilName = "Excalibur";
                         m_anvilNameEdited = true;
                         m_player.experience = 200;
                         refreshAnvilResult();
@@ -9743,22 +9744,26 @@ void Application::handleEvents()
     else if (m_inventoryOpen && m_player.creative() && m_input.wheelDelta() != 0)
         m_paletteRow -= m_input.wheelDelta();
 
-    const bool naming = m_inventoryOpen && m_anvilOpen && m_inventory.slot(Inventory::ANVIL_LEFT).id == Items::NameTag;
+    if (m_inventoryOpen && m_anvilOpen)
+    {
+        const ItemStack& left = m_inventory.slot(Inventory::ANVIL_LEFT);
+        if (!left.sameAs(m_anvilNameSource) || left.count != m_anvilNameSource.count)
+        {
+            m_anvilNameSource = left;
+            m_anvilName = left.empty() ? std::string() : itemLabel(left);
+            m_anvilNameEdited = false;
+            refreshAnvilResult();
+        }
+    }
+    const bool naming = m_inventoryOpen && m_anvilOpen && !m_inventory.slot(Inventory::ANVIL_LEFT).empty();
     if (naming)
     {
         bool changed = false;
-        if (!m_input.typedText().empty() && !m_anvilNameEdited)
+        if (Utf8::type(m_anvilName, m_input.typedText(), 50))
         {
-            std::string typed;
-            if (Utf8::type(typed, m_input.typedText(), 35))
-            {
-                m_anvilName = typed;
-                m_anvilNameEdited = true;
-                changed = true;
-            }
-        }
-        else if (Utf8::type(m_anvilName, m_input.typedText(), 35))
+            m_anvilNameEdited = true;
             changed = true;
+        }
         for (int i = 0; i < m_input.backspaces() && !m_anvilName.empty(); ++i)
         {
             Utf8::popBack(m_anvilName);
@@ -18476,10 +18481,13 @@ void Application::handlePlacement()
                 m_audio.play(Sound::DigWool, 0.6f, 1.2f);
                 return;
             }
-            if (held.id == Items::NameTag && held.damage > 0 && held.damage <= static_cast<int>(m_itemNames.size()) &&
-                aimed->typeId() != MobId::EnderDragon)
+            const std::string tagName = held.id != Items::NameTag ? std::string()
+                                        : !Enchanting::nameText(held.enchantments).empty() ? Enchanting::nameText(held.enchantments)
+                                        : held.damage > 0 && held.damage <= static_cast<int>(m_itemNames.size())
+                                            ? m_itemNames[static_cast<size_t>(held.damage - 1)] : std::string();
+            if (!tagName.empty() && aimed->typeId() != MobId::EnderDragon)
             {
-                aimed->setCustomName(m_itemNames[static_cast<size_t>(held.damage - 1)]);
+                aimed->setCustomName(tagName);
                 if (!m_player.creative() && --held.count <= 0) held.clear();
                 m_audio.play(Sound::Click, 0.5f, 1.4f);
                 return;
@@ -23860,11 +23868,7 @@ Mob* Application::mobBySerial(uint32_t serial)
 
 int Application::nameIdOf(const std::string& name)
 {
-    for (size_t i = 0; i < m_itemNames.size(); ++i)
-        if (m_itemNames[i] == name) return static_cast<int>(i) + 1;
-    if (m_itemNames.size() >= 60000u) return 0;
-    m_itemNames.push_back(name);
-    return static_cast<int>(m_itemNames.size());
+    return Enchanting::nameIdOf(name);
 }
 
 void Application::dropLeash(const Leash& leash, const glm::vec3& at)
@@ -24651,7 +24655,7 @@ void Application::renderPlayers(const glm::mat4& view, const glm::mat4& projecti
         const ItemStack& chest = m_inventory.slot(Inventory::ARMOR_FIRST + Armour::slotFor(Items::Elytra));
         if (!chest.empty() && chest.id == Items::Elytra)
             m_playerModel.renderElytra(m_activeShader ? *m_activeShader : m_chunkShader, *m_world, pose,
-                                       (!m_activeShader && chest.enchantments) ? glintTexture(true) : 0,
+                                       (!m_activeShader && Enchanting::glints(chest.id, chest.enchantments)) ? glintTexture(true) : 0,
                                        glintShift());
     }
 }
@@ -26761,7 +26765,7 @@ void Application::shareItems(float deltaTime)
         std::vector<Net::ItemSnap> items;
         items.reserve(snaps.size());
         for (const DroppedItems::Snap& snap : snaps)
-            items.push_back({ snap.serial, snap.position, static_cast<uint16_t>(snap.id), snap.count, snap.ready });
+            items.push_back({ snap.serial, snap.position, static_cast<uint16_t>(snap.id), snap.count, snap.ready, snap.enchantments });
         m_net.broadcastItems(items);
         return;
     }
@@ -26779,6 +26783,7 @@ void Application::shareItems(float deltaTime)
             snap.id = static_cast<StackId>(item.id);
             snap.count = item.count;
             snap.ready = item.ready;
+            snap.enchantments = item.enchantments;
             snaps.push_back(snap);
         }
         m_drops.mirror(snaps);

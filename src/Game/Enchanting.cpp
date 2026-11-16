@@ -81,7 +81,8 @@ namespace Enchanting
 
         constexpr int COLOUR_AT = KIND_COUNT;
         constexpr int WORK_AT = KIND_COUNT + 4;
-        using Levels = std::array<uint8_t, KIND_COUNT + 5>;
+        constexpr int NAME_AT = KIND_COUNT + 5;
+        using Levels = std::array<uint8_t, KIND_COUNT + 7>;
 
         constexpr uint32_t LIBRARY_MARK = 7u << 21;
         constexpr uint32_t LIBRARY_INDEX = (1u << 21) - 1u;
@@ -117,7 +118,8 @@ namespace Enchanting
         Set encode(const Levels& levels, Set top)
         {
             bool packs = levels[static_cast<size_t>(Kind::FrostWalker)] < 7 && levels[static_cast<size_t>(COLOUR_AT)] == 0 &&
-                         levels[static_cast<size_t>(WORK_AT)] == 0;
+                         levels[static_cast<size_t>(WORK_AT)] == 0 && levels[static_cast<size_t>(NAME_AT)] == 0 &&
+                         levels[static_cast<size_t>(NAME_AT) + 1] == 0;
             for (int k = PACKED_KINDS; k < KIND_COUNT && packs; ++k)
                 if (levels[static_cast<size_t>(k)] != 0) packs = false;
             if (packs)
@@ -335,6 +337,84 @@ namespace Enchanting
         Levels levels = decode(set);
         levels[static_cast<size_t>(WORK_AT)] = static_cast<uint8_t>(std::clamp(cost, 0, 255));
         return encode(levels, set);
+    }
+
+    std::vector<std::string>& names()
+    {
+        static std::vector<std::string> table;
+        return table;
+    }
+
+    std::string& previewName()
+    {
+        static std::string pending;
+        return pending;
+    }
+
+    int findName(const std::string& text)
+    {
+        const std::vector<std::string>& table = names();
+        for (size_t i = 0; i < table.size(); ++i)
+            if (table[i] == text) return static_cast<int>(i) + 1;
+        return 0;
+    }
+
+    int nameIdOf(const std::string& text)
+    {
+        const int found = findName(text);
+        if (found > 0) return found;
+        if (names().size() >= 60000u) return 0;
+        names().push_back(text);
+        return static_cast<int>(names().size());
+    }
+
+    int nameOf(Set set)
+    {
+        if (!shelved(set)) return 0;
+        const Levels levels = decode(set);
+        return (static_cast<int>(levels[static_cast<size_t>(NAME_AT)]) << 8) | levels[static_cast<size_t>(NAME_AT) + 1];
+    }
+
+    Set withName(Set set, int id)
+    {
+        Levels levels = decode(set);
+        const int kept = std::clamp(id, 0, 65535);
+        levels[static_cast<size_t>(NAME_AT)] = static_cast<uint8_t>(kept >> 8);
+        levels[static_cast<size_t>(NAME_AT) + 1] = static_cast<uint8_t>(kept & 255);
+        return encode(levels, set);
+    }
+
+    std::string nameText(Set set)
+    {
+        const int id = nameOf(set);
+        if (id == PREVIEW_NAME) return previewName();
+        if (id <= 0 || id > static_cast<int>(names().size())) return std::string();
+        return names()[static_cast<size_t>(id - 1)];
+    }
+
+    Portable portable(Set set)
+    {
+        Portable out;
+        if (!shelved(set)) return out;
+        Levels levels = decode(set);
+        out.name = nameText(set);
+        levels[static_cast<size_t>(NAME_AT)] = 0;
+        levels[static_cast<size_t>(NAME_AT) + 1] = 0;
+        out.levels.assign(levels.begin(), levels.end());
+        return out;
+    }
+
+    Set fromPortable(Set raw, const Portable& carried)
+    {
+        if (!shelved(raw)) return raw;
+        Levels levels{};
+        for (size_t k = 0; k < levels.size() && k < carried.levels.size(); ++k)
+            levels[k] = static_cast<uint8_t>(static_cast<int>(k) < KIND_COUNT
+                                                 ? std::min<int>(carried.levels[k], maxLevel(static_cast<Kind>(k)))
+                                                 : carried.levels[k]);
+        Set out = encode(levels, raw & ~KIND_BITS);
+        if (!carried.name.empty()) out = withName(out, nameIdOf(carried.name));
+        return out;
     }
 
     int anvilCost(Kind kind)

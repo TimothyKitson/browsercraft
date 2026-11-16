@@ -163,6 +163,7 @@ namespace Net
         uint16_t id = 0;
         int count = 1;
         bool ready = false;
+        uint32_t enchantments = 0;
     };
 
     struct ItemDrop

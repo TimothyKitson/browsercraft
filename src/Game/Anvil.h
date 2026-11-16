@@ -42,7 +42,10 @@ namespace Anvil
         // How many of the right-hand stack it consumes. Always 1 except
         // when mending with raw material.
         int used = 0;
+        int count = 1;
     };
+
+    constexpr int KEEP_NAME = -1;
 
     // Minecraft's ceiling, and the reason a tool cannot be built up
     // forever. Anything at or above this is refused.
@@ -73,5 +76,5 @@ namespace Anvil
 
     // What comes out, and what it costs. An invalid result means the
     // two do not go together and the output slot stays empty.
-    Result combine(const Input& left, const Input& right);
+    Result combine(const Input& left, const Input& right, int rename = KEEP_NAME);
 }
