@@ -90,6 +90,7 @@ public:
 
     int loadedChunks() const { return static_cast<int>(m_chunks.size()); }
     int pendingJobs() const { return m_activeJobs.load(); }
+    void snapshotFor(const Chunk& chunk, MeshSnapshot& snapshot) const { buildSnapshot(chunk, snapshot); }
     int renderDistance() const { return m_renderDistance; }
     void setRenderDistance(int distance);
     // How many milliseconds a frame may spend building chunks. The

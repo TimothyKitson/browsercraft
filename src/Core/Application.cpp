@@ -2471,6 +2471,7 @@ bool Application::frame()
     // Clamp so a hitch (or a breakpoint) can't teleport the player
     // through the world on the next physics step.
     deltaTime = std::min(deltaTime, 0.1f);
+    if (!m_cinematicPath.empty()) deltaTime = static_cast<float>(std::max(1, m_cineStride)) / 30.0f;
     m_worldDelta = worldTimeScale(deltaTime);
     if (m_debugRunning) ++m_debugFrames;
 
@@ -3572,6 +3573,7 @@ bool Application::frame()
         }
     }
 
+    if (!m_cinematicPath.empty()) tickCinematic();
     render();
 
     // Menu clicks are carried out here, once drawing is finished.
@@ -9154,6 +9156,7 @@ bool Application::frame()
         if (m_autoScreenshotDelay > 0.0f && m_lanTest.empty()) m_running = false;
     }
 
+    if (m_cineCapture) captureCinematicFrame();
     m_window.swapBuffers();
     if (m_maxFps > 0 && !m_automated)
     {
@@ -21436,7 +21439,7 @@ void Application::render()
             renderDeathScreen();
             break;
     }
-    if ((inWorld && m_world) || !inGame()) renderToasts();
+    if (((inWorld && m_world) || !inGame()) && m_cinematicPath.empty()) renderToasts();
 
     m_ui.end();
 }
@@ -21658,6 +21661,7 @@ void Application::renderWorldShaded()
     m_books.render(world, *m_world);
     renderLids(world);
     m_fangRenderer.render(world, *m_world, m_fangs, m_fangClock / Fangs::TICK);
+    m_crystalRenderer.render(world, *m_world, crystalSpots(), m_elapsedSeconds * 20.0f);
     m_paintingRenderer.render(world, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(world, *m_world, standsHere(96.0f));
     m_signRenderer.render(world, *m_world, m_world->signsNear(m_camera.position, 64.0f));
@@ -21814,6 +21818,7 @@ void Application::renderWorld()
     m_books.render(m_chunkShader, *m_world);
     renderLids(m_chunkShader);
     m_fangRenderer.render(m_chunkShader, *m_world, m_fangs, m_fangClock / Fangs::TICK);
+    m_crystalRenderer.render(m_chunkShader, *m_world, crystalSpots(), m_elapsedSeconds * 20.0f);
     m_paintingRenderer.render(m_chunkShader, *m_world, m_paintings.near(m_camera.position, 96.0f));
     m_standRenderer.render(m_chunkShader, *m_world, standsHere(96.0f));
     m_signRenderer.render(m_chunkShader, *m_world, m_world->signsNear(m_camera.position, 64.0f));
@@ -25423,6 +25428,33 @@ void Application::castShadows(const glm::mat4& view, const glm::mat4& projection
     m_shadows.render(view, projection);
 }
 
+const std::vector<glm::ivec3>& Application::crystalSpots()
+{
+    if (--m_crystalScan > 0) return m_crystalSpots;
+    m_crystalScan = 20;
+    m_crystalSpots.clear();
+    if (!m_world) return m_crystalSpots;
+    if (m_dimension == Dimension::End)
+        for (int i = 0; i < WorldGen::END_PILLARS; ++i)
+        {
+            int px = 0, pz = 0, tall = 0;
+            WorldGen::endPillar(i, px, pz, tall);
+            const int y = WorldGen::END_ISLAND_LEVEL + tall + 2;
+            if (m_world->getBlock(px, y, pz) == Blocks::EndCrystal) m_crystalSpots.emplace_back(px, y, pz);
+        }
+    const glm::ivec3 eye(static_cast<int>(std::floor(m_camera.position.x)), static_cast<int>(std::floor(m_camera.position.y)),
+                         static_cast<int>(std::floor(m_camera.position.z)));
+    for (int dy = -12; dy <= 12; ++dy)
+        for (int dz = -12; dz <= 12; ++dz)
+            for (int dx = -12; dx <= 12; ++dx)
+            {
+                const glm::ivec3 at = eye + glm::ivec3(dx, dy, dz);
+                if (m_world->getBlock(at.x, at.y, at.z) != Blocks::EndCrystal) continue;
+                if (std::find(m_crystalSpots.begin(), m_crystalSpots.end(), at) == m_crystalSpots.end()) m_crystalSpots.push_back(at);
+            }
+    return m_crystalSpots;
+}
+
 void Application::queueBeams()
 {
     m_beams.clear();
@@ -25516,16 +25548,23 @@ void Application::queueBeams()
         const glm::vec3 heart = dragon->position() + glm::vec3(0.0f, dragon->height() * 0.5f, 0.0f);
         if (dragon->alive())
         {
+            float nearest = 32.0f;
+            glm::vec3 healer(0.0f);
+            bool healing = false;
             for (int i = 0; i < WorldGen::END_PILLARS; ++i)
             {
                 int px = 0, pz = 0, tall = 0;
                 WorldGen::endPillar(i, px, pz, tall);
                 const int y = WorldGen::END_ISLAND_LEVEL + tall + 2;
                 if (m_world->getBlock(px, y, pz) != Blocks::EndCrystal) continue;
-                const glm::vec3 crystal(px + 0.5f, y + 0.5f, pz + 0.5f);
-                if (glm::length(heart - crystal) > 64.0f) continue;
-                m_beams.beam(BeamRenderer::Look::Crystal, crystal, heart, 0.1f, t * 1.5f, t);
+                const glm::vec3 crystal(px + 0.5f, y + 1.0f, pz + 0.5f);
+                const float distance = glm::length(dragon->position() - crystal);
+                if (distance >= nearest) continue;
+                nearest = distance;
+                healer = crystal;
+                healing = true;
             }
+            if (healing) m_beams.beam(BeamRenderer::Look::Crystal, healer, heart, 0.1f, t * 1.5f, t);
         }
         else
         {
@@ -31226,6 +31265,7 @@ void Application::renderSleep()
 #include "PackScreen.inl"
 #include "Tutorial.inl"
 #include "Spectator.inl"
+#include "Cinematic.inl"
 #include "Commands.inl"
 #include "AccessibilityScreen.inl"
 #include "ControlsScreen.inl"

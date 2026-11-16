@@ -34,57 +34,13 @@ namespace
     constexpr float ITEM_DOWN = 0.65f * 0.8f;
     constexpr float ITEM_FORWARD = 0.9f * 0.8f;
 
-    // The empty hand is not simply the pose above with nothing in it.
-    // Mojang puts the arm through a stack of its own after it --
-    //
-    //     translate(-1, 3.6, 3.5)  rotateZ(120)  rotateX(200)
-    //     rotateY(-135)  translate(5.6, 0, 0)
-    //
-    // -- and then draws the biped's right arm, a 4x12x4 box pinned at
-    // (-5, 2, 0), at a sixteenth scale. Walking the fist end of that
-    // box through the whole chain puts it at (0.74, -0.48, -1.14) in
-    // the camera's frame, which is where these three come from: a
-    // fist about three quarters of the way across the screen and four
-    // fifths of the way down it, which is exactly where Minecraft's
-    // is. The arm below is built out from that point, so what matters
-    // is that the point is right rather than that the chain is
-    // replayed in full.
-    constexpr float HAND_RIGHT = 0.7355f;
-    constexpr float HAND_DOWN = 0.4800f;
-    constexpr float HAND_FORWARD = 1.1379f;
-
-    // How far the hand drops while something new is being raised.
     constexpr float EQUIP_DROP = 0.6f;
 
-    // The arm's own origin is its fist, so the offsets above place the
-    // fist directly and there is nothing further to nudge.
-    constexpr float HAND_LOCAL_X = 0.0f;
-    constexpr float HAND_LOCAL_Y = 0.0f;
-    constexpr float HAND_LOCAL_Z = 0.0f;
-
-    // Minecraft's first-person arm is a slim thing tucked into the
-    // bottom corner -- about a tenth of the screen across -- long
-    // enough that the shoulder runs off the bottom edge, so only the
-    // fist end is ever in shot.
-    constexpr float ARM_HALF_WIDTH = 0.100f;
-    constexpr float ARM_HALF_DEPTH = 0.100f;
-
-    // An arm's texture patch is four pixels across and twelve tall, so
-    // the box has to be three times as long as it is wide or the texels
-    // come out taller than they are wide and the whole thing reads as
-    // stretched.
-    constexpr float ARM_TEXEL_RATIO = 3.0f;   // 12 tall / 4 wide
+    constexpr float ARM_HALF_WIDTH = 0.125f;
+    constexpr float ARM_HALF_DEPTH = 0.125f;
+    constexpr float ARM_TEXEL_RATIO = 3.0f;
     constexpr float ARM_LENGTH = ARM_HALF_WIDTH * 2.0f * ARM_TEXEL_RATIO;
-
-    // Radians, leaning the arm so it rises from the bottom-right corner
-    // towards the middle of the screen. It has to be zero: a lean tips
-    // the cut end of the fist sideways, and what should be a level edge
-    // across the knuckles comes out as a slant.
-    constexpr float ARM_LEAN = 0.0f;
-
-    // How far past edge-on to carry the cut end, in radians. Zero, now
-    // that the end caps take the fist's patch rather than the sleeve's.
-    constexpr float ARM_CAP_MARGIN = 0.0f;
+    constexpr float ARM_BOB = 0.05f;
 
     // Minecraft scales a held block to four tenths of a block and
     // draws it about its own middle, so it is 0.4 across however the
@@ -331,34 +287,17 @@ glm::mat4 HeldItem::pose(const glm::mat4& camera, bool item, bool, bool) const
         return camera * FLIP_FORWARD * m;
     }
 
-    const float right = HAND_RIGHT - arc * 0.3f;
-    const float down = HAND_DOWN + (1.0f - m_equip) * EQUIP_DROP - lift * 0.4f;
-    const float forward = HAND_FORWARD + punch * 0.4f;
-
-    const glm::vec3 origin = glm::vec3(camera[3]) +
-                             glm::vec3(camera[0]) * right +
-                             glm::vec3(camera[1]) * -down +
-                             glm::vec3(camera[2]) * forward;
-
-    const float yaw = degrees(-45.0f - arc * 70.0f);
-    const float roll = degrees(-std::sin(p * p * PI) * 20.0f);
-
-    const float cy = std::cos(yaw), sy = std::sin(yaw);
-    const float cr = std::cos(roll), sr = std::sin(roll);
-
-    const glm::mat3 Ry(cy, 0.0f, -sy,  0.0f, 1.0f, 0.0f,  sy, 0.0f, cy);
-    const glm::mat3 Rz(cr, sr, 0.0f,  -sr, cr, 0.0f,  0.0f, 0.0f, 1.0f);
-    const glm::mat3 turn = Ry * Rz;
-
-    const glm::mat3 basis{ glm::vec3(camera[0]), glm::vec3(camera[1]), glm::vec3(camera[2]) };
-    const glm::mat3 axes = basis * turn;
-
-    glm::mat4 out(1.0f);
-    out[0] = glm::vec4(axes[0], 0.0f);
-    out[1] = glm::vec4(axes[1], 0.0f);
-    out[2] = glm::vec4(axes[2], 0.0f);
-    out[3] = glm::vec4(origin, 1.0f);
-    return out;
+    glm::mat4 m(1.0f);
+    m = glm::translate(m, glm::vec3(-0.3f * arc + 0.64f, 0.4f * lift - 0.6f - 0.6f * (1.0f - m_equip), -0.4f * punch - 0.72f));
+    m = m * mcRotate(glm::vec3(0.0f, 1.0f, 0.0f), 45.0f);
+    m = m * mcRotate(glm::vec3(0.0f, 1.0f, 0.0f), arc * 70.0f);
+    m = m * mcRotate(glm::vec3(0.0f, 0.0f, 1.0f), -20.0f * std::sin(p * p * PI));
+    m = glm::translate(m, glm::vec3(-1.0f, 3.6f, 3.5f));
+    m = m * mcRotate(glm::vec3(0.0f, 0.0f, 1.0f), 120.0f);
+    m = m * mcRotate(glm::vec3(1.0f, 0.0f, 0.0f), 200.0f);
+    m = m * mcRotate(glm::vec3(0.0f, 1.0f, 0.0f), -135.0f);
+    m = glm::translate(m, glm::vec3(5.6f, 0.0f, 0.0f));
+    return camera * FLIP_FORWARD * m;
 }
 
 // Up and back on the way out, down and forward on the way in, which is
@@ -377,101 +316,40 @@ void HeldItem::appendArm(const glm::mat4& toWorld, const PlayerSkin& skin,
     const float texW = static_cast<float>(skin.width());
     const float texH = static_cast<float>(skin.height());
 
-    // The right arm out of the skin, turned in the plane of the screen
-    // so it rises from the bottom-right corner with the fist towards
-    // the middle.
-    //
-    // Turning it in the screen's plane alone is not enough to hide the
-    // cut end of the box. The hand sits well off to the right, so
-    // perspective lets you see round it and the cross-section shows at
-    // the knuckles -- an arm that looks like a tube you are peering
-    // down. The cure is to pitch the arm until that end is edge-on
-    // *from the eye*, which also happens to be the truth of it: your
-    // fist really is further from your eye than your shoulder is.
-    //
-    // The angle for that is not a number to guess at -- it falls out of
-    // where the hand is, so it is worked out here and follows the hand
-    // if it ever moves.
-    //
-    // Held exactly edge-on, and with no lean, the end of the fist faces
-    // straight ahead: the square cut projects to a level line across the
-    // knuckles, which is the flat end Minecraft shows. Any margin past
-    // edge-on hides the cut behind the arm, and what bounds the top of
-    // the arm instead is one edge of that square -- turned out of true
-    // by the spin below, so the fist tapers off at an angle.
-    const float cl = std::cos(ARM_LEAN), sl = std::sin(ARM_LEAN);
+    const bool slim = w < 4.0f;
+    const glm::vec3 pivot(-5.0f / 16.0f, (slim ? 2.5f : 2.0f) / 16.0f, 0.0f);
+    const glm::vec3 fist((slim ? -0.5f : -1.0f) / 16.0f, 10.0f / 16.0f, 0.0f);
+    const glm::mat4 arm = toWorld * glm::translate(glm::mat4(1.0f), pivot) *
+                          glm::rotate(glm::mat4(1.0f), ARM_BOB, glm::vec3(0.0f, 0.0f, 1.0f)) *
+                          glm::translate(glm::mat4(1.0f), fist) *
+                          glm::rotate(glm::mat4(1.0f), PI, glm::vec3(0.0f, 1.0f, 0.0f));
 
-    const float tilt = std::atan2(cl * -HAND_DOWN - sl * HAND_RIGHT, HAND_FORWARD)
-                       - ARM_CAP_MARGIN;
-    const float ct = std::cos(tilt), st = std::sin(tilt);
-
-    glm::mat4 lean(1.0f);
-    lean[0] = glm::vec4(cl, sl, 0.0f, 0.0f);
-    lean[1] = glm::vec4(-sl * ct, cl * ct, -st, 0.0f);
-    lean[2] = glm::vec4(-sl * st, cl * st, ct, 0.0f);
-    lean[3] = glm::vec4(HAND_LOCAL_X, HAND_LOCAL_Y, HAND_LOCAL_Z, 1.0f);
-    // Spun about its own length so two of the long faces show at once
-    // and the arm reads as a box seen corner-on rather than as a flat
-    // slab facing you. Measured against the line from the eye to the
-    // hand, like the block's turn, because the hand sits far enough off
-    // to the side that that line and the camera's axis differ. Spinning
-    // about the arm's own axis leaves the end cap pointing where it was,
-    // so the tilt above still hides it.
-    // A further quarter turn on top of the eighth: the cross-section is
-    // square, so it leaves the silhouette alone and only swaps which pair
-    // of faces is which, putting the brighter one on the left where
-    // Minecraft has it rather than on the right.
-    const float spinAngle = std::atan2(HAND_FORWARD, HAND_RIGHT) + 0.7853982f;
-    const float cs = std::cos(spinAngle), ss = std::sin(spinAngle);
-    glm::mat4 spin(1.0f);
-    spin[0] = glm::vec4(cs, 0.0f, ss, 0.0f);
-    spin[2] = glm::vec4(-ss, 0.0f, cs, 0.0f);
-
-    const glm::mat4 arm = toWorld * lean * spin;
-
-    const float halfW = ARM_HALF_WIDTH * (w / 4.0f);
-    const float halfD = ARM_HALF_DEPTH;
-    const float length = ARM_LENGTH;
-
-    for (int face = 0; face < 6; ++face)
+    const bool layered = skin.height() >= 64;
+    for (int layer = 0; layer < (layered ? 2 : 1); ++layer)
     {
-        // The box has the fist at its top and the shoulder at its
-        // bottom; the skin has them the other way up. That applies to
-        // the two end caps as much as to the long faces, so they swap
-        // patches -- otherwise the end of the fist is textured with the
-        // top of the sleeve, and the sliver of it you can see at the
-        // knuckles comes out teal.
-        const int patchFace = (face == 2) ? 3 : (face == 3) ? 2 : face;
-
-        int px = 0, py = 0, pw = 0, ph = 0;
-        BoxMesh::facePatch(patchFace, 40, 16, static_cast<int>(w), 12, 4, px, py, pw, ph);
-
-        // The four long faces take their v from where the corner
-        // actually is along the arm, rather than from the cube's own
-        // table: the box has the hand at its top and the skin has the
-        // hand at the bottom of its patch, and reading the table
-        // straight is what put the cuff on the knuckles.
-        const bool longFace = (face != 2 && face != 3);
-
-        Quad q;
-        q.shade = CUBE_SHADE[face];
-        for (int k = 0; k < 4; ++k)
+        const float grow = layer == 1 ? 0.25f / 16.0f : 0.0f;
+        const float halfW = ARM_HALF_WIDTH * (w / 4.0f) + grow;
+        const float halfD = ARM_HALF_DEPTH + grow;
+        const float top = grow;
+        const float bottom = -ARM_LENGTH - grow;
+        for (int face = 0; face < 6; ++face)
         {
-            const int* c = CUBE_FACE[face][k];
-            q.corner[k] = place(arm,
-                                (c[0] ? halfW : -halfW),
-                                (c[1] ? 0.0f : -length),
-                                (c[2] ? halfD : -halfD));
-
-            // c[1] is 1 at the hand end of the box, 0 at the shoulder.
-            const float vEdge = longFace
-                                    ? FirstPersonArm::patchV(c[1] ? 1.0f : 0.0f)
-                                    : CUBE_UV[face][k][1];
-
-            q.u[k] = (px + CUBE_UV[face][k][0] * pw) / texW;
-            q.v[k] = (py + vEdge * ph) / texH;
+            const int patchFace = (face == 2) ? 3 : (face == 3) ? 2 : face;
+            int px = 0, py = 0, pw = 0, ph = 0;
+            BoxMesh::facePatch(patchFace, 40, layer == 1 ? 32 : 16, static_cast<int>(w), 12, 4, px, py, pw, ph);
+            const bool longFace = (face != 2 && face != 3);
+            Quad q;
+            q.shade = CUBE_SHADE[face];
+            for (int k = 0; k < 4; ++k)
+            {
+                const int* c = CUBE_FACE[face][k];
+                q.corner[k] = place(arm, (c[0] ? halfW : -halfW), (c[1] ? top : bottom), (c[2] ? halfD : -halfD));
+                const float vEdge = longFace ? FirstPersonArm::patchV(c[1] ? 1.0f : 0.0f) : CUBE_UV[face][k][1];
+                q.u[k] = (px + CUBE_UV[face][k][0] * pw) / texW;
+                q.v[k] = (py + vEdge * ph) / texH;
+            }
+            pushQuad(m_vertices, q, sky, blockLight);
         }
-        pushQuad(m_vertices, q, sky, blockLight);
     }
 }
 

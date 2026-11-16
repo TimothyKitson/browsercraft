@@ -365,11 +365,11 @@ void main()
 
     float texLuma = luma(texel.rgb);
     if (material == MAT_LAVA)
-        colour = albedo * 4.2 + albedo * light * 0.2;
+        colour = albedo * 1.9 + albedo * light * 0.2;
     else if (material == MAT_FLAME)
         colour += albedo * 3.2 * smoothstep(0.25, 0.75, texLuma);
     else if (material == MAT_PORTAL)
-        colour += albedo * 2.8;
+        colour += albedo * 1.1;
     else if (material == MAT_GLOWING)
     {
         float warm = mix(0.5, 1.0, smoothstep(0.0, 0.2, texel.r - texel.b));

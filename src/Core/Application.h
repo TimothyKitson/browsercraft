@@ -44,6 +44,7 @@
 #include "World/WorldBorder.h"
 #include "Renderer/BookRenderer.h"
 #include "Renderer/FangRenderer.h"
+#include "Renderer/EndCrystalRenderer.h"
 #include "Renderer/PaintingRenderer.h"
 #include "Renderer/ArmorStandRenderer.h"
 #include "Renderer/SignRenderer.h"
@@ -80,6 +81,8 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <fstream>
+#include <cstdio>
 #include <map>
 #include <tuple>
 #include <functional>
@@ -226,6 +229,14 @@ public:
     void setStartupMode(GameMode mode) { m_startupMode = mode; m_startImmediately = true; }
     // Dev aid: open on a particular screen so menus can be screenshotted.
     void setStartupScreen(const std::string& screen) { m_startupScreen = screen; }
+    void setCinematic(const std::string& path) { m_cinematicPath = path; m_startImmediately = true; }
+    void setCinematicExport(const std::string& dir) { m_cineExportDir = dir; }
+    struct CineKey
+    {
+        float t;
+        glm::vec3 pos;
+        glm::vec3 look;
+    };
     // Generate the next new world from a specific seed instead of a random one.
     void setSeedOverride(uint32_t seed) { m_seedOverride = seed; m_hasSeedOverride = true; }
     // Dev aids: start a world and immediately share it, or join one.
@@ -733,6 +744,10 @@ private:
     float m_paintingClock = 0.0f;
     std::vector<Fangs::Fang> m_fangs;
     FangRenderer m_fangRenderer;
+    EndCrystalRenderer m_crystalRenderer;
+    std::vector<glm::ivec3> m_crystalSpots;
+    int m_crystalScan = 0;
+    const std::vector<glm::ivec3>& crystalSpots();
     float m_fangClock = 0.0f;
     float m_glowClock = 0.0f;
     void queueFireworks();
@@ -940,6 +955,53 @@ private:
     bool m_pendingScreenshot = false;
     bool m_automated = false;
     bool m_startImmediately = false;
+    struct CineShot
+    {
+        std::vector<CineKey> keys;
+        float seconds = 0.0f;
+        bool easeIn = true;
+        bool easeOut = true;
+        bool trackDragon = false;
+    };
+    enum class CinePhase { Travel, Load, Settle, Shoot };
+    std::string m_cinematicPath;
+    CineShot m_cineShot;
+    CinePhase m_cinePhase = CinePhase::Travel;
+    int m_cineShotIndex = 0;
+    int m_cineCounter = 0;
+    int m_cineSpent = 0;
+    int m_cineFrame = 0;
+    int m_cineWritten = 0;
+    glm::vec3 m_cineAnchor{ 0.0f };
+    glm::vec3 m_cineWait{ 0.0f };
+    glm::vec3 m_cineDragonAim{ 0.0f };
+    bool m_cineDragonSeen = false;
+    bool m_cineCapture = false;
+    FILE* m_cinePipe = nullptr;
+    std::string m_cineExportDir;
+    std::string m_cineStillDir;
+    int m_cineStride = 0;
+    bool m_cineAtlasSaved = false;
+    std::set<unsigned int> m_cineSavedTextures;
+    std::ofstream m_cineTrack;
+    glm::vec3 m_cinePortal{ 0.0f };
+    void cineSaveTexture(unsigned int texture, const std::string& path);
+    float cineSight(const glm::vec3& from, const glm::vec3& to) const;
+    bool cineOpenAir(const glm::vec3& at) const;
+    glm::vec3 cineCentroid(const glm::vec3& around, int reach, int low, int high, bool (*match)(const char*), int& count, int& top) const;
+    void cineExportShot();
+    void cineClearPath();
+    void cineTrackFrame(const glm::vec3& eye, const glm::vec3& look);
+    int cineGround(int x, int fromY, int z, int lowest) const;
+    void cineBuildPortal(int x0, int y0, int z0);
+    void cineSummon(MobId type, int x, int fromY, int z, int lowest);
+    void cineAim(const glm::vec3& eye, const glm::vec3& look);
+    bool cineLoaded(const glm::vec3& around, int radius) const;
+    bool cineStage(int shot);
+    bool cineLocate(int shot);
+    void tickCinematic();
+    void captureCinematicFrame();
+    void finishCinematic();
     GameMode m_startupMode = GameMode::Survival;
     std::string m_startupScreen;
 

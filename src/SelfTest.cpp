@@ -18621,7 +18621,9 @@ namespace
         check(std::fabs(item.y + 0.52f) < 0.001f, "and 0.52 down");
         check(std::fabs(item.z - 0.72f) < 0.001f, "and 0.72 forward");
 
-        const glm::vec3 fist = glm::vec3(hand.pose(eye, false)[3]);
+        const glm::vec3 fist = glm::vec3(hand.pose(eye, false) * glm::vec4(-6.0f / 16.0f, 12.0f / 16.0f, 0.0f, 1.0f));
+        check(std::fabs(fist.x - 0.7355f) < 0.002f && std::fabs(fist.y + 0.4791f) < 0.002f && std::fabs(fist.z - 1.1384f) < 0.002f,
+              "the empty fist lands where 1.21's arm stack puts it");
         check(fist.x > item.x, "an empty hand sits further out than a full one");
         check(fist.y > item.y, "and higher");
         check(fist.z > item.z, "and further forward, which is where its fist lands");

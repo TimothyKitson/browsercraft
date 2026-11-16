@@ -70,7 +70,6 @@ namespace
         const size_t n = std::strlen(p);
         return s.size() >= n && s.compare(s.size() - n, n, p) == 0;
     }
-    bool has(const std::string& s, const char* p) { return s.find(p) != std::string::npos; }
     bool oneOf(const std::string& s, std::initializer_list<const char*> list)
     {
         for (const char* one : list) if (s == one) return true;
@@ -108,123 +107,42 @@ namespace
         return n;
     }
 
-    unsigned tabsOf(StackId id)
+    std::vector<ItemStack>& paletteSpecials()
     {
-        const std::string n = vanillaName(id);
-        const bool block = !isItem(id);
-        unsigned bits = 0;
-        auto add = [&](int tab) { bits |= 1u << tab; };
-        static const char* COLOURS[16] = { "white_", "orange_", "magenta_", "light_blue_", "yellow_", "lime_", "pink_", "gray_",
-                                           "light_gray_", "cyan_", "purple_", "blue_", "brown_", "green_", "red_", "black_" };
-        bool dyed = false;
-        for (const char* c : COLOURS) if (startsWith(n, c)) dyed = true;
-        const bool colourKind = endsWith(n, "wool") || endsWith(n, "carpet") || endsWith(n, "terracotta") || endsWith(n, "concrete") ||
-                                endsWith(n, "concrete_powder") || endsWith(n, "stained_glass") || endsWith(n, "stained_glass_pane") ||
-                                endsWith(n, "shulker_box") || endsWith(n, "_bed") || endsWith(n, "candle") || endsWith(n, "_banner") ||
-                                n == "glass" || n == "glass_pane" || n == "tinted_glass";
-        if ((dyed && colourKind) || oneOf(n, { "terracotta", "glass", "glass_pane", "shulker_box", "candle", "tinted_glass" }))
-            add(TAB_COLORED);
+        static std::vector<ItemStack> specials;
+        return specials;
+    }
 
-        if (oneOf(n, { "command_block", "chain_command_block", "repeating_command_block", "command_block_minecart", "structure_block",
-                       "structure_void", "jigsaw", "barrier", "light", "debug_stick", "knowledge_book" }))
-            add(TAB_OPERATOR);
-        if (id == Items::SpawnEgg || oneOf(n, { "spawner", "trial_spawner" })) add(TAB_SPAWN_EGGS);
-
-        const bool redstone = oneOf(n, { "redstone", "redstone_torch", "redstone_block", "repeater", "comparator", "target", "lever",
-            "oak_button", "stone_button", "oak_pressure_plate", "stone_pressure_plate", "light_weighted_pressure_plate",
-            "heavy_weighted_pressure_plate", "sculk_sensor", "calibrated_sculk_sensor", "amethyst_block", "white_wool", "tripwire_hook",
-            "string", "lectern", "daylight_detector", "lightning_rod", "piston", "sticky_piston", "slime_block", "honey_block", "dispenser",
-            "dropper", "crafter", "hopper", "chest", "barrel", "chiseled_bookshelf", "furnace", "trapped_chest", "jukebox",
-            "decorated_pot", "observer", "note_block", "composter", "cauldron", "rail", "powered_rail", "detector_rail", "activator_rail",
-            "minecart", "hopper_minecart", "chest_minecart", "furnace_minecart", "tnt_minecart", "oak_chest_boat", "bamboo_chest_raft",
-            "tnt", "redstone_lamp", "bell", "big_dripleaf", "armor_stand", "redstone_ore", "iron_door", "iron_trapdoor", "oak_door",
-            "oak_trapdoor", "oak_fence_gate", "copper_bulb", "waxed_copper_bulb" });
-        if (redstone) add(TAB_REDSTONE);
-
-        const bool functional = oneOf(n, { "torch", "soul_torch", "redstone_torch", "lantern", "soul_lantern", "chain", "end_rod",
-            "sea_lantern", "redstone_lamp", "glowstone", "shroomlight", "ochre_froglight", "verdant_froglight", "pearlescent_froglight",
-            "crying_obsidian", "glow_lichen", "magma_block", "crafting_table", "stonecutter", "cartography_table", "fletching_table",
-            "smithing_table", "grindstone", "loom", "furnace", "smoker", "blast_furnace", "campfire", "soul_campfire", "anvil",
-            "chipped_anvil", "damaged_anvil", "composter", "note_block", "jukebox", "enchanting_table", "end_crystal", "brewing_stand",
-            "cauldron", "bell", "beacon", "conduit", "lodestone", "ladder", "scaffolding", "bee_nest", "beehive", "suspicious_sand",
-            "suspicious_gravel", "lightning_rod", "flower_pot", "decorated_pot", "armor_stand", "item_frame", "glow_item_frame",
-            "painting", "bookshelf", "chiseled_bookshelf", "lectern", "tinted_glass", "chest", "barrel", "ender_chest", "respawn_anchor",
-            "infested_stone", "infested_cobblestone", "infested_stone_bricks", "infested_mossy_stone_bricks",
-            "infested_cracked_stone_bricks", "infested_chiseled_stone_bricks", "infested_deepslate", "end_portal_frame", "vault",
-            "dragon_egg", "heavy_core", "crafter", "trapped_chest", "copper_bulb" }) ||
-            endsWith(n, "_sign") || endsWith(n, "_hanging_sign") || endsWith(n, "_skull") || endsWith(n, "_head") ||
-            endsWith(n, "shulker_box") || endsWith(n, "_bed") || endsWith(n, "candle") || endsWith(n, "_banner") || endsWith(n, "_lantern");
-        if ((functional && n != "jack_o_lantern") || n == "ender_eye") add(TAB_FUNCTIONAL);
-
-        const bool natural = oneOf(n, { "grass_block", "podzol", "mycelium", "dirt_path", "dirt", "coarse_dirt", "rooted_dirt",
-            "farmland", "mud", "clay", "gravel", "sand", "sandstone", "red_sand", "red_sandstone", "ice", "packed_ice", "blue_ice",
-            "snow_block", "snow", "moss_block", "moss_carpet", "stone", "deepslate", "granite", "diorite", "andesite", "calcite", "tuff",
-            "dripstone_block", "pointed_dripstone", "prismarine", "magma_block", "obsidian", "crying_obsidian", "netherrack",
-            "crimson_nylium", "warped_nylium", "soul_sand", "soul_soil", "bone_block", "blackstone", "basalt", "smooth_basalt",
-            "end_stone", "amethyst_block", "budding_amethyst", "small_amethyst_bud", "medium_amethyst_bud", "large_amethyst_bud",
-            "amethyst_cluster", "bedrock", "cobweb", "sponge", "wet_sponge", "melon", "pumpkin", "carved_pumpkin", "jack_o_lantern",
-            "hay_block", "bee_nest", "honeycomb_block", "slime_block", "honey_block", "ochre_froglight", "verdant_froglight",
-            "pearlescent_froglight", "sculk", "sculk_vein", "sculk_catalyst", "sculk_shrieker", "sculk_sensor", "glow_lichen",
-            "hanging_roots", "spore_blossom", "vine", "weeping_vines", "twisting_vines", "lily_pad", "seagrass", "kelp", "dried_kelp_block",
-            "sea_pickle", "cactus", "sugar_cane", "bamboo", "big_dripleaf", "small_dripleaf", "chorus_plant", "chorus_flower",
-            "turtle_egg", "sniffer_egg", "frogspawn", "wheat_seeds", "cocoa_beans", "pumpkin_seeds", "melon_seeds", "beetroot_seeds",
-            "torchflower_seeds", "pitcher_pod", "glow_berries", "sweet_berries", "nether_wart", "azalea", "flowering_azalea",
-            "mangrove_roots", "muddy_mangrove_roots", "mangrove_propagule", "brown_mushroom", "red_mushroom", "brown_mushroom_block",
-            "red_mushroom_block", "mushroom_stem", "crimson_fungus", "warped_fungus", "crimson_roots", "warped_roots", "nether_sprouts",
-            "nether_wart_block", "warped_wart_block", "shroomlight", "short_grass", "fern", "dead_bush", "tall_grass", "large_fern",
-            "dandelion", "poppy", "blue_orchid", "allium", "azure_bluet", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip",
-            "oxeye_daisy", "cornflower", "lily_of_the_valley", "torchflower", "wither_rose", "pink_petals", "sunflower", "lilac",
-            "rose_bush", "peony", "pitcher_plant", "gravel", "powder_snow_bucket", "mud", "glowstone" }) ||
-            endsWith(n, "_ore") || startsWith(n, "raw_") || endsWith(n, "_log") || endsWith(n, "_stem") || endsWith(n, "_leaves") ||
-            endsWith(n, "_sapling") || has(n, "coral") || n == "moss_carpet" || n == "bamboo_block" || n == "ancient_debris";
-        if (natural && (!startsWith(n, "raw_") || endsWith(n, "_block")) && !startsWith(n, "stripped_")) add(TAB_NATURAL);
-
-        if (n == "end_crystal") add(TAB_COMBAT);
-        if (block)
+    ItemStack paletteStack(int entry)
+    {
+        if (entry < 0)
         {
-            const bool natureOnly = (bits & (1u << TAB_NATURAL)) && !endsWith(n, "_log") &&
-                                    !(endsWith(n, "_stem") && n != "mushroom_stem") &&
-                                    !oneOf(n, { "stone", "deepslate", "granite", "diorite", "andesite", "tuff", "calcite", "sandstone",
-                                                "red_sandstone", "prismarine", "blackstone", "basalt", "smooth_basalt", "end_stone",
-                                                "amethyst_block", "bamboo_block", "netherrack" });
-            const bool elsewhere = (bits & ((1u << TAB_COLORED) | (1u << TAB_OPERATOR) | (1u << TAB_SPAWN_EGGS))) != 0;
-            const bool workBlock = functional && !endsWith(n, "_sign");
-            if (!natureOnly && !elsewhere && !workBlock && !(redstone && !has(n, "door") && !has(n, "trapdoor") && !has(n, "gate") &&
-                                                             !has(n, "button") && !has(n, "pressure_plate")))
-                add(TAB_BUILDING_BLOCKS);
-            if (has(n, "door") || has(n, "trapdoor") || has(n, "fence_gate") || has(n, "button") || has(n, "pressure_plate") ||
-                endsWith(n, "_slab") || endsWith(n, "_stairs") || endsWith(n, "_wall") || endsWith(n, "_fence") ||
-                endsWith(n, "_planks") || endsWith(n, "_wood") || endsWith(n, "_hyphae") || has(n, "stripped_") || endsWith(n, "_log") ||
-                endsWith(n, "_stem") || has(n, "brick") || has(n, "copper") || has(n, "quartz") || has(n, "purpur") || has(n, "polished") ||
-                has(n, "chiseled") || has(n, "cut_") || has(n, "smooth_") || has(n, "iron_bars"))
-                if (!(bits & ((1u << TAB_OPERATOR) | (1u << TAB_COLORED))) && !workBlock && !endsWith(n, "_ore") && n != "mushroom_stem")
-                    add(TAB_BUILDING_BLOCKS);
-            if (oneOf(n, { "chain", "sea_lantern", "amethyst_block", "netherrack", "end_stone", "gilded_blackstone" })) add(TAB_BUILDING_BLOCKS);
-            if (bits == 0) add(TAB_BUILDING_BLOCKS);
-            return bits;
+            const std::vector<ItemStack>& specials = paletteSpecials();
+            const size_t index = static_cast<size_t>(-entry - 1);
+            return index < specials.size() ? specials[index] : ItemStack{};
         }
+        ItemStack stack;
+        stack.id = static_cast<StackId>(entry & 0xFFFF);
+        stack.count = 1;
+        stack.damage = entry >> 16;
+        return stack;
+    }
 
-        if (has(n, "_shovel") || has(n, "_pickaxe") || has(n, "_axe") || has(n, "_hoe") || endsWith(n, "bucket") ||
-            oneOf(n, { "flint_and_steel", "fire_charge", "bone_meal", "shears", "brush", "name_tag", "lead", "bundle", "compass",
-                       "recovery_compass", "clock", "spyglass", "map", "writable_book", "ender_pearl", "ender_eye",
-                       "elytra", "goat_horn", "fishing_rod", "carrot_on_a_stick", "warped_fungus_on_a_stick", "saddle", "minecart",
-                       "chest_minecart", "furnace_minecart", "tnt_minecart", "hopper_minecart", "firework_rocket",
-                       "trial_key", "ominous_trial_key", "wind_charge" }) ||
-            startsWith(n, "music_disc") || endsWith(n, "_boat") || endsWith(n, "_raft") || endsWith(n, "_chest_boat") || endsWith(n, "_chest_raft"))
-            add(TAB_TOOLS_UTILITIES);
-        if (has(n, "_sword") || has(n, "_axe") || endsWith(n, "_helmet") || endsWith(n, "_chestplate") || endsWith(n, "_leggings") ||
-            endsWith(n, "_boots") || endsWith(n, "horse_armor") || oneOf(n, { "mace", "trident", "shield", "bow", "crossbow", "arrow",
-            "spectral_arrow", "tipped_arrow", "wolf_armor", "totem_of_undying", "end_crystal", "snowball", "egg", "wind_charge" }))
-            add(TAB_COMBAT);
-        const bool food = Food::isEdible(id) || oneOf(n, { "milk_bucket", "potion", "splash_potion", "lingering_potion", "honey_bottle",
-                                                          "ominous_bottle", "suspicious_stew", "cake" });
-        if (food) add(TAB_FOOD);
-        if (id == Items::SpawnEgg) return bits;
-        if (oneOf(n, { "filled_map", "written_book" })) return 0;
-        if (bits == 0 || oneOf(n, { "bone_meal", "egg", "snowball", "experience_bottle", "string", "wheat", "sugar", "rabbit_foot",
-                                    "spider_eye", "glistering_melon_slice" }))
-            add(TAB_INGREDIENTS);
-        return bits;
+    std::string snakeName(const std::string& name)
+    {
+        std::string out;
+        for (char c : name)
+        {
+            if (c == ' ' || c == '-') out += '_';
+            else if (c != '\'' && c != '.') out += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        return out;
+    }
+
+    std::vector<std::string>& creativeMissing()
+    {
+        static std::vector<std::string> missing;
+        return missing;
     }
 
     const std::vector<int>& tabEntries(int tab)
@@ -233,55 +151,138 @@ namespace
         if (built.empty())
         {
             built.resize(TAB_COUNT);
-            std::set<std::string> seenBlocks;
+            static const std::vector<std::vector<const char*>> VANILLA = {
+#include "CreativeTabs.inl"
+            };
+            static const int ROW_TAB[] = { TAB_BUILDING_BLOCKS, TAB_COLORED, TAB_NATURAL, TAB_FUNCTIONAL, TAB_REDSTONE,
+                                           TAB_TOOLS_UTILITIES, TAB_COMBAT, TAB_FOOD, TAB_INGREDIENTS, TAB_SPAWN_EGGS, TAB_OPERATOR };
+            std::map<std::string, int> named;
             for (StackId id : allStacks())
-                if (isItem(id)) seenBlocks.insert(vanillaName(id));
+                if (isItem(id)) named.emplace(vanillaName(id), static_cast<int>(id));
             for (StackId id : allStacks())
             {
-                if (id == Items::Potion || id == Items::SplashPotion || id == Items::LingeringPotion || id == Items::SpawnEgg) continue;
-                if (!isItem(id))
-                {
-                    const BlockId block = static_cast<BlockId>(id);
-                    if (axisBase(block) != block || isPistonHead(block)) continue;
-                    const std::string name = vanillaName(id);
-                    if (oneOf(name, { "crystal_base", "end_gateway", "tall_seagrass", "snowy_grass", "ominous_vault" })) continue;
-                    if (!seenBlocks.insert(name).second) continue;
-                }
-                const unsigned bits = tabsOf(id);
-                for (int t = 0; t < TAB_COUNT; ++t)
-                    if (bits & (1u << t)) built[static_cast<size_t>(t)].push_back(static_cast<int>(id));
+                if (isItem(id)) continue;
+                const BlockId block = static_cast<BlockId>(id);
+                if (axisBase(block) != block || isPistonHead(block)) continue;
+                named.emplace(vanillaName(id), static_cast<int>(id));
             }
             for (int mob = 0; mob < mobTypeCount(); ++mob)
             {
                 unsigned int shell = 0, spots = 0;
                 if (!spawnEggColours(static_cast<MobId>(mob), shell, spots)) continue;
-                built[TAB_SPAWN_EGGS].push_back(static_cast<int>(Items::SpawnEgg) | (mob << 16));
+                named.emplace(snakeName(mobType(static_cast<MobId>(mob)).name) + "_spawn_egg", static_cast<int>(Items::SpawnEgg) | (mob << 16));
             }
-            for (const StackId form : { static_cast<StackId>(Items::Potion), static_cast<StackId>(Items::SplashPotion),
-                                        static_cast<StackId>(Items::LingeringPotion) })
+            std::vector<ItemStack>& specials = paletteSpecials();
+            auto special = [&](const ItemStack& stack) {
+                specials.push_back(stack);
+                return -static_cast<int>(specials.size());
+            };
+            auto potions = [&](std::vector<int>& into, StackId form) {
                 for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
                     for (int variant = 0; variant < 3; ++variant)
                     {
                         Brewing::Brew brew{ static_cast<Brewing::Potion>(p), variant == 1, variant == 2 };
                         if ((variant == 1 && !Brewing::canExtend(brew.potion)) || (variant == 2 && !Brewing::canStrengthen(brew.potion)))
                             continue;
-                        built[TAB_FOOD].push_back(static_cast<int>(form) | (Brewing::encode(brew) << 16));
+                        into.push_back(static_cast<int>(form) | (Brewing::encode(brew) << 16));
                     }
-            std::vector<int> arrows;
-            for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
-                for (int variant = 0; variant < 2; ++variant)
+            };
+            for (size_t row = 0; row < VANILLA.size() && row < std::size(ROW_TAB); ++row)
+            {
+                std::vector<int>& into = built[static_cast<size_t>(ROW_TAB[row])];
+                for (const char* token : VANILLA[row])
                 {
-                    const Brewing::Brew brew{ static_cast<Brewing::Potion>(p), false, variant == 1 };
-                    if (variant == 1 && !Brewing::canStrengthen(brew.potion)) continue;
-                    const std::vector<Brewing::Dose> doses = Brewing::dosesOf(brew);
-                    if (doses.empty()) continue;
-                    const int damage = Brewing::tippedDamage(doses.front().kind, doses.front().amplifier);
-                    if (std::find(arrows.begin(), arrows.end(), damage) != arrows.end()) continue;
-                    arrows.push_back(damage);
-                    built[TAB_COMBAT].push_back(static_cast<int>(Items::TippedArrow) | (damage << 16));
+                    const std::string name = token;
+                    if (name == "@paintings" || name == "@operator_paintings")
+                    {
+                        const bool placeable = name == "@paintings";
+                        std::vector<int> order;
+                        for (int v = 0; v < Paintings::count(); ++v)
+                            if (Paintings::variants()[static_cast<size_t>(v)].placeable == placeable) order.push_back(v);
+                        std::stable_sort(order.begin(), order.end(), [](int a, int b) {
+                            const Paintings::Variant& x = Paintings::variants()[static_cast<size_t>(a)];
+                            const Paintings::Variant& y = Paintings::variants()[static_cast<size_t>(b)];
+                            const int ax = x.width * x.height, ay = y.width * y.height;
+                            if (ax != ay) return ax < ay;
+                            if (x.width != y.width) return x.width < y.width;
+                            return std::string(x.name) < std::string(y.name);
+                        });
+                        for (int v : order) into.push_back(static_cast<int>(Items::Painting) | ((v + 1) << 16));
+                    }
+                    else if (name == "@firework_rockets")
+                    {
+                        for (int flight = 1; flight <= Fireworks::MAX_FLIGHT; ++flight)
+                        {
+                            Fireworks::Rocket rocket;
+                            rocket.flight = flight;
+                            const int id = Fireworks::library().rocket(rocket);
+                            if (id > 0) into.push_back(static_cast<int>(Items::FireworkRocket) | (id << 16));
+                        }
+                    }
+                    else if (name == "@goat_horns")
+                    {
+                        for (int call = 0; call < 8; ++call) into.push_back(static_cast<int>(Items::GoatHorn) | (call << 16));
+                    }
+                    else if (name == "@tipped_arrows")
+                    {
+                        std::vector<int> arrows;
+                        for (int p = 0; p < static_cast<int>(Brewing::Potion::Count); ++p)
+                            for (int variant = 0; variant < 2; ++variant)
+                            {
+                                const Brewing::Brew brew{ static_cast<Brewing::Potion>(p), false, variant == 1 };
+                                if (variant == 1 && !Brewing::canStrengthen(brew.potion)) continue;
+                                const std::vector<Brewing::Dose> doses = Brewing::dosesOf(brew);
+                                if (doses.empty()) continue;
+                                const int damage = Brewing::tippedDamage(doses.front().kind, doses.front().amplifier);
+                                if (std::find(arrows.begin(), arrows.end(), damage) != arrows.end()) continue;
+                                arrows.push_back(damage);
+                                into.push_back(static_cast<int>(Items::TippedArrow) | (damage << 16));
+                            }
+                    }
+                    else if (name == "@potions") potions(into, Items::Potion);
+                    else if (name == "@splash_potions") potions(into, Items::SplashPotion);
+                    else if (name == "@lingering_potions") potions(into, Items::LingeringPotion);
+                    else if (name == "@suspicious_stews")
+                    {
+                        for (int flower : { 3, 7, 0, 1, 8, 6, 4, 5, 9 })
+                            into.push_back(static_cast<int>(Items::SuspiciousStew) | (flower << 16));
+                    }
+                    else if (name == "@ominous_bottles")
+                    {
+                        for (int level = 0; level < 5; ++level) into.push_back(static_cast<int>(Items::OminousBottle) | (level << 16));
+                    }
+                    else if (name == "@enchanted_books")
+                    {
+                        std::vector<std::pair<std::string, ItemStack>> books;
+                        for (int k = 0; k < Enchanting::KIND_COUNT; ++k)
+                        {
+                            const auto kind = static_cast<Enchanting::Kind>(k);
+                            ItemStack book{ Items::EnchantedBook, 1 };
+                            book.enchantments = Enchanting::withLevel(0, kind, Enchanting::maxLevel(kind));
+                            books.emplace_back(Enchanting::idOf(kind), book);
+                        }
+                        for (int k = 0; k < static_cast<int>(Enchanting::TridentKind::Count); ++k)
+                        {
+                            const auto kind = static_cast<Enchanting::TridentKind>(k);
+                            ItemStack book{ Items::EnchantedBook, 1 };
+                            book.enchantments = Enchanting::withTrident(0, kind, Enchanting::tridentMax(kind));
+                            books.emplace_back(snakeName(Enchanting::tridentName(kind)), book);
+                        }
+                        std::stable_sort(books.begin(), books.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+                        for (const auto& entry : books) into.push_back(special(entry.second));
+                    }
+                    else if (name == "@lights")
+                    {
+                        for (int level = 15; level >= 0; --level) into.push_back(static_cast<int>(lightBlockOf(level)));
+                    }
+                    else if (name[0] != '@')
+                    {
+                        const auto found = named.find(name);
+                        if (found != named.end()) into.push_back(found->second);
+                        else creativeMissing().push_back(name);
+                    }
                 }
-            for (int variant = 0; variant < Paintings::count(); ++variant)
-                built[TAB_FUNCTIONAL].push_back(static_cast<int>(Items::Painting) | ((variant + 1) << 16));
+            }
             std::vector<int>& search = built[TAB_SEARCH];
             for (int t = 0; t < TAB_COUNT; ++t)
                 for (int entry : built[static_cast<size_t>(t)])
@@ -3280,7 +3281,7 @@ void Application::renderCreativeScreen(float w, float h)
             for (char& c : want) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             for (int entry : tabEntries(SEARCH_TAB))
             {
-                std::string name = stackName(ItemStack{ static_cast<StackId>(entry & 0xFFFF), 1, entry >> 16 });
+                std::string name = stackName(paletteStack(entry));
                 for (char& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
                 if (name.find(want) != std::string::npos) entries.push_back(entry);
             }
@@ -3301,8 +3302,10 @@ void Application::renderCreativeScreen(float w, float h)
                 well(x, y);
 
                 const int cell = (row + m_paletteRow) * PALETTE_COLUMNS + column;
-                if (cell >= count || (entries[cell] & 0xFFFF) == 0) continue;
-                drawItem(x, y, SLOT, static_cast<StackId>(entries[cell] & 0xFFFF), 0, glm::vec4(1.0f), entries[cell] >> 16);
+                if (cell >= count) continue;
+                const ItemStack shown = paletteStack(entries[cell]);
+                if (shown.empty()) continue;
+                drawItem(x, y, SLOT, shown.id, 0, glm::vec4(1.0f), shown.damage, shown.enchantments);
                 m_slotBoxes.push_back({ SlotBox::Kind::Palette, entries[cell],
                                         x - 1.0f, y - 1.0f, PITCH });
             }
@@ -3487,7 +3490,7 @@ void Application::finishInventoryScreen()
             }
             case SlotBox::Kind::Palette:
                 highlight();
-                tip = stackName(ItemStack{ static_cast<StackId>(box->index & 0xFFFF), 1, box->index >> 16 });
+                tip = stackName(paletteStack(box->index));
                 break;
             case SlotBox::Kind::Scroll:
             m_draggingScroll = true;
@@ -3808,8 +3811,15 @@ void Application::handleInventoryClick(int mouseX, int mouseY, bool rightButton,
                             return;
                         }
             }
-            m_inventory.takeFromPalette(static_cast<BlockId>(box->index & 0xFFFF));
-            if (!m_inventory.cursor().empty()) m_inventory.cursor().damage = box->index >> 16;
+            {
+                const ItemStack picked = paletteStack(box->index);
+                m_inventory.takeFromPalette(static_cast<BlockId>(picked.id));
+                if (!m_inventory.cursor().empty())
+                {
+                    m_inventory.cursor().damage = picked.damage;
+                    m_inventory.cursor().enchantments = picked.enchantments;
+                }
+            }
             m_audio.play(Sound::Click, 0.4f);
             break;
 

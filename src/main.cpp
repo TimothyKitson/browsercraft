@@ -1724,6 +1724,8 @@ int main(int argc, char** argv)
     int shaders = -1;
     float timeOverride = -1.0f;
     const char* startupScreen = nullptr;
+    const char* cinematicPath = nullptr;
+    const char* cinematicExport = nullptr;
     uint32_t seed = 0;
     bool hasSeed = false;
     bool worldInfo = false;
@@ -1774,6 +1776,14 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--time") == 0 && i + 1 < argc)
         {
             timeOverride = static_cast<float>(std::atof(argv[++i]));
+        }
+        else if (std::strcmp(argv[i], "--cinematic-export") == 0 && i + 1 < argc)
+        {
+            cinematicExport = argv[++i];
+        }
+        else if (std::strcmp(argv[i], "--cinematic") == 0 && i + 1 < argc)
+        {
+            cinematicPath = argv[++i];
         }
         else if (std::strcmp(argv[i], "--screen") == 0 && i + 1 < argc)
         {
@@ -1932,6 +1942,8 @@ int main(int argc, char** argv)
         if (shaders >= 0) app.setShadersEnabled(shaders == 1);
         if (timeOverride >= 0.0f) app.setTimeOverride(timeOverride);
         if (startupScreen) app.setStartupScreen(startupScreen);
+        if (cinematicPath) app.setCinematic(cinematicPath);
+        if (cinematicExport) app.setCinematicExport(cinematicExport);
         if (hasSeed) app.setSeedOverride(seed);
         if (buildTest) app.setBuildTest();
         if (mobTest) app.setMobTest();
