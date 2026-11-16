@@ -40,6 +40,16 @@ namespace Trees
         virtual bool muddy(int x, int y, int z) const = 0;
     };
 
+    struct Cells
+    {
+        virtual ~Cells() = default;
+        virtual BlockId at(int x, int y, int z) const = 0;
+        virtual void set(int x, int y, int z, BlockId id) = 0;
+    };
+
     Plan plan(Shape shape, const glm::ivec3& origin, uint32_t seed, float bees, const Ground* ground = nullptr);
     bool giant(Shape shape);
+    bool replaceable(BlockId id);
+    bool fits(Shape shape, const Plan& plan, const Cells& cells);
+    void write(const Plan& plan, Cells& cells);
 }

@@ -1,4 +1,5 @@
 #include "WorldGen.h"
+#include "Game/Trees.h"
 #include <atomic>
 #include "Game/EndPortal.h"
 #include "Game/Saplings.h"
@@ -1882,158 +1883,6 @@ void WorldGen::placeOres(Chunk& chunk) const
             const BlockId host = chunk.getBlock(px, py, pz);
             if (host == Blocks::Stone || host == Blocks::Deepslate) chunk.setBlockRaw(px, py, pz, infestedOf(host));
         }
-    }
-}
-
-void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, TreeKind kind) const
-{
-    const int baseX = chunk.position().x * Chunk::SX;
-    const int baseZ = chunk.position().z * Chunk::SZ;
-
-    BlockId logBlock = Blocks::Log;
-    BlockId leafBlock = Blocks::Leaves;
-    int extraHeight = 0;
-    int canopyRadius = 2;
-
-    switch (kind)
-    {
-        case TreeKind::Birch:
-            logBlock = Blocks::BirchLog;  leafBlock = Blocks::BirchLeaves;
-            extraHeight = 1;
-            break;
-        case TreeKind::Spruce:
-            logBlock = Blocks::SpruceLog; leafBlock = Blocks::SpruceLeaves;
-            // Tall and narrow, which is what a conifer is.
-            extraHeight = 3;
-            canopyRadius = 1;
-            break;
-        case TreeKind::DarkOak:
-            logBlock = Blocks::DarkOakLog; leafBlock = Blocks::DarkOakLeaves;
-            // Short and broad, so a dark oak wood has a closed canopy.
-            extraHeight = -1;
-            canopyRadius = 3;
-            break;
-        case TreeKind::Jungle:
-            logBlock = Blocks::JungleLog; leafBlock = Blocks::JungleLeaves;
-            // The tallest thing that grows: a jungle is a roof you walk
-            // about underneath.
-            extraHeight = 6;
-            canopyRadius = 3;
-            break;
-        case TreeKind::Acacia:
-            logBlock = Blocks::AcaciaLog; leafBlock = Blocks::AcaciaLeaves;
-            // Bare trunk and then a flat plate of leaves on top, which
-            // is the one tree you can name from its silhouette alone.
-            extraHeight = 2;
-            canopyRadius = 3;
-            break;
-        case TreeKind::Mangrove:
-            logBlock = Blocks::MangroveLog; leafBlock = Blocks::MangroveLeaves;
-            extraHeight = 1;
-            canopyRadius = 3;
-            break;
-        case TreeKind::Cherry:
-            logBlock = Blocks::CherryLog; leafBlock = Blocks::CherryLeaves;
-            extraHeight = 1;
-            canopyRadius = 3;
-            break;
-        case TreeKind::Oak:
-            break;
-    }
-
-    if (kind == TreeKind::Mangrove)
-    {
-        const int ground = surfaceY;
-        const int lifted = std::max(surfaceY, SEA_LEVEL) + 2;
-        auto root = [&](int wx, int y, int wz) {
-            const int lx = wx - baseX, lz = wz - baseZ;
-            if (!Chunk::inBounds(lx, y, lz)) return;
-            const BlockId here = chunk.getBlock(lx, y, lz);
-            if (here == Blocks::Air || isWater(here) || here == Blocks::TallGrass)
-                chunk.setBlockRaw(lx, y, lz, Blocks::MangroveRoots);
-        };
-        for (int y = ground + 1; y <= lifted; ++y) root(worldX, y, worldZ);
-        static const int LEGS[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-        for (int leg = 0; leg < 4; ++leg)
-        {
-            if (hashToFloat(hashCoords(worldX, 20 + leg, worldZ, m_seed + 5160)) < 0.25f) continue;
-            const int fx = worldX + LEGS[leg][0] * 2, fz = worldZ + LEGS[leg][1] * 2;
-            root(worldX + LEGS[leg][0], lifted, worldZ + LEGS[leg][1]);
-            for (int y = lifted - 1; y > ground - 2; --y) root(fx, y, fz);
-        }
-        surfaceY = lifted;
-    }
-
-    uint32_t h = hashCoords(worldX, 0, worldZ, m_seed + 5150);
-    const int trunkHeight = 4 + static_cast<int>(hashToFloat(h) * 3.0f) + extraHeight;
-    const int topY = surfaceY + trunkHeight;
-
-    // An acacia leans: the trunk goes up straight and then steps two
-    // blocks to one side, and the plate of leaves sits over where it
-    // ended up rather than over its roots. Without the lean a flat
-    // canopy on a straight trunk is a mushroom.
-    int leanX = 0, leanZ = 0;
-    if (kind == TreeKind::Acacia)
-    {
-        const int way = static_cast<int>(
-            hashToFloat(hashCoords(worldX, 1, worldZ, m_seed + 5151)) * 4.0f) & 3;
-        if (way == 0) leanX = 1;
-        else if (way == 1) leanX = -1;
-        else if (way == 2) leanZ = 1;
-        else leanZ = -1;
-    }
-    const int crownX = worldX + leanX * 2;
-    const int crownZ = worldZ + leanZ * 2;
-
-    // Canopy first so the trunk overwrites any leaves in its column. A
-    // conifer carries its needles further down the trunk than a
-    // broadleaf carries its leaves, which is the whole silhouette.
-    // An acacia carries its leaves in a plate two blocks deep; a
-    // conifer carries them most of the way down the trunk.
-    const int canopyDrop = (kind == TreeKind::Spruce)  ? 5
-                         : (kind == TreeKind::Acacia) ? 1
-                                                      : 2;
-    for (int dy = -canopyDrop; dy <= 1; ++dy)
-    {
-        int y = topY + dy;
-        if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) continue;
-
-        // Flat on top and flat underneath: an acacia's plate does not
-        // taper the way a broadleaf's crown does.
-        int radius = (kind == TreeKind::Acacia)
-                         ? canopyRadius
-                         : ((dy >= 1) ? std::max(1, canopyRadius - 1) : canopyRadius);
-
-        for (int dx = -radius; dx <= radius; ++dx)
-        {
-            for (int dz = -radius; dz <= radius; ++dz)
-            {
-                if (std::abs(dx) == radius && std::abs(dz) == radius)
-                {
-                    // Round the corners off, with a little randomness.
-                    if (hashToFloat(hashCoords(crownX + dx, y, crownZ + dz, m_seed + 61)) < 0.6f)
-                        continue;
-                }
-                int lx = crownX + dx - baseX;
-                int lz = crownZ + dz - baseZ;
-                if (!Chunk::inBounds(lx, y, lz)) continue;
-                if (chunk.getBlock(lx, y, lz) == Blocks::Air)
-                    chunk.setBlockRaw(lx, y, lz, leafBlock);
-            }
-        }
-    }
-
-    for (int i = 0; i < trunkHeight; ++i)
-    {
-        int y = surfaceY + 1 + i;
-
-        // The last two blocks of an acacia's trunk walk out to meet its
-        // crown; everything else goes straight up.
-        const int step = (trunkHeight - i <= 2) ? (trunkHeight - i == 2 ? 1 : 2) : 0;
-        int lx = worldX + leanX * step - baseX;
-        int lz = worldZ + leanZ * step - baseZ;
-        if (Chunk::inBounds(lx, y, lz))
-            chunk.setBlockRaw(lx, y, lz, logBlock);
     }
 }
 
@@ -4902,74 +4751,7 @@ void WorldGen::buildVillages(Chunk& chunk) const
         }
 }
 
-// Vines down the outside of a canopy. Hung off the tree after it is
-// built rather than built into it, so every wood keeps the shape it
-// already had and only a swamp gets these.
-void WorldGen::hangVines(Chunk& chunk, int worldX, int ground, int worldZ) const
-{
-    // Three, to match the margin the tree loop uses. A vine hung
-    // further out than the loop reaches would appear on one side of a
-    // chunk border and not the other.
-    constexpr int CANOPY = 3;
-    constexpr int LONGEST = 5;
 
-    for (int dx = -CANOPY; dx <= CANOPY; ++dx)
-        for (int dz = -CANOPY; dz <= CANOPY; ++dz)
-        {
-            if (std::abs(dx) + std::abs(dz) < 2) continue;   // the trunk
-
-            const int wx = worldX + dx;
-            const int wz = worldZ + dz;
-
-            // One column in ten, not one in four. At 0.28 a single
-            // tree hung twenty-odd curtains and the swamp came out as
-            // a solid green wall you could not see through.
-            if (hashToFloat(hashCoords(wx, 11, wz, m_seed + 7801)) > 0.10f) continue;
-
-            // Find the leaves to hang from, which is the only block a
-            // vine can start under.
-            for (int y = ground + 9; y > ground + 2; --y)
-            {
-                if (!isLeaves(chunk.getBlock(wx - chunk.position().x * Chunk::SX,
-                                             y,
-                                             wz - chunk.position().z * Chunk::SZ)))
-                    continue;
-
-                const int drop = 2 + static_cast<int>(
-                    hashToFloat(hashCoords(wx, 12, wz, m_seed + 7802)) * (LONGEST - 1));
-
-                const int toward = std::abs(dx) >= std::abs(dz) ? (dx > 0 ? 3 : 1) : (dz > 0 ? 0 : 2);
-                for (int k = 1; k <= drop; ++k)
-                    put(chunk, wx, y - k, wz, vineWith((1 << toward) | (k == 1 ? 16 : 0)));
-                break;
-            }
-        }
-}
-
-// A cocoa pod on the side of a jungle trunk. The only thing in the
-// game that grows on wood, and the only way to a cookie.
-void WorldGen::hangCocoa(Chunk& chunk, int worldX, int ground, int worldZ) const
-{
-    static const int DX[] = { 1, -1, 0, 0 };
-    static const int DZ[] = { 0, 0, 1, -1 };
-
-    for (int y = ground + 2; y <= ground + 6; ++y)
-    {
-        if (hashToFloat(hashCoords(worldX, y, worldZ, m_seed + 7811)) > 0.22f) continue;
-
-        const int side = static_cast<int>(
-            hashCoords(worldX, y + 64, worldZ, m_seed + 7812) % 4u);
-        const int wx = worldX + DX[side];
-        const int wz = worldZ + DZ[side];
-
-        // Ripeness is fixed at generation rather than grown in: a pod
-        // nobody has been near is as likely to be ready as not.
-        const int stage = static_cast<int>(
-            hashCoords(wx, y, wz, m_seed + 7813) % 3u);
-        static const int TOWARD[4] = { 3, 1, 0, 2 };
-        put(chunk, wx, y, wz, cocoaWith(TOWARD[side], stage));
-    }
-}
 
 void WorldGen::decorate(Chunk& chunk) const
 {
@@ -4980,9 +4762,9 @@ void WorldGen::decorate(Chunk& chunk) const
     // we can look at columns just outside this chunk and draw the parts of
     // their canopies that overhang into it. That keeps trees seamless
     // across chunk borders without any cross-chunk writes.
-    for (int wx = baseX - 6; wx < baseX + Chunk::SX + 6; ++wx)
+    for (int wx = baseX - 8; wx < baseX + Chunk::SX + 8; ++wx)
     {
-        for (int wz = baseZ - 6; wz < baseZ + Chunk::SZ + 6; ++wz)
+        for (int wz = baseZ - 8; wz < baseZ + Chunk::SZ + 8; ++wz)
         {
             if (!treeStandsAt(wx, wz)) continue;
 
@@ -5073,94 +4855,110 @@ void WorldGen::decorate(Chunk& chunk) const
                 continue;
             }
 
-            TreeKind kind = TreeKind::Oak;
+            using S = Trees::Shape;
+            auto chance = [&](int salt) { return hashToFloat(hashCoords(wx, 40 + salt, wz, m_seed + 4250)); };
+            S shape = S::Oak;
+            float bees = 0.0f;
+            bool none = false;
             switch (variant)
             {
-                case Biomes::Kind::BirchForest: case Biomes::Kind::OldGrowthBirchForest: kind = TreeKind::Birch; break;
-                case Biomes::Kind::DarkForest: kind = roll < 0.85f ? TreeKind::DarkOak : TreeKind::Oak; break;
-                case Biomes::Kind::FlowerForest: kind = roll < 0.3f ? TreeKind::Birch : TreeKind::Oak; break;
-                case Biomes::Kind::Forest: kind = roll < 0.2f ? TreeKind::Birch : TreeKind::Oak; break;
-                case Biomes::Kind::Taiga: case Biomes::Kind::OldGrowthPineTaiga: case Biomes::Kind::OldGrowthSpruceTaiga:
-                case Biomes::Kind::SnowyTaiga: case Biomes::Kind::Grove:
-                    kind = TreeKind::Spruce;
+                case Biomes::Kind::BirchForest: shape = S::Birch; bees = 0.002f; break;
+                case Biomes::Kind::OldGrowthBirchForest: shape = chance(0) < 0.5f ? S::SuperBirch : S::Birch; bees = 0.002f; break;
+                case Biomes::Kind::DarkForest:
+                    shape = chance(0) < 0.6666667f ? S::DarkOak : chance(1) < 0.2f ? S::Birch : chance(2) < 0.1f ? S::FancyOak : S::Oak;
                     break;
-                case Biomes::Kind::WindsweptForest: kind = roll < 0.75f ? TreeKind::Spruce : TreeKind::Oak; break;
-                case Biomes::Kind::WindsweptSavanna: case Biomes::Kind::SavannaPlateau: kind = TreeKind::Acacia; break;
-                case Biomes::Kind::WoodedBadlands: kind = TreeKind::Oak; break;
-                case Biomes::Kind::Meadow: kind = roll < 0.5f ? TreeKind::Birch : TreeKind::Oak; break;
+                case Biomes::Kind::FlowerForest:
+                    shape = chance(0) < 0.2f ? S::Birch : chance(1) < 0.1f ? S::FancyOak : S::Oak;
+                    bees = 0.02f;
+                    break;
+                case Biomes::Kind::Forest:
+                    shape = chance(0) < 0.2f ? S::Birch : chance(1) < 0.1f ? S::FancyOak : S::Oak;
+                    bees = 0.002f;
+                    break;
+                case Biomes::Kind::Taiga: case Biomes::Kind::SnowyTaiga: case Biomes::Kind::Grove:
+                    shape = chance(0) < 0.33333334f ? S::Pine : S::Spruce;
+                    break;
+                case Biomes::Kind::OldGrowthSpruceTaiga:
+                    shape = chance(0) < 0.33333334f ? S::MegaSpruce : chance(1) < 0.33333334f ? S::Pine : S::Spruce;
+                    break;
+                case Biomes::Kind::OldGrowthPineTaiga:
+                    shape = chance(0) < 0.025641026f ? S::MegaSpruce : chance(1) < 0.30769232f ? S::MegaPine
+                          : chance(2) < 0.33333334f ? S::Pine : S::Spruce;
+                    break;
+                case Biomes::Kind::WindsweptForest: case Biomes::Kind::WindsweptHills: case Biomes::Kind::WindsweptGravellyHills:
+                    shape = chance(0) < 0.666f ? S::Spruce : chance(1) < 0.1f ? S::FancyOak : S::Oak;
+                    break;
+                case Biomes::Kind::WindsweptSavanna: case Biomes::Kind::SavannaPlateau: case Biomes::Kind::Savanna:
+                    shape = chance(0) < 0.8f ? S::Acacia : S::Oak;
+                    break;
+                case Biomes::Kind::WoodedBadlands: shape = S::Oak; break;
+                case Biomes::Kind::Meadow: shape = chance(0) < 0.5f ? S::FancyOak : S::SuperBirch; bees = 1.0f; break;
+                case Biomes::Kind::SnowyPlains: shape = S::Spruce; break;
+                case Biomes::Kind::SparseJungle:
+                    shape = chance(0) < 0.1f ? S::FancyOak : chance(1) < 0.5f ? S::JungleBush : S::Jungle;
+                    break;
+                case Biomes::Kind::BambooJungle:
+                    if (chance(0) < 0.05f) shape = S::FancyOak;
+                    else if (chance(1) < 0.15f) shape = S::JungleBush;
+                    else if (chance(2) < 0.7f) shape = S::MegaJungle;
+                    else none = true;
+                    break;
                 default:
                     if (here == Biome::Jungle)
-                        kind = (roll < 0.85f) ? TreeKind::Jungle : TreeKind::Oak;
+                        shape = chance(0) < 0.1f ? S::FancyOak : chance(1) < 0.5f ? S::JungleBush : chance(2) < 0.33333334f ? S::MegaJungle : S::Jungle;
                     else if (here == Biome::Savanna)
-                        kind = TreeKind::Acacia;
+                        shape = chance(0) < 0.8f ? S::Acacia : S::Oak;
                     else if (here == Biome::CherryGrove)
-                        kind = TreeKind::Cherry;
+                    {
+                        shape = S::Cherry;
+                        bees = 0.05f;
+                    }
                     else if (here == Biome::MangroveSwamp)
-                        kind = TreeKind::Mangrove;
+                        shape = chance(0) < 0.85f ? S::TallMangrove : S::Mangrove;
+                    else if (here == Biome::Swamp)
+                        shape = S::SwampOak;
                     else if (here == Biome::Snowy || here == Biome::Mountains)
-                        kind = (roll < 0.80f) ? TreeKind::Spruce : TreeKind::Oak;
+                        shape = chance(0) < 0.666f ? S::Spruce : chance(1) < 0.1f ? S::FancyOak : S::Oak;
                     else
-                        kind = (roll < 0.35f) ? TreeKind::Birch : TreeKind::Oak;
+                    {
+                        shape = chance(0) < 0.33333334f ? S::FancyOak : S::Oak;
+                        bees = 0.05f;
+                    }
                     break;
             }
+            if (none) continue;
 
-            const float shape = hashToFloat(hashCoords(wx, 11, wz, m_seed + 4247));
-            const bool megaJungle = kind == TreeKind::Jungle && shape < 0.18f;
-            const bool squareDarkOak = kind == TreeKind::DarkOak;
-            const bool megaSpruce = kind == TreeKind::Spruce && shape < 0.4f &&
-                                    (variant == Biomes::Kind::OldGrowthPineTaiga || variant == Biomes::Kind::OldGrowthSpruceTaiga);
-            const bool fancy = kind == TreeKind::Oak && shape < 0.1f &&
-                               (variant == Biomes::Kind::Forest || variant == Biomes::Kind::FlowerForest || here == Biome::Plains);
-            if (megaJungle || squareDarkOak || megaSpruce || fancy)
+            struct GenGround : Trees::Ground
             {
-                struct LocalCells : Saplings::Cells
+                const WorldGen* gen = nullptr;
+                bool open(int x, int y, int z) const override { return y > gen->surfaceHeight(x, z); }
+                bool muddy(int x, int y, int z) const override
                 {
-                    Chunk* chunk = nullptr;
-                    int baseX = 0, baseZ = 0;
-                    BlockId at(int x, int y, int z) const override
-                    {
-                        const int lx = x - baseX, lz = z - baseZ;
-                        return Chunk::inBounds(lx, y, lz) ? chunk->getBlock(lx, y, lz) : Blocks::Air;
-                    }
-                    void set(int x, int y, int z, BlockId id) override
-                    {
-                        const int lx = x - baseX, lz = z - baseZ;
-                        if (Chunk::inBounds(lx, y, lz)) chunk->setBlockRaw(lx, y, lz, id);
-                    }
-                } cells;
-                cells.chunk = &chunk;
-                cells.baseX = baseX;
-                cells.baseZ = baseZ;
-                const uint32_t treeSeed = hashCoords(wx, 12, wz, m_seed + 4248) | 1u;
-                if (fancy) Saplings::fancyOak(cells, glm::ivec3(wx, surface + 1, wz), treeSeed, true);
-                else Saplings::bigTree(cells, glm::ivec3(wx, surface + 1, wz), megaJungle ? 3 : megaSpruce ? 1 : 5, treeSeed, true);
-                continue;
-            }
-            if (std::abs(wx - (baseX + Chunk::SX / 2)) > Chunk::SX / 2 + 3 || std::abs(wz - (baseZ + Chunk::SZ / 2)) > Chunk::SZ / 2 + 3) continue;
-            buildTree(chunk, wx, surface, wz, kind);
-
-            if ((kind == TreeKind::Oak || kind == TreeKind::Birch) &&
-                (here == Biome::Plains || here == Biome::Forest) &&
-                hashToFloat(hashCoords(wx, 31, wz, m_seed + 5171)) <
-                    (variant == Biomes::Kind::Meadow ? 0.5f : variant == Biomes::Kind::FlowerForest ? 0.1f : here == Biome::Plains ? 0.05f : 0.02f))
+                    const int top = gen->surfaceHeight(x, z);
+                    return y <= top && y > top - 3 && gen->biomeAt(x, z) == Biome::MangroveSwamp;
+                }
+            } ground;
+            ground.gen = this;
+            struct ChunkCells : Trees::Cells
             {
-                const int trunk = 4 + static_cast<int>(hashToFloat(hashCoords(wx, 0, wz, m_seed + 5150)) * 3.0f) +
-                                  (kind == TreeKind::Birch ? 1 : 0);
-                const int ny = surface + trunk - 3;
-                const int lx = wx - baseX, lz = wz + 1 - baseZ;
-                if (ny > surface && Chunk::inBounds(lx, ny, lz) && chunk.getBlock(lx, ny, lz) == Blocks::Air)
-                    chunk.setBlockRaw(lx, ny, lz, hiveOf(true, 2, 0));
-            }
-
-            // Vines off the canopy, which is most of what makes a
-            // swamp look like one from the ground. Hung after the
-            // tree rather than built into buildTree, so every wood
-            // keeps the shape it had.
-            if (here == Biome::Swamp || here == Biome::Jungle) hangVines(chunk, wx, surface, wz);
-
-            // And cocoa on a jungle trunk, which is where Minecraft
-            // puts it and the only place it grows.
-            if (kind == TreeKind::Jungle) hangCocoa(chunk, wx, surface, wz);
+                Chunk* chunk = nullptr;
+                int baseX = 0, baseZ = 0;
+                BlockId at(int x, int y, int z) const override
+                {
+                    const int lx = x - baseX, lz = z - baseZ;
+                    return Chunk::inBounds(lx, y, lz) ? chunk->getBlock(lx, y, lz) : Blocks::Air;
+                }
+                void set(int x, int y, int z, BlockId id) override
+                {
+                    const int lx = x - baseX, lz = z - baseZ;
+                    if (Chunk::inBounds(lx, y, lz)) chunk->setBlockRaw(lx, y, lz, id);
+                }
+            } cells;
+            cells.chunk = &chunk;
+            cells.baseX = baseX;
+            cells.baseZ = baseZ;
+            const Trees::Plan plan = Trees::plan(shape, glm::ivec3(wx, surface + 1, wz), hashCoords(wx, 12, wz, m_seed + 4248) | 1u, bees, &ground);
+            if (plan.ok) Trees::write(plan, cells);
         }
     }
 

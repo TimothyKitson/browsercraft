@@ -988,7 +988,7 @@ namespace
         check(Saplings::fancyOak(oak, glm::ivec3(0, 1, 0), 123u, true), "a fancy oak grows");
         int offTrunk = 0;
         for (const auto& [at, block] : oak.blocks)
-            if (block == logOfWood(0) && (std::get<0>(at) != 0 || std::get<2>(at) != 0)) ++offTrunk;
+            if (axisBase(block) == logOfWood(0) && (std::get<0>(at) != 0 || std::get<2>(at) != 0)) ++offTrunk;
         check(offTrunk >= 2 && oak.count(leavesOfWood(0)) > 40, "with branches off its trunk and balls of leaves");
     }
 

@@ -7046,6 +7046,7 @@ namespace
     Color GRASS_TINT{ 145, 189, 89, 255 };
     Color FOLIAGE_TINT{ 119, 171, 47, 255 };
     const Color BIRCH_TINT{ 128, 167, 85, 255 };
+    const Color SPRUCE_TINT{ 97, 153, 97, 255 };
     const Color WATER_TINT{ 63, 118, 228, 255 };
     const Color REDSTONE_OFF_TINT{ 118, 16, 10, 255 };
     const Color REDSTONE_ON_TINT{ 252, 58, 34, 255 };
@@ -9904,6 +9905,7 @@ namespace
         Grass,   // greyscale art multiplied by the biome grass colour
         Foliage,
         Birch,
+        Spruce,
         Water,
         RedstoneOff,
         RedstoneOn,
@@ -11263,7 +11265,7 @@ namespace
         { Tiles::Planks,        { "oak_planks", "planks_oak", nullptr },               Tinting::None,    0,   false },
         { Tiles::SpruceLogTop,  { "spruce_log_top", "log_spruce_top", nullptr },       Tinting::None,    0,   false },
         { Tiles::SpruceLogSide, { "spruce_log", "log_spruce", nullptr },               Tinting::None,    0,   false },
-        { Tiles::SpruceLeaves,  { "spruce_leaves", "leaves_spruce", nullptr },         Tinting::None,    0,   false },
+        { Tiles::SpruceLeaves,  { "spruce_leaves", "leaves_spruce", nullptr },         Tinting::Spruce,  0,   false },
         { Tiles::SprucePlanks,  { "spruce_planks", "planks_spruce", nullptr },         Tinting::None,    0,   false },
         { Tiles::DarkOakLogTop, { "dark_oak_log_top", "log_big_oak_top", nullptr },    Tinting::None,    0,   false },
         { Tiles::DarkOakLogSide,{ "dark_oak_log", "log_big_oak", nullptr },            Tinting::None,    0,   false },
@@ -11614,6 +11616,7 @@ namespace
             case Tinting::Grass:   tintImage(image, GRASS_TINT); break;
             case Tinting::Foliage: tintImage(image, FOLIAGE_TINT); break;
             case Tinting::Birch:   tintImage(image, BIRCH_TINT); break;
+            case Tinting::Spruce:  tintImage(image, SPRUCE_TINT); break;
             case Tinting::Water:   tintImage(image, WATER_TINT); break;
             case Tinting::RedstoneOff: tintImage(image, REDSTONE_OFF_TINT); break;
             case Tinting::RedstoneOn:  tintImage(image, REDSTONE_ON_TINT); break;

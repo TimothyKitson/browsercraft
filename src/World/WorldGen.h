@@ -16,11 +16,6 @@
 #include "Biomes.h"
 const char* dimensionFolder(Dimension dimension);
 
-// Which tree is being planted. Spruce grows tall and narrow in the
-// cold, dark oak short and broad in the thick of the forest, which is
-// most of what tells one wood from another at a distance.
-enum class TreeKind : uint8_t { Oak, Birch, Spruce, DarkOak, Jungle, Acacia, Cherry, Mangrove };
-
 enum class Biome : uint8_t
 {
     Ocean,
@@ -555,8 +550,6 @@ private:
     void buildLandmarks(Chunk& chunk) const;
     void stampLandmark(Chunk& chunk, Landmark kind, int midX, int midZ) const;
     void stampSwampHut(Chunk& chunk, int midX, int midZ, int ground) const;
-    void hangVines(Chunk& chunk, int worldX, int ground, int worldZ) const;
-    void hangCocoa(Chunk& chunk, int worldX, int ground, int worldZ) const;
     void dressSeabed(Chunk& chunk) const;
     void buildDungeons(Chunk& chunk) const;
     void buildFossils(Chunk& chunk) const;
@@ -650,6 +643,4 @@ private:
 
     void generateNether(Chunk& chunk) const;
     void generateEnd(Chunk& chunk) const;
-
-    void buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, TreeKind kind) const;
 };
