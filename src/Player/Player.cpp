@@ -542,9 +542,10 @@ bool Player::damage(int amount, bool throughArmour)
 {
     if (exempt() || amount <= 0 || m_hurtCooldown > 0.0f) return false;
 
+    float exact = static_cast<float>(amount);
     if (!throughArmour)
-        amount = Armour::reduce(amount, armourPoints + static_cast<int>(attributes.value(Attributes::Kind::Armor)),
-                                armourToughness + static_cast<int>(attributes.value(Attributes::Kind::ArmorToughness)));
+        exact = Armour::reduceExact(exact, armourPoints + static_cast<int>(attributes.value(Attributes::Kind::Armor)),
+                                    armourToughness + static_cast<int>(attributes.value(Attributes::Kind::ArmorToughness)));
 
     {
         const std::string why = cause ? cause : "";
@@ -563,13 +564,24 @@ bool Player::damage(int amount, bool throughArmour)
             suit = true;
             factor += Enchanting::protectionFactor(set, hurt);
         }
-        if (suit) amount = Enchanting::reducedByFactor(factor, amount);
-        else if (hurt != Enchanting::Hurt::Unprotected) amount = Enchanting::protectionReduced(protection, amount);
+        if (!suit && hurt != Enchanting::Hurt::Unprotected) factor = 4 * Enchanting::levelOf(protection, Enchanting::Kind::Protection);
+        if (factor > 0) exact *= 1.0f - static_cast<float>(std::min(factor, 20)) / 25.0f;
     }
-    const int unresisted = amount;
-    amount = Effects::resisted(effects, amount);
-    if (unresisted > amount) m_tally.resisted += unresisted - amount;
-    if (amount <= 0 && unresisted > 0) return false;
+    const float unresisted = exact;
+    if (effects.has(Effects::Kind::Resistance))
+        exact *= std::max(0.0f, 1.0f - 0.20f * static_cast<float>(effects.amplifier(Effects::Kind::Resistance) + 1));
+    if (unresisted > exact) m_tally.resisted += static_cast<int>(std::lround(unresisted - exact));
+    if (exact <= 0.0f) return false;
+
+    const float owed = exact + m_damageDebt;
+    amount = static_cast<int>(std::floor(owed + 0.0001f));
+    m_damageDebt = std::max(0.0f, owed - static_cast<float>(amount));
+    if (amount <= 0)
+    {
+        m_hurtCooldown = HURT_IMMUNITY;
+        damageFlash = 0.4f;
+        return true;
+    }
 
     if (absorption > 0)
     {

@@ -116,6 +116,15 @@ float Armour::knockbackResistanceOf(StackId id)
     return inArmourRange(id) && tierOf(id) == Tier::Netherite ? 0.1f : 0.0f;
 }
 
+float Armour::reduceExact(float incoming, int points, int toughness)
+{
+    if (incoming <= 0.0f) return 0.0f;
+    const float armour = static_cast<float>(std::clamp(points, 0, 30));
+    const float bypass = armour - 4.0f * incoming / (static_cast<float>(std::max(0, toughness)) + 8.0f);
+    const float effective = std::clamp(std::max(armour / 5.0f, bypass), 0.0f, 20.0f);
+    return incoming * (1.0f - effective * 0.04f);
+}
+
 int Armour::reduce(int incoming, int points, int toughness)
 {
     if (incoming <= 0) return 0;

@@ -4147,6 +4147,14 @@ namespace
             const Anvil::Input loyal{ Items::Trident, 1, 0, r.enchantments };
             check(!Anvil::combine(loyal, riptide).valid, "and Riptide will not go on beside Loyalty");
         }
+        {
+            Player tank(glm::vec3(0.0f, 70.0f, 0.0f));
+            tank.armourPoints = 20;
+            tank.armourToughness = 8;
+            const int before = tank.health;
+            check(tank.damage(1) && tank.health == before,
+                  "a 1-point hit on full diamond takes a fraction of a point, kept until the fractions add up, as Minecraft's float health does");
+        }
         check(Shield::wearFor(2) == 0 && Shield::wearFor(3) == 4 && Shield::wearFor(9) == 10,
               "a blow under 3 costs the shield nothing, a bigger one 1 more than its damage, as in Minecraft");
 

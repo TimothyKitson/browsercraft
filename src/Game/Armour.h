@@ -29,6 +29,7 @@ namespace Armour
     // four percent off per point, so twenty points -- a full diamond
     // suit -- is eighty percent off. A blow never drops below one.
     int reduce(int incoming, int points, int toughness = 0);
+    float reduceExact(float incoming, int points, int toughness = 0);
     int toughnessOf(StackId id);
     float knockbackResistanceOf(StackId id);
 }

@@ -294,6 +294,7 @@ private:
     int m_silverfishOwed = 0;
     uint32_t m_infestRoll = 0x1F5u;
     float m_exhaustion = 0.0f;
+    float m_damageDebt = 0.0f;
     float m_starveTimer = 0.0f;
     float m_drownTimer = 0.0f;
     float m_burnTimer = 0.0f;
