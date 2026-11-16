@@ -14566,6 +14566,12 @@ void Application::settleRedstone(const glm::ivec3& at)
                     continue;
                 }
 
+                if (Redstone::isRedstoneTorch(here))
+                {
+                    settleTorch(cells, glm::ivec3(x, y, z), here);
+                    continue;
+                }
+
                 if (here == Blocks::Tnt && Redstone::poweredAt(cells, x, y, z))
                 {
                     primeTnt(glm::ivec3(x, y, z));
@@ -14669,6 +14675,39 @@ void Application::settleRedstone(const glm::ivec3& at)
                 moved = moved || shifted;
             }
 
+}
+
+void Application::settleTorch(const Redstone::Cells& cells, const glm::ivec3& at, BlockId now)
+{
+    const std::array<int, 4> key = { static_cast<int>(m_dimension), at.x, at.y, at.z };
+    const bool lit = Redstone::torchLit(now);
+    bool want = Redstone::torchWants(cells, at.x, at.y, at.z);
+    const auto burnt = m_torchBurnt.find(key);
+    if (burnt != m_torchBurnt.end())
+    {
+        if (m_elapsedSeconds < burnt->second) want = false;
+        else m_torchBurnt.erase(burnt);
+    }
+    if (want == lit) return;
+    const BlockId flipped = Redstone::torchWith(now, want);
+    for (const TimedBlock& timed : m_timedBlocks)
+        if (timed.at == at && timed.expect == now && timed.then == flipped) return;
+    if (!want)
+    {
+        std::vector<float>& flips = m_torchFlips[key];
+        flips.erase(std::remove_if(flips.begin(), flips.end(), [&](float t) { return m_elapsedSeconds - t > 3.0f; }), flips.end());
+        flips.push_back(m_elapsedSeconds);
+        if (flips.size() >= 8)
+        {
+            flips.clear();
+            m_torchBurnt[key] = m_elapsedSeconds + 8.0f;
+            namedAt("random/fizz", glm::vec3(at) + glm::vec3(0.5f), 0.5f, 2.6f + static_cast<float>((at.x + at.z) & 7) * 0.1f, Sound::Fire);
+            setBlockFor(at, flipped, flipped, 8.05f);
+            return;
+        }
+    }
+    m_world->setBlock(at.x, at.y, at.z, now);
+    setBlockFor(at, now, flipped, 0.1f);
 }
 
 void Application::scheduleDiode(const glm::ivec3& at, BlockId now, bool wantLit)
@@ -17268,6 +17307,12 @@ namespace
         {
             if (striking == Arrows::Kind::Spectral) mob.afflict(Mob::Affliction::Glowing, 10.0f);
             if (striking != Arrows::Kind::Tipped) return;
+            if (effect >= Arrows::MOB_TIP)
+            {
+                const Effects::Kind kind = static_cast<Effects::Kind>(effect - Arrows::MOB_TIP);
+                doseMob(mob, kind, 0, kind == Effects::Kind::Slowness ? 30.0f : 5.0f, 1.0f);
+                return;
+            }
             doseMob(mob, Brewing::tippedKind(effect), Brewing::tippedAmplifier(effect), Brewing::tippedSeconds(effect), 1.0f);
         }
 
@@ -17471,7 +17516,12 @@ namespace
                 ++playerHits;
                 if (shooter >= 0) lastShooter = shooter;
             }
-            if (striking == Arrows::Kind::Tipped && effect >= 0)
+            if (striking == Arrows::Kind::Tipped && effect >= Arrows::MOB_TIP)
+            {
+                const Effects::Kind kind = static_cast<Effects::Kind>(effect - Arrows::MOB_TIP);
+                player->takeEffect(kind, 0, kind == Effects::Kind::Slowness ? 30.0f : 5.0f);
+            }
+            else if (striking == Arrows::Kind::Tipped && effect >= 0)
                 player->takeEffect(Brewing::tippedKind(effect), Brewing::tippedAmplifier(effect), Brewing::tippedSeconds(effect));
             if (striking == Arrows::Kind::Bullet) player->takeEffect(Effects::Kind::Levitation, 0, 10.0f);
             if (striking == Arrows::Kind::Skull) player->takeEffect(Effects::Kind::Wither, 0, 10.0f);

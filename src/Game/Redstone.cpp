@@ -111,12 +111,71 @@ namespace Redstone
         }
     }
 
+    bool isRedstoneTorch(BlockId id)
+    {
+        return id == Blocks::RedstoneTorch || id == Blocks::RedstoneTorchOff || (isWallTorch(id) && wallTorchKind(id) >= 2);
+    }
+
+    bool torchLit(BlockId id)
+    {
+        return id == Blocks::RedstoneTorch || (isWallTorch(id) && wallTorchKind(id) == 2);
+    }
+
+    BlockId torchWith(BlockId id, bool on)
+    {
+        if (isWallTorch(id)) return wallTorchOf(on ? 2 : 3, wallTorchFacing(id));
+        return on ? Blocks::RedstoneTorch : Blocks::RedstoneTorchOff;
+    }
+
+    int torchAttachedStep(BlockId id)
+    {
+        return isWallTorch(id) ? (stepOf(wallTorchFacing(id)) ^ 1) : 3;
+    }
+
+    bool dustPoints(const Cells& cells, int x, int y, int z, int step)
+    {
+        static const int SIDES[4] = { 0, 1, 4, 5 };
+        auto links = [&](BlockId id, int k) {
+            if (isWire(id) || isRedstoneTorch(id) || isSource(id) || isObserver(id) || isComparator(id)) return true;
+            if (isRepeater(id)) return (stepOf(diodeOut(id)) >> 1) == (k >> 1);
+            return false;
+        };
+        const bool roofed = isOpaque(cells.at(x, y + 1, z));
+        bool linked[6] = {};
+        int count = 0;
+        for (int k : SIDES)
+        {
+            const BlockId beside = cells.at(x + DX[k], y, z + DZ[k]);
+            if (links(beside, k)) linked[k] = true;
+            else if (isOpaque(beside) && !roofed && isWire(cells.at(x + DX[k], y + 1, z + DZ[k]))) linked[k] = true;
+            else if (!isOpaque(beside) && isWire(cells.at(x + DX[k], y - 1, z + DZ[k]))) linked[k] = true;
+            count += linked[k] ? 1 : 0;
+        }
+        if (count == 0) return true;
+        if (count == 1)
+            for (int k : SIDES)
+                if (linked[k]) linked[k ^ 1] = true;
+        return linked[step];
+    }
+
     bool carries(const Cells& cells, int x, int y, int z)
     {
         const BlockId self = cells.at(x, y, z);
         if (!isSolid(self) || isWire(self) || isDiode(self)) return false;
         const BlockId above = cells.at(x, y + 1, z);
-        if (isSource(above) && !isObserver(above)) return true;
+        const bool mountedElsewhere = (isFamilyButton(above) && buttonFace(above) != 0) || (isFamilyLever(above) && leverFace(above) != 0);
+        if (isSource(above) && !isObserver(above) && !isRedstoneTorch(above) && !mountedElsewhere) return true;
+        const BlockId below = cells.at(x, y - 1, z);
+        if (torchLit(below)) return true;
+        if ((isFamilyButton(below) && buttonFace(below) == 2 && buttonPowered(below)) || (isFamilyLever(below) && leverFace(below) == 2 && leverOn(below)))
+            return true;
+        for (int k = 0; k < 6; ++k)
+        {
+            if (DY[k] != 0) continue;
+            const BlockId near = cells.at(x + DX[k], y, z + DZ[k]);
+            if (isFamilyButton(near) && buttonFace(near) == 1 && buttonPowered(near) && stepOf(buttonFacing(near)) == k) return true;
+            if (isFamilyLever(near) && leverFace(near) == 1 && leverOn(near) && stepOf(leverFacing(near)) == k) return true;
+        }
         for (int k = 0; k < 6; ++k)
         {
             const BlockId near = cells.at(x + DX[k], y + DY[k], z + DZ[k]);
@@ -130,6 +189,41 @@ namespace Redstone
             if (hookPowered(near) && stepOf(hookFacing(near)) == k) return true;
         }
         return false;
+    }
+
+    bool receives(const Cells& cells, int x, int y, int z)
+    {
+        const BlockId self = cells.at(x, y, z);
+        if (!isSolid(self) || isWire(self) || isDiode(self)) return false;
+        if (carries(cells, x, y, z)) return true;
+        for (int k = 0; k < 6; ++k)
+        {
+            const int nx = x + DX[k], ny = y + DY[k], nz = z + DZ[k];
+            const BlockId near = cells.at(nx, ny, nz);
+            if (isWire(near))
+            {
+                if (dustPower(near) <= 0) continue;
+                if (DY[k] > 0) return true;
+                if (DY[k] == 0 && dustPoints(cells, nx, ny, nz, k ^ 1)) return true;
+                continue;
+            }
+            if (isRedstoneTorch(near))
+            {
+                if (torchLit(near) && torchAttachedStep(near) != (k ^ 1)) return true;
+                continue;
+            }
+            if (isObserver(near) || isDiode(near)) continue;
+            if (isSource(near)) return true;
+        }
+        return false;
+    }
+
+    bool torchWants(const Cells& cells, int x, int y, int z)
+    {
+        const BlockId self = cells.at(x, y, z);
+        if (!isRedstoneTorch(self)) return false;
+        const int step = torchAttachedStep(self);
+        return !receives(cells, x + DX[step], y + DY[step], z + DZ[step]);
     }
 
     bool feeds(const Cells& cells, int x, int y, int z, int step)

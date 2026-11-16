@@ -1434,6 +1434,9 @@ private:
     std::map<std::array<int, 3>, int> m_fireAge;
     float m_fireClock = 0.0f;
     void tickWiring(float deltaTime);
+void settleTorch(const Redstone::Cells& cells, const glm::ivec3& at, BlockId now);
+std::map<std::array<int, 4>, std::vector<float>> m_torchFlips;
+std::map<std::array<int, 4>, float> m_torchBurnt;
     void scheduleDiode(const glm::ivec3& at, BlockId now, bool wantLit);
     bool comparatorWants(const glm::ivec3& at);
     int comparatorLevel(const glm::ivec3& at);

@@ -16,6 +16,8 @@ class Camera;
 // reachable from --selftest without a world to shoot across.
 namespace Arrows
 {
+    constexpr int MOB_TIP = 1000;
+
     // What is in the air. An arrow drops and sticks; a blaze's charge
     // flies flat and sets what it hits alight; a wind charge flies flat
     // and bursts, shoving everything near it.

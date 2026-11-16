@@ -13138,6 +13138,38 @@ namespace
                 check(dark.at(x, 0, 0) == Blocks::RedstoneDust, "a lever off leaves it dark");
             check(dark.at(4, 0, 0) == Blocks::RedstoneLamp, "and the lamp with it");
         }
+        {
+            Bench gate;
+            gate.set(0, 0, 0, Blocks::Stone);
+            gate.set(0, 1, 0, Blocks::RedstoneTorch);
+            check(Redstone::torchWants(gate, 0, 1, 0), "a redstone torch on an unpowered block stays lit");
+            gate.set(1, 0, 0, leverOf(1, 1, true));
+            check(!Redstone::torchWants(gate, 0, 1, 0), "a lever on the side of its block turns it off: a NOT gate");
+            gate.set(1, 0, 0, leverOf(1, 1, false));
+            check(Redstone::torchWants(gate, 0, 1, 0), "and throwing the lever back lights it again");
+            gate.set(-1, 0, 0, Blocks::RedstoneDustLit);
+            gate.set(-2, 0, 0, Blocks::RedstoneDustLit);
+            check(!Redstone::torchWants(gate, 0, 1, 0), "dust running into the block powers it as well");
+            gate.cells.erase({ -1, 0, 0 });
+            gate.cells.erase({ -2, 0, 0 });
+            gate.set(0, 0, 1, Blocks::RedstoneDustLit);
+            gate.set(-1, 0, 1, Blocks::RedstoneDustLit);
+            gate.set(1, 0, 1, Blocks::RedstoneDustLit);
+            check(Redstone::torchWants(gate, 0, 1, 0), "but dust running past the block does not");
+            gate.cells.erase({ 0, 0, 1 });
+            gate.cells.erase({ -1, 0, 1 });
+            gate.cells.erase({ 1, 0, 1 });
+            gate.set(0, 2, 0, Blocks::Stone);
+            check(Redstone::carries(gate, 0, 2, 0) && !Redstone::carries(gate, 0, 0, 0),
+                  "a lit torch powers the block above it, not the block it stands on");
+            gate.set(0, 1, 0, wallTorchOf(2, 1));
+            gate.set(-1, 1, 0, Blocks::Stone);
+            gate.set(-1, 2, 0, Blocks::RedstoneTorch);
+            check(Redstone::torchAttachedStep(gate.at(0, 1, 0)) == 1 && Redstone::torchWants(gate, 0, 1, 0),
+                  "a wall torch hangs off the block behind it");
+            gate.set(-1, 0, 0, Blocks::RedstoneBlock);
+            check(!Redstone::torchWants(gate, 0, 1, 0), "and a redstone block beside that block turns it off");
+        }
 
         // Switching one off again has to put the line out. Relighting
         // from the sources rather than from the change is what makes

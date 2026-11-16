@@ -72,6 +72,13 @@ namespace Redstone
     // power, cut down to the one case this game can make: everything
     // here sits on top of something rather than on the side of it.
     bool carries(const Cells& cells, int x, int y, int z);
+    bool isRedstoneTorch(BlockId id);
+    bool torchLit(BlockId id);
+    BlockId torchWith(BlockId id, bool lit);
+    int torchAttachedStep(BlockId id);
+    bool dustPoints(const Cells& cells, int x, int y, int z, int step);
+    bool receives(const Cells& cells, int x, int y, int z);
+    bool torchWants(const Cells& cells, int x, int y, int z);
 
     int stepOf(int facing);
     bool feeds(const Cells& cells, int x, int y, int z, int step);

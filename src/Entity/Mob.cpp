@@ -1607,6 +1607,11 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                       : t.throwsPotions ? Arrows::Kind::Potion
                       : t.spits ? Arrows::Kind::Spit
                                      : Arrows::Kind::Shaft;
+            if (shot.kind == Arrows::Kind::Shaft && (m_type == MobId::Stray || m_type == MobId::Bogged))
+            {
+                shot.kind = Arrows::Kind::Tipped;
+                shot.effect = Arrows::MOB_TIP + static_cast<int>(m_type == MobId::Stray ? Effects::Kind::Slowness : Effects::Kind::Poison);
+            }
             m_shots.push_back(shot);
 
             const float shotPitch = 0.8f + random01() * 0.4f;
