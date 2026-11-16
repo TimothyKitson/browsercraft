@@ -1549,7 +1549,9 @@ void Mob::update(float deltaTime, const World& world, const glm::vec3& playerPos
                 {
                     MobStrike strike;
                     strike.damage = t.arrowDamage;
+                    strike.magic = m_type == MobId::ElderGuardian ? 3 : 1;
                     strike.from = m_position;
+                    strike.attacker = static_cast<int>(m_type);
                     m_strikes.push_back(strike);
                     m_laserCharge = 0.0f;
                     m_shootTimer = t.arrowInterval;

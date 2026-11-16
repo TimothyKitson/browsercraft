@@ -137,6 +137,7 @@ namespace Enchanting
     int tridentLevel(Set set, TridentKind kind);
     Set withTrident(Set set, TridentKind kind, int level);
     int tridentMax(TridentKind kind);
+    bool anyAtAll(Set set);
     const char* tridentName(TridentKind kind);
     std::string phrase(uint32_t seed, int row);
     bool tridentConflicts(Set set, TridentKind kind);

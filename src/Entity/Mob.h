@@ -31,6 +31,7 @@ struct MobSound
 struct MobStrike
 {
     int damage = 0;
+    int magic = 0;
     glm::vec3 from{ 0.0f };     // the mob's position, for knockback
     int blindSeconds = 0;
     int effect = -1;

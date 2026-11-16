@@ -523,6 +523,21 @@ bool Player::burn(float deltaTime, bool inLava)
     return false;
 }
 
+bool Player::damageMixed(int magic, int physical)
+{
+    if (exempt() || m_hurtCooldown > 0.0f) return false;
+    const char* why = cause;
+    cause = "magic";
+    bool hurt = damage(magic, true);
+    cause = why;
+    if (physical > magic && health > 0)
+    {
+        m_hurtCooldown = 0.0f;
+        hurt = damage(physical - magic) || hurt;
+    }
+    return hurt;
+}
+
 bool Player::damage(int amount, bool throughArmour)
 {
     if (exempt() || amount <= 0 || m_hurtCooldown > 0.0f) return false;

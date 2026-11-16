@@ -26925,6 +26925,11 @@ void Application::sufferStrike(const MobStrike& strike)
         }
         m_audio.play(Sound::Click, 0.7f, 0.7f);
         m_stats.add(Stats::Custom::DamageBlockedByShield, static_cast<long long>(strike.damage) * 10);
+        if (strike.magic > 0)
+        {
+            m_player.cause = "magic";
+            m_player.damage(strike.magic + (m_worldMeta.difficulty == Worlds::Difficulty::Hard ? 2 : 0), true);
+        }
 
         const glm::vec3 off = m_player.position - strike.from;
         const glm::vec3 level(off.x, 0.0f, off.z);
@@ -26933,7 +26938,12 @@ void Application::sufferStrike(const MobStrike& strike)
         return;
     }
 
-    if (!m_player.damage(Player::scaledByDifficulty(strike.damage, m_player.difficulty))) return;
+    const int physical = Player::scaledByDifficulty(strike.damage, m_player.difficulty);
+    if (strike.magic > 0)
+    {
+        if (!m_player.damageMixed(strike.magic + (m_worldMeta.difficulty == Worlds::Difficulty::Hard ? 2 : 0), physical)) return;
+    }
+    else if (!m_player.damage(physical)) return;
     if (strike.attacker >= 0)
     {
         int thorns = 0;

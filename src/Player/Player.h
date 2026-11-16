@@ -98,6 +98,7 @@ public:
     // frame and kills you instantly.
     static constexpr float HURT_IMMUNITY = 0.5f;
     bool damage(int amount, bool throughArmour = false);
+    bool damageMixed(int magic, int physical);
     bool invulnerable() const { return m_hurtCooldown > 0.0f; }
     void heal(int amount);
     int maxHealth() const { return std::max(1, static_cast<int>(attributes.value(Attributes::Kind::MaxHealth))) + Effects::maxHealthBonus(effects); }

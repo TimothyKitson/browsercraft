@@ -120,6 +120,31 @@ Anvil::Result Anvil::combine(const Input& left, const Input& right)
             cost += each * merged;
             if (left.count > 1) cost = TOO_EXPENSIVE;
         }
+        for (int t = 0; t < static_cast<int>(Enchanting::TridentKind::Count); ++t)
+        {
+            const Enchanting::TridentKind kind = static_cast<Enchanting::TridentKind>(t);
+            const int level = Enchanting::tridentLevel(right.enchantments, kind);
+            if (level <= 0) continue;
+            const int had = Enchanting::tridentLevel(out.enchantments, kind);
+            int merged = had == level ? level + 1 : std::max(level, had);
+            bool fits = leftBook || left.id == Items::Trident;
+            if (Enchanting::tridentConflicts(out.enchantments, kind))
+            {
+                fits = false;
+                ++cost;
+            }
+            if (!fits)
+            {
+                refused = true;
+                continue;
+            }
+            applied = true;
+            merged = std::min(merged, Enchanting::tridentMax(kind));
+            out.enchantments = Enchanting::withTrident(out.enchantments, kind, merged);
+            static const int COST[4] = { 2, 4, 8, 4 };
+            const int each = book ? std::max(1, COST[t] / 2) : COST[t];
+            cost += each * merged;
+        }
         if (refused && !applied) return out;
     }
 
@@ -130,7 +155,6 @@ Anvil::Result Anvil::combine(const Input& left, const Input& right)
         out.tooExpensive = true;
         return out;
     }
-    if (left.id != Items::Trident)
     {
         const int work = std::max(Enchanting::priorWork(left.enchantments), Enchanting::priorWork(right.enchantments));
         out.enchantments = Enchanting::withPriorWork(out.enchantments, std::min(255, work * 2 + 1));

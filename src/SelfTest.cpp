@@ -4137,6 +4137,16 @@ namespace
         check(Anvil::repairMaterial(Items::Shield) == static_cast<StackId>(Blocks::Planks) &&
                   Anvil::repairsWith(Items::Shield, static_cast<StackId>(Blocks::BirchPlanks)),
               "and any planks mend it, as in 1.21.1");
+        {
+            const Anvil::Input trident{ Items::Trident, 1, 0, 0 };
+            const Anvil::Input loyalty{ Items::EnchantedBook, 1, 0, Enchanting::withTrident(0u, Enchanting::TridentKind::Loyalty, 3) };
+            const Anvil::Result r = Anvil::combine(trident, loyalty);
+            check(r.valid && Enchanting::tridentLevel(r.enchantments, Enchanting::TridentKind::Loyalty) == 3 && r.levelCost == 3,
+                  "a Loyalty III book goes onto a trident for Minecraft's book cost of 1 a level");
+            const Anvil::Input riptide{ Items::EnchantedBook, 1, 0, Enchanting::withTrident(0u, Enchanting::TridentKind::Riptide, 1) };
+            const Anvil::Input loyal{ Items::Trident, 1, 0, r.enchantments };
+            check(!Anvil::combine(loyal, riptide).valid, "and Riptide will not go on beside Loyalty");
+        }
         check(Shield::wearFor(2) == 0 && Shield::wearFor(3) == 4 && Shield::wearFor(9) == 10,
               "a blow under 3 costs the shield nothing, a bigger one 1 more than its damage, as in Minecraft");
 

@@ -364,7 +364,13 @@ namespace Enchanting
     bool glints(StackId id, Set set)
     {
         if (!isItem(id) && isDecoratedPot(asBlock(id))) return false;
-        if (id == Items::Trident) return set != 0u;
+        if (id == Items::Trident)
+        {
+            if (any(set)) return true;
+            for (int t = 0; t < static_cast<int>(TridentKind::Count); ++t)
+                if (tridentLevel(set, static_cast<TridentKind>(t)) > 0) return true;
+            return false;
+        }
         if (id == Items::EnchantedGoldenApple || id == Items::ExperienceBottle || id == Items::EnchantedBook ||
             id == Items::WrittenBook) return true;
         return any(set);
@@ -389,6 +395,14 @@ namespace Enchanting
         if (k < 0 || k >= 4) return set;
         const uint32_t clamped = static_cast<uint32_t>(std::clamp(level, 0, tridentMax(kind)));
         return (set & ~(TRIDENT_MASK[k] << TRIDENT_SHIFT[k])) | (clamped << TRIDENT_SHIFT[k]);
+    }
+
+    bool anyAtAll(Set set)
+    {
+        if (any(set)) return true;
+        for (int t = 0; t < static_cast<int>(TridentKind::Count); ++t)
+            if (tridentLevel(set, static_cast<TridentKind>(t)) > 0) return true;
+        return false;
     }
 
     int tridentMax(TridentKind kind)
