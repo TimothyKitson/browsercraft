@@ -2166,6 +2166,7 @@ private:
     // largest scale the window will hold; 1 to 4 pin it.
     int m_guiScaleSetting = 0;
     int m_fovSetting = 70;
+    float m_pixelRatio = 1.0f;
     float m_brightness = 0.5f;
     bool m_viewBobbing = true;
     float m_bobPhase = 0.0f;

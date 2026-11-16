@@ -23,9 +23,11 @@ namespace
             var target = canvas || window;
             target.addEventListener('mousemove', function (event) {
                 var rect = canvas ? canvas.getBoundingClientRect()
-                                  : { left: 0, top: 0 };
-                window.__bcMouseX = (event.clientX - rect.left) | 0;
-                window.__bcMouseY = (event.clientY - rect.top) | 0;
+                                  : { left: 0, top: 0, width: 0, height: 0 };
+                var sx = canvas && rect.width > 0 ? canvas.width / rect.width : 1;
+                var sy = canvas && rect.height > 0 ? canvas.height / rect.height : 1;
+                window.__bcMouseX = ((event.clientX - rect.left) * sx) | 0;
+                window.__bcMouseY = ((event.clientY - rect.top) * sy) | 0;
             });
         });
     }

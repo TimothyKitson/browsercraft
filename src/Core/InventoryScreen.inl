@@ -724,6 +724,51 @@ bool Application::drawShapedIcon(float x, float y, float size, StackId id, const
         drawModelIcon(x, y, size, elements, glm::vec3(30.0f, 45.0f, 0.0f), glm::vec3(0.0f), 0.6f, tint, true);
         return true;
     }
+    if (headKind(block) >= 0)
+    {
+        const int kind = headKind(block);
+        const int t = Tiles::HeadTileFirst + kind * 6;
+        const int extra = Tiles::HeadTileFirst + HEAD_KINDS * 6;
+        auto part = [](glm::vec3 from, glm::vec3 to, const int (&tiles)[6]) {
+            IconElement element;
+            element.from = from;
+            element.to = to;
+            for (int side = 0; side < 6; ++side) element.faces[side].tile = tiles[side];
+            return element;
+        };
+        const int skin[6] = { t + 1, t + 0, t + 5, t + 3, t + 2, t + 4 };
+        std::vector<IconElement> parts;
+        if (kind == 5)
+        {
+            parts.push_back(part(glm::vec3(2.0f, 0.0f, 1.0f), glm::vec3(14.0f, 12.0f, 13.0f), skin));
+            const int lip[6] = { extra + 2, extra + 1, extra + 2, extra + 2, extra + 2, extra + 2 };
+            parts.push_back(part(glm::vec3(3.5f, 3.0f, 11.5f), glm::vec3(12.5f, 6.75f, 23.5f), lip));
+            parts.back().faces[1].rotation = 180;
+        }
+        else if (kind == 6)
+        {
+            parts.push_back(part(glm::vec3(3.0f, 0.0f, 4.0f), glm::vec3(13.0f, 8.0f, 12.0f), skin));
+            const int snout[6] = { extra, extra, extra, extra, extra, extra };
+            parts.push_back(part(glm::vec3(6.0f, 0.0f, 12.0f), glm::vec3(10.0f, 4.0f, 13.0f), snout));
+        }
+        else
+            parts.push_back(part(glm::vec3(4.0f, 0.0f, 4.0f), glm::vec3(12.0f, 8.0f, 12.0f), skin));
+        parts.front().faces[1].rotation = 180;
+        if (kind == 5) drawModelIcon(x, y, size, parts, glm::vec3(30.0f, 45.0f, 0.0f), glm::vec3(-2.0f, 2.0f, 0.0f), 0.6f, tint);
+        else drawModelIcon(x, y, size, parts, glm::vec3(30.0f, 45.0f, 0.0f), glm::vec3(0.0f, 3.0f, 0.0f), 1.0f, tint);
+        return true;
+    }
+    if (isPistonBody(block))
+    {
+        const bool sticky = block >= Blocks::StickyPistonNorth && block <= Blocks::StickyPistonOutWest;
+        const glm::vec4 full(0.0f, 0.0f, 16.0f, 16.0f);
+        const glm::vec4 faces[6] = { full, full, full, full, full, full };
+        IconElement cube = box(glm::vec3(0.0f), glm::vec3(16.0f), Tiles::PistonSide, faces);
+        cube.faces[0].tile = Tiles::PistonBack;
+        cube.faces[1].tile = sticky ? Tiles::StickyPistonFace : Tiles::PistonFace;
+        drawModelIcon(x, y, size, { cube }, glm::vec3(30.0f, 225.0f, 0.0f), glm::vec3(0.0f), 0.625f, tint);
+        return true;
+    }
     if (block == Blocks::Conduit)
     {
         const glm::vec4 shell[6] = { { 0, 0, 16, 16 }, { 0, 0, 16, 16 }, { 0, 0, 16, 16 }, { 0, 0, 16, 16 }, { 0, 0, 16, 16 }, { 0, 0, 16, 16 } };
@@ -777,6 +822,12 @@ bool Application::drawShapedIcon(float x, float y, float size, StackId id, const
         tiles = { { "bottom", Tiles::ComposterBottom }, { "inside", Tiles::ComposterBottom }, { "side", Tiles::ComposterSide },
                   { "top", Tiles::ComposterTop } };
     }
+    else if (block == Blocks::Scaffolding)
+    {
+        name = "scaffolding_stable";
+        tiles = { { "top", Tiles::ScaffoldTop }, { "side", Tiles::ScaffoldSide }, { "bottom", Tiles::ScaffoldBottom } };
+    }
+    else if (isLightningRod(block)) { name = "lightning_rod"; tiles = { { "texture", Tiles::LightningRodTile } }; }
     else if (block == Blocks::Beacon)
     {
         name = "beacon";

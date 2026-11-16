@@ -6313,6 +6313,13 @@ namespace
         t.set(3, 4, Color{ 52, 52, 56 }); t.set(13, 4, Color{ 52, 52, 56 });
         for (int x = 5; x < 12; ++x) t.set(x, 14, Color{ 96, 96, 100 });
     }
+    void paintItemSeaPickle(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 4; y < 14; ++y)
+            for (int x = 6; x < 10; ++x) t.set(x, y, (x == 6 || x == 9) ? Color{ 74, 96, 40 } : Color{ 104, 128, 54 });
+        t.set(7, 2, Color{ 190, 240, 170 }); t.set(8, 3, Color{ 190, 240, 170 }); t.set(7, 3, Color{ 150, 210, 130 });
+    }
     void paintItemLantern(Tile& t, bool soul)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9190,6 +9197,7 @@ namespace
         { Tiles::ItemBrewingStand, paintItemBrewingStand },
         { Tiles::ItemLantern, [](Tile& t) { paintItemLantern(t, false); } },
         { Tiles::ItemSoulLantern, [](Tile& t) { paintItemLantern(t, true); } },
+        { Tiles::ItemSeaPickle, paintItemSeaPickle },
         { Tiles::ItemIronNugget, paintItemIronNugget },
         { Tiles::ItemChorusFruit, paintItemChorusFruit },
         { Tiles::ItemPoppedChorusFruit, paintItemPoppedChorusFruit },
@@ -10395,6 +10403,7 @@ namespace
         { Tiles::ItemBrewingStand, { "brewing_stand", nullptr, nullptr } },
         { Tiles::ItemLantern, { "lantern", nullptr, nullptr } },
         { Tiles::ItemSoulLantern, { "soul_lantern", nullptr, nullptr } },
+        { Tiles::ItemSeaPickle, { "sea_pickle", nullptr, nullptr } },
         { Tiles::ItemIronNugget, { "iron_nugget", nullptr, nullptr } },
         { Tiles::ItemChorusFruit, { "chorus_fruit", nullptr, nullptr } },
         { Tiles::ItemPoppedChorusFruit, { "popped_chorus_fruit", nullptr, nullptr } },

@@ -606,7 +606,7 @@ namespace Tiles
         ItemPumpkinSeeds, ItemShears, ItemHoneyBottle, ItemSweetBerries, ItemDriedKelp,
         ItemNautilusShell, ItemHeartOfTheSea, ItemTurtleScute, ItemTurtleHelmet, ItemPowderSnowBucket,
         ItemRepeater, ItemComparator, ItemIronDoor, ItemTurtleEggIcon,
-        ItemIronNugget, ItemChorusFruit, ItemPoppedChorusFruit, ItemChain, ItemBell, ItemBrewingStand, ItemLantern, ItemSoulLantern,
+        ItemIronNugget, ItemChorusFruit, ItemPoppedChorusFruit, ItemChain, ItemBell, ItemBrewingStand, ItemLantern, ItemSoulLantern, ItemSeaPickle,
         ItemBrush, ItemSherdFirst, ItemSherdLast = ItemSherdFirst + 22, ItemSnifferEgg,
         ItemTemplateFirst, ItemTemplateLast = ItemTemplateFirst + 18,
         ItemCompass, ItemEmptyMap, ItemFilledMap,

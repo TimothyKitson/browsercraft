@@ -2511,12 +2511,10 @@ bool Application::frame()
     {
         double cssWidth = 0.0, cssHeight = 0.0;
         emscripten_get_element_css_size("#canvas", &cssWidth, &cssHeight);
-        // Render at CSS resolution rather than device pixels: the HUD is
-        // laid out in raw pixels, so a 2x backing store would halve the
-        // apparent size of every button and heart. It also keeps the
-        // single-threaded web build's fill rate down.
-        const int targetWidth = std::max(1, static_cast<int>(cssWidth));
-        const int targetHeight = std::max(1, static_cast<int>(cssHeight));
+        const double ratio = std::clamp(emscripten_get_device_pixel_ratio(), 1.0, 2.0);
+        m_pixelRatio = static_cast<float>(ratio);
+        const int targetWidth = std::max(1, static_cast<int>(cssWidth * ratio));
+        const int targetHeight = std::max(1, static_cast<int>(cssHeight * ratio));
 
         if (targetWidth != m_window.width() || targetHeight != m_window.height())
         {
@@ -10021,8 +10019,8 @@ void Application::updateGameplay(float deltaTime)
     // bogus mouse delta, which would snap the view straight up. Real mouse
     // movement never covers this much ground in a single frame.
     constexpr float MAX_LOOK_DELTA = 180.0f;
-    float lookX = m_input.mouseDeltaX();
-    float lookY = m_input.mouseDeltaY();
+    float lookX = m_input.mouseDeltaX() / m_pixelRatio;
+    float lookY = m_input.mouseDeltaY() / m_pixelRatio;
     if (std::fabs(lookX) > MAX_LOOK_DELTA || std::fabs(lookY) > MAX_LOOK_DELTA)
     {
         lookX = 0.0f;
@@ -29506,7 +29504,8 @@ void Application::lightCave(int atX, int atY, int atZ)
 
 int Application::guiScale() const
 {
-    return Gui::scaleFor(m_window.width(), m_window.height(), m_guiScaleSetting);
+    const int setting = m_guiScaleSetting > 0 ? static_cast<int>(std::lround(m_guiScaleSetting * m_pixelRatio)) : m_guiScaleSetting;
+    return Gui::scaleFor(m_window.width(), m_window.height(), setting);
 }
 
 void Application::renderHud()
@@ -31068,8 +31067,8 @@ void Application::renderNameEntryScreen()
         const float previewWidth = (preview.armWidth() * 2.0f + 8.0f) * previewUnit;
         drawPlayerDoll(preview, sx + (swatch - previewWidth) * 0.5f, sy + 5.0f * ui, previewUnit);
 
-        const float mouseX = static_cast<float>(m_input.mouseX());
-        const float mouseY = static_cast<float>(m_input.mouseY());
+        const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
+        const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
         const bool hovered = mouseX >= sx && mouseX < sx + swatch &&
                              mouseY >= sy && mouseY < sy + swatch;
         if (!m_automated && hovered && m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT))
