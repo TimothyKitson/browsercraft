@@ -271,8 +271,8 @@ void main()
     }
 
     vec3 normal = geoNormal;
-    float smoothness = vInfo.b;
-    float metal = vInfo.a;
+    float smoothness = material == MAT_PORTAL ? 0.0 : vInfo.b;
+    float metal = material == MAT_PORTAL ? 0.0 : vInfo.a;
     float emission = vInfo.g;
 
     if (uPbrEnabled == 1 && chunk && !plantQuad)
