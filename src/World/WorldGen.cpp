@@ -827,7 +827,7 @@ Biome WorldGen::netherBiomeAt(int worldX, int worldZ) const
 
 void WorldGen::generateNether(Chunk& chunk) const
 {
-    constexpr int ROOF = 120;
+    constexpr int ROOF = 128;
     constexpr int LAVA_LEVEL = NETHER_LAVA_LEVEL;
 
     const int baseX = chunk.position().x * Chunk::SX;
@@ -844,11 +844,10 @@ void WorldGen::generateNether(Chunk& chunk) const
             {
                 BlockId block = Blocks::Netherrack;
 
-                if (y <= 1 || y >= ROOF - 2)
+                if (y <= 4 || y >= ROOF - 5)
                 {
-                    // Ragged bedrock shell top and bottom.
-                    const int fromEdge = (y <= 1) ? y : (ROOF - 1 - y);
-                    if (fromEdge == 0 || hashToFloat(hashCoords(wx, y, wz, m_seed + 71)) < 0.55f)
+                    const int fromEdge = (y <= 4) ? y : (ROOF - 1 - y);
+                    if (fromEdge == 0 || hashToFloat(hashCoords(wx, y, wz, m_seed + 71)) < static_cast<float>(5 - fromEdge) / 5.0f)
                         block = Blocks::Bedrock;
                 }
                 else
