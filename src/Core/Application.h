@@ -1292,6 +1292,25 @@ private:
     void drawBoxIcon(float x, float y, float size, const glm::vec3& from, const glm::vec3& to, int tile, const glm::vec4& upUV,
                      const glm::vec4& eastUV, const glm::vec4& northUV, const glm::vec4& tint);
     bool drawBlockIcon(float x, float y, float size, StackId id, const glm::vec4& tint);
+    struct IconFace
+    {
+        int tile = -1;
+        unsigned int texture = 0;
+        glm::vec4 uv{ 0.0f, 0.0f, 16.0f, 16.0f };
+        int rotation = 0;
+    };
+    struct IconElement
+    {
+        glm::vec3 from{ 0.0f };
+        glm::vec3 to{ 16.0f };
+        int axis = 0;
+        float angle = 0.0f;
+        glm::vec3 origin{ 8.0f };
+        IconFace faces[6];
+    };
+    void drawModelIcon(float x, float y, float size, const std::vector<IconElement>& elements, const glm::vec3& rotation,
+                       const glm::vec3& translation, float scale, const glm::vec4& tint, bool frontLight = false);
+    bool drawShapedIcon(float x, float y, float size, StackId id, const glm::vec4& tint);
 
     void drawItem(float x, float y, float size, StackId id, int count, const glm::vec4& tint,
                   int damage = 0, uint32_t enchantments = 0);

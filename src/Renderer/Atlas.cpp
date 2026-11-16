@@ -6305,6 +6305,24 @@ namespace
         for (int y = 0; y < Tile::N; ++y) for (int x = 0; x < Tile::N; ++x)
             if ((x % 8 == 0) || (y % 8 == 0) || hash2(x, y, 2206) > 0.85f) t.set(x, y, Color{ 44, 46, 52 });
     }
+    void paintItemBrewingStand(Tile& t)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        for (int y = 2; y < 14; ++y) t.set(8, y, y < 4 ? Color{ 250, 220, 90 } : Color{ 220, 170, 40 });
+        for (int x = 3; x < 14; ++x) t.set(x, 3, Color{ 52, 52, 56 });
+        t.set(3, 4, Color{ 52, 52, 56 }); t.set(13, 4, Color{ 52, 52, 56 });
+        for (int x = 5; x < 12; ++x) t.set(x, 14, Color{ 96, 96, 100 });
+    }
+    void paintItemLantern(Tile& t, bool soul)
+    {
+        t.fill(Color{ 0, 0, 0, 0 });
+        const Color frame{ 60, 64, 76 };
+        const Color glow = soul ? Color{ 110, 220, 230 } : Color{ 250, 200, 90 };
+        t.set(7, 1, frame); t.set(8, 1, frame); t.set(7, 2, frame); t.set(8, 2, frame);
+        for (int x = 5; x < 11; ++x) { t.set(x, 4, frame); t.set(x, 14, frame); }
+        for (int y = 5; y < 14; ++y)
+            for (int x = 5; x < 11; ++x) t.set(x, y, (x == 5 || x == 10) ? frame : glow);
+    }
     void paintItemBell(Tile& t)
     {
         t.fill(Color{ 0, 0, 0, 0 });
@@ -9169,6 +9187,9 @@ namespace
         { Tiles::ItemSnifferEgg, paintItemSnifferEgg },
         { Tiles::ItemBrush, paintItemBrush },
         { Tiles::ItemBell, paintItemBell },
+        { Tiles::ItemBrewingStand, paintItemBrewingStand },
+        { Tiles::ItemLantern, [](Tile& t) { paintItemLantern(t, false); } },
+        { Tiles::ItemSoulLantern, [](Tile& t) { paintItemLantern(t, true); } },
         { Tiles::ItemIronNugget, paintItemIronNugget },
         { Tiles::ItemChorusFruit, paintItemChorusFruit },
         { Tiles::ItemPoppedChorusFruit, paintItemPoppedChorusFruit },
@@ -10371,6 +10392,9 @@ namespace
         { Tiles::ItemSherdFirst + 21, { "skull_pottery_sherd", nullptr, nullptr } },
         { Tiles::ItemSherdFirst + 22, { "snort_pottery_sherd", nullptr, nullptr } },
         { Tiles::ItemBell, { "bell", nullptr, nullptr } },
+        { Tiles::ItemBrewingStand, { "brewing_stand", nullptr, nullptr } },
+        { Tiles::ItemLantern, { "lantern", nullptr, nullptr } },
+        { Tiles::ItemSoulLantern, { "soul_lantern", nullptr, nullptr } },
         { Tiles::ItemIronNugget, { "iron_nugget", nullptr, nullptr } },
         { Tiles::ItemChorusFruit, { "chorus_fruit", nullptr, nullptr } },
         { Tiles::ItemPoppedChorusFruit, { "popped_chorus_fruit", nullptr, nullptr } },

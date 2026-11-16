@@ -541,10 +541,286 @@ void Application::drawBoxIcon(float x, float y, float size, const glm::vec3& fro
     m_ui.texturedShape(m_atlas.textureId(), north, northTex, shaded(0.60f), light(glm::vec3(-1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, -1)));
 }
 
+namespace
+{
+    struct IconFaceSource
+    {
+        const char* var;
+        float u0, v0, u1, v1;
+        int rotation;
+    };
+
+    struct IconElementSource
+    {
+        float from[3];
+        float to[3];
+        int axis;
+        float angle;
+        float origin[3];
+        IconFaceSource faces[6];
+    };
+
+    struct IconModelSource
+    {
+        const char* name;
+        float rotation[3];
+        float translation[3];
+        float scale;
+        std::vector<IconElementSource> elements;
+    };
+
+    const IconModelSource* iconModel(const std::string& name)
+    {
+        static const std::vector<IconModelSource> MODELS = {
+#include "IconModels.inl"
+        };
+        for (const IconModelSource& model : MODELS)
+            if (name == model.name) return &model;
+        return nullptr;
+    }
+}
+
+void Application::drawModelIcon(float x, float y, float size, const std::vector<IconElement>& elements, const glm::vec3& rotation,
+                                const glm::vec3& translation, float scale, const glm::vec4& tint, bool frontLight)
+{
+    const glm::mat4 turn = glm::rotate(glm::mat4(1.0f), glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
+                           glm::rotate(glm::mat4(1.0f), glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                           glm::rotate(glm::mat4(1.0f), glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    static const glm::vec3 NORMALS[6] = { { 0, -1, 0 }, { 0, 1, 0 }, { 0, 0, -1 }, { 0, 0, 1 }, { -1, 0, 0 }, { 1, 0, 0 } };
+    static const glm::vec3 AXES[4] = { { 0, 1, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
+    struct Quad
+    {
+        glm::vec2 corner[4];
+        glm::vec2 uv[4];
+        unsigned int texture;
+        float depth;
+        float shade;
+    };
+    std::vector<Quad> quads;
+    for (const IconElement& element : elements)
+    {
+        const glm::mat4 own = element.axis == 0 ? glm::mat4(1.0f)
+                                                : glm::translate(glm::mat4(1.0f), element.origin) *
+                                                      glm::rotate(glm::mat4(1.0f), glm::radians(element.angle), AXES[element.axis]) *
+                                                      glm::translate(glm::mat4(1.0f), -element.origin);
+        const glm::vec3 f = element.from, t = element.to;
+        const glm::vec3 corners[6][4] = {
+            { { f.x, f.y, t.z }, { t.x, f.y, t.z }, { t.x, f.y, f.z }, { f.x, f.y, f.z } },
+            { { f.x, t.y, f.z }, { t.x, t.y, f.z }, { t.x, t.y, t.z }, { f.x, t.y, t.z } },
+            { { t.x, t.y, f.z }, { f.x, t.y, f.z }, { f.x, f.y, f.z }, { t.x, f.y, f.z } },
+            { { f.x, t.y, t.z }, { t.x, t.y, t.z }, { t.x, f.y, t.z }, { f.x, f.y, t.z } },
+            { { f.x, t.y, f.z }, { f.x, t.y, t.z }, { f.x, f.y, t.z }, { f.x, f.y, f.z } },
+            { { t.x, t.y, t.z }, { t.x, t.y, f.z }, { t.x, f.y, f.z }, { t.x, f.y, t.z } },
+        };
+        for (int side = 0; side < 6; ++side)
+        {
+            const IconFace& face = element.faces[side];
+            if (face.tile < 0 && face.texture == 0) continue;
+            const glm::vec3 normal = glm::normalize(glm::vec3(turn * own * glm::vec4(NORMALS[side], 0.0f)));
+            if (normal.z <= 0.001f) continue;
+            Quad quad;
+            quad.texture = face.texture != 0 ? face.texture : m_atlas.textureId();
+            quad.depth = 0.0f;
+            quad.shade = frontLight ? 1.0f : std::clamp(0.78f - 0.127f * normal.x + 0.254f * normal.y, 0.3f, 1.0f);
+            const glm::vec2 rect[4] = { { face.uv.x, face.uv.y }, { face.uv.z, face.uv.y }, { face.uv.z, face.uv.w }, { face.uv.x, face.uv.w } };
+            const int steps = ((face.rotation / 90) % 4 + 4) % 4;
+            const TileUV tile = face.texture != 0 ? TileUV{} : tileUV(face.tile);
+            for (int k = 0; k < 4; ++k)
+            {
+                const glm::vec3 local = glm::vec3(own * glm::vec4(corners[side][k], 1.0f));
+                const glm::vec3 v = glm::vec3(turn * glm::vec4((local / 16.0f - 0.5f) * scale, 1.0f)) + translation / 16.0f;
+                quad.corner[k] = glm::vec2(x + size * 0.5f + v.x * size, y + size * 0.5f - v.y * size);
+                quad.depth += v.z * 0.25f;
+                const glm::vec2 at = rect[(k - steps + 4) % 4];
+                if (face.texture != 0) quad.uv[k] = at;
+                else quad.uv[k] = glm::vec2(tile.u0 + (tile.u1 - tile.u0) * at.x / 16.0f, tile.vTop + (tile.vBottom - tile.vTop) * at.y / 16.0f);
+            }
+            quads.push_back(quad);
+        }
+    }
+    std::stable_sort(quads.begin(), quads.end(), [](const Quad& a, const Quad& b) { return a.depth < b.depth; });
+    for (const Quad& quad : quads)
+        m_ui.texturedShape(quad.texture, quad.corner, quad.uv,
+                           glm::vec4(tint.r * quad.shade, tint.g * quad.shade, tint.b * quad.shade, tint.a), glm::vec3(0.0f, 0.0f, 1.0f));
+}
+
+bool Application::drawShapedIcon(float x, float y, float size, StackId id, const glm::vec4& tint)
+{
+    if (isItem(id)) return false;
+    const BlockId block = asBlock(id);
+    const BlockInfo& info = blockInfo(block);
+    auto box = [](glm::vec3 from, glm::vec3 to, int tile, const glm::vec4 uv[6]) {
+        IconElement element;
+        element.from = from;
+        element.to = to;
+        for (int side = 0; side < 6; ++side)
+        {
+            element.faces[side].tile = uv[side].x < 0.0f ? -1 : tile;
+            element.faces[side].uv = uv[side].x < 0.0f ? glm::vec4(0.0f) : uv[side];
+        }
+        return element;
+    };
+    const glm::vec4 none(-1.0f);
+    if (isChestFamily(block))
+    {
+        const ChestState state = chestState(block);
+        const int set = state.kind == 2 ? 3 : state.kind;
+        const int base = Tiles::ChestTileFirst + set * 3 * 5;
+        std::vector<IconElement> elements;
+        IconElement body;
+        body.from = glm::vec3(1.0f, 0.0f, 1.0f);
+        body.to = glm::vec3(15.0f, 14.0f, 15.0f);
+        const int tilesFor[6] = { base + 4, base + 0, base + 1, base + 3, base + 2, base + 2 };
+        const glm::vec4 uvFor[6] = { { 1, 1, 15, 15 }, { 1, 1, 15, 15 }, { 1, 2, 15, 16 }, { 1, 2, 15, 16 }, { 1, 2, 15, 16 }, { 1, 2, 15, 16 } };
+        for (int side = 0; side < 6; ++side)
+        {
+            body.faces[side].tile = tilesFor[side];
+            body.faces[side].uv = uvFor[side];
+        }
+        elements.push_back(body);
+        const glm::vec4 latch[6] = { { 0, 0, 2, 2 }, { 0, 0, 2, 2 }, { 0, 0, 2, 2 }, { 0, 0, 2, 2 }, { 0, 0, 2, 2 }, { 0, 0, 2, 2 } };
+        elements.push_back(box(glm::vec3(7.0f, 7.0f, 15.0f), glm::vec3(9.0f, 11.0f, 16.0f), base + 1, latch));
+        drawModelIcon(x, y, size, elements, glm::vec3(30.0f, 45.0f, 0.0f), glm::vec3(0.0f), 0.625f, tint);
+        return true;
+    }
+    if (isBed(block))
+    {
+        const int colour = bedColour(block);
+        const int sides = Tiles::BedSidesTile + colour;
+        const int ends = Tiles::BedEndsTile + colour;
+        std::vector<IconElement> elements;
+        const glm::vec4 footFaces[6] = { none, { 0, 0, 16, 16 }, { 0, 6, 16, 12 }, none, { 0, 6, 16, 12 }, { 0, 6, 16, 12 } };
+        IconElement foot = box(glm::vec3(0.0f, 3.0f, -16.0f), glm::vec3(16.0f, 9.0f, 0.0f), sides, footFaces);
+        foot.faces[1].tile = Tiles::BedFootTopTile + colour;
+        foot.faces[1].rotation = 180;
+        foot.faces[2].tile = ends;
+        elements.push_back(foot);
+        const glm::vec4 headFaces[6] = { none, { 0, 0, 16, 16 }, none, { 0, 0, 16, 6 }, { 0, 0, 16, 6 }, { 0, 0, 16, 6 } };
+        IconElement head = box(glm::vec3(0.0f, 3.0f, 0.0f), glm::vec3(16.0f, 9.0f, 16.0f), sides, headFaces);
+        head.faces[1].tile = Tiles::BedHeadTopTile + colour;
+        head.faces[1].rotation = 180;
+        head.faces[3].tile = ends;
+        elements.push_back(head);
+        const glm::vec4 leg[6] = { { 0, 12, 3, 15 }, { 0, 12, 3, 15 }, { 0, 12, 3, 15 }, { 0, 12, 3, 15 }, { 0, 12, 3, 15 }, { 0, 12, 3, 15 } };
+        for (float lx : { 0.0f, 13.0f })
+            for (float lz : { -16.0f, 13.0f })
+                elements.push_back(box(glm::vec3(lx, 0.0f, lz), glm::vec3(lx + 3.0f, 3.0f, lz + 3.0f), sides, leg));
+        drawModelIcon(x, y, size, elements, glm::vec3(30.0f, 160.0f, 0.0f), glm::vec3(2.0f, 3.0f, 0.0f), 0.5325f, tint);
+        return true;
+    }
+
+    if (isDecoratedPot(block))
+    {
+        std::vector<IconElement> elements;
+        const glm::vec4 sideUV(1.0f, 0.0f, 15.0f, 16.0f);
+        const glm::vec4 bodyFaces[6] = { { 7.0f, 6.5f, 14.0f, 13.5f }, { 0.0f, 6.5f, 7.0f, 13.5f }, sideUV, sideUV, sideUV, sideUV };
+        IconElement body = box(glm::vec3(1.0f, 0.0f, 1.0f), glm::vec3(15.0f, 16.0f, 15.0f), Tiles::PotSideTile, bodyFaces);
+        body.faces[0].tile = Tiles::PotBaseTile;
+        body.faces[1].tile = Tiles::PotBaseTile;
+        elements.push_back(body);
+        const glm::vec4 neckFaces[6] = { { 4.0f, 0.0f, 8.0f, 4.0f }, { 4.0f, 0.0f, 8.0f, 4.0f }, { 4.0f, 4.0f, 8.0f, 5.5f },
+                                         { 4.0f, 4.0f, 8.0f, 5.5f }, { 0.0f, 4.0f, 4.0f, 5.5f }, { 8.0f, 4.0f, 12.0f, 5.5f } };
+        elements.push_back(box(glm::vec3(4.0f, 16.0f, 4.0f), glm::vec3(12.0f, 19.0f, 12.0f), Tiles::PotBaseTile, neckFaces));
+        drawModelIcon(x, y, size, elements, glm::vec3(30.0f, 45.0f, 0.0f), glm::vec3(0.0f), 0.6f, tint, true);
+        return true;
+    }
+    if (block == Blocks::Conduit)
+    {
+        const glm::vec4 shell[6] = { { 0, 0, 16, 16 }, { 0, 0, 16, 16 }, { 0, 0, 16, 16 }, { 0, 0, 16, 16 }, { 0, 0, 16, 16 }, { 0, 0, 16, 16 } };
+        drawModelIcon(x, y, size, { box(glm::vec3(5.0f), glm::vec3(11.0f), info.tileSide, shell) }, glm::vec3(30.0f, 45.0f, 0.0f), glm::vec3(0.0f),
+                      1.0f, tint);
+        return true;
+    }
+
+    std::string name;
+    std::vector<std::pair<std::string, int>> tiles;
+    if (isFence(block)) { name = "fence_inventory"; tiles = { { "texture", info.tileSide } }; }
+    else if (isFenceGate(block)) { name = "template_fence_gate"; tiles = { { "texture", info.tileSide } }; }
+    else if (isWall(block)) { name = "wall_inventory"; tiles = { { "wall", info.tileSide } }; }
+    else if (isTrapdoor(block)) { name = "template_trapdoor_bottom"; tiles = { { "texture", info.tileTop } }; }
+    else if (isStairs(block)) { name = "stairs"; tiles = { { "bottom", info.tileBottom }, { "top", info.tileTop }, { "side", info.tileSide } }; }
+    else if (isCarpet(block) || block == Blocks::MossCarpet) { name = "carpet"; tiles = { { "wool", info.tileTop } }; }
+    else if (isSnowLayer(block)) { name = "snow_height2"; tiles = { { "texture", info.tileTop } }; }
+    else if (isDaylightDetector(block)) { name = "template_daylight_detector"; tiles = { { "top", info.tileTop }, { "side", Tiles::DaylightSideTile } }; }
+    else if (isStonecutter(block))
+    {
+        name = "stonecutter";
+        tiles = { { "bottom", Tiles::StonecutterBottomTile }, { "top", Tiles::StonecutterTopTile }, { "side", Tiles::StonecutterSideTile },
+                  { "saw", Tiles::StonecutterSawTile } };
+    }
+    else if (isLectern(block))
+    {
+        name = "lectern";
+        tiles = { { "bottom", blockInfo(Blocks::Planks).tileSide }, { "base", Tiles::LecternBase }, { "front", Tiles::LecternFront },
+                  { "sides", Tiles::LecternSide }, { "top", Tiles::LecternTop } };
+    }
+    else if (isGrindstone(block))
+    {
+        name = "grindstone";
+        tiles = { { "leg", blockInfo(Blocks::DarkOakLog).tileSide }, { "pivot", Tiles::GrindstonePivot }, { "round", Tiles::GrindstoneFace },
+                  { "side", Tiles::GrindstoneSide } };
+    }
+    else if (block == Blocks::EnchantingTable)
+    {
+        name = "enchanting_table";
+        tiles = { { "bottom", Tiles::EnchantTableBottom }, { "top", Tiles::EnchantTableTop }, { "side", Tiles::EnchantTableSide } };
+    }
+    else if (block == Blocks::EndPortalFrame || block == Blocks::EndPortalFrameFilled)
+    {
+        name = "end_portal_frame";
+        tiles = { { "bottom", blockInfo(Blocks::EndStone).tileSide }, { "top", Tiles::EndFrameTop }, { "side", Tiles::EndFrameSide } };
+    }
+    else if (block == Blocks::DragonEgg) { name = "dragon_egg"; tiles = { { "all", Tiles::DragonEggTile } }; }
+    else if (isComposter(block))
+    {
+        name = "composter";
+        tiles = { { "bottom", Tiles::ComposterBottom }, { "inside", Tiles::ComposterBottom }, { "side", Tiles::ComposterSide },
+                  { "top", Tiles::ComposterTop } };
+    }
+    else if (block == Blocks::Beacon)
+    {
+        name = "beacon";
+        tiles = { { "beacon", Tiles::BeaconTile }, { "glass", blockInfo(Blocks::Glass).tileSide }, { "obsidian", blockInfo(Blocks::Obsidian).tileSide } };
+    }
+    else
+        return false;
+
+    const IconModelSource* model = iconModel(name);
+    if (!model) return false;
+    auto tileOf = [&](const char* var) {
+        for (const auto& [key, tile] : tiles)
+            if (key == var) return tile;
+        return -1;
+    };
+    std::vector<IconElement> elements;
+    for (const IconElementSource& source : model->elements)
+    {
+        IconElement element;
+        element.from = glm::vec3(source.from[0], source.from[1], source.from[2]);
+        element.to = glm::vec3(source.to[0], source.to[1], source.to[2]);
+        element.axis = source.axis;
+        element.angle = source.angle;
+        element.origin = glm::vec3(source.origin[0], source.origin[1], source.origin[2]);
+        for (int side = 0; side < 6; ++side)
+        {
+            const IconFaceSource& face = source.faces[side];
+            if (!face.var) continue;
+            element.faces[side].tile = tileOf(face.var);
+            element.faces[side].uv = glm::vec4(face.u0, face.v0, face.u1, face.v1);
+            element.faces[side].rotation = face.rotation;
+        }
+        elements.push_back(element);
+    }
+    drawModelIcon(x, y, size, elements, glm::vec3(model->rotation[0], model->rotation[1], model->rotation[2]),
+                  glm::vec3(model->translation[0], model->translation[1], model->translation[2]), model->scale, tint);
+    return true;
+}
+
 bool Application::drawBlockIcon(float x, float y, float size, StackId id,
                                 const glm::vec4& tint)
 {
     if (isItem(id)) return false;
+    if (drawShapedIcon(x, y, size, id, tint)) return true;
 
     const BlockId block = asBlock(id);
     const BlockInfo& info = blockInfo(block);
@@ -641,11 +917,11 @@ bool Application::drawBlockIcon(float x, float y, float size, StackId id,
     // Left, then right. Drawn after the top so a seam between them is
     // covered by the face in front rather than showing through.
     const glm::vec2 leftFace[4] = { D, C, Cb, Db };
-    faceUV(info.tileFront >= 0 ? tileUV(info.tileFront) : sideUV, uv);
+    faceUV(sideUV, uv);
     m_ui.texturedShape(m_atlas.textureId(), leftFace, uv, shaded(0.78f), leftLight);
 
     const glm::vec2 rightFace[4] = { C, B, Bb, Cb };
-    faceUV(sideUV, uv);
+    faceUV(info.tileFront >= 0 ? tileUV(info.tileFront) : sideUV, uv);
     m_ui.texturedShape(m_atlas.textureId(), rightFace, uv, shaded(0.60f), rightLight);
 
     return true;
@@ -3641,12 +3917,42 @@ void Application::stowCartography()
 
 void Application::drawBannerIcon(float x, float y, float size, int colour, const Banners::Design& design, const glm::vec4& tint)
 {
-    const float px = size / 16.0f;
     const BannerRenderer::Cell cell = m_bannerRenderer.cellFor(colour, design);
     const float texel = cell.size / static_cast<float>(Banners::SHEET);
-    m_ui.texturedQuad(m_bannerRenderer.texture(), x + 2.5f * px, y + 0.5f * px, 11.0f * px, 1.5f * px,
-                      cell.u0 + texel * 2.0f, cell.v0 + texel * 44.0f, cell.u0 + texel * 22.0f, cell.v0 + texel * 46.0f, tint);
-    drawBannerFlag(colour, design, x + 4.0f * px, y + 2.0f * px, 8.0f * px, 14.0f * px, tint);
+    const unsigned int sheet = m_bannerRenderer.texture();
+    auto patch = [&](float u0, float v0, float u1, float v1) {
+        IconFace face;
+        face.texture = sheet;
+        face.uv = glm::vec4(cell.u0 + texel * u0, cell.v0 + texel * v0, cell.u0 + texel * u1, cell.v0 + texel * v1);
+        return face;
+    };
+    const float k = 2.0f / 3.0f;
+    std::vector<IconElement> elements;
+    IconElement pole;
+    pole.from = glm::vec3(8.0f - k, 0.0f, 8.0f - k);
+    pole.to = glm::vec3(8.0f + k, 42.0f * k, 8.0f + k);
+    pole.faces[1] = patch(46, 0, 48, 2);
+    pole.faces[3] = patch(46, 2, 48, 44);
+    pole.faces[4] = patch(44, 2, 46, 44);
+    pole.faces[5] = patch(48, 2, 50, 44);
+    elements.push_back(pole);
+    IconElement bar;
+    bar.from = glm::vec3(8.0f - 10.0f * k, 40.0f * k, 8.0f - k);
+    bar.to = glm::vec3(8.0f + 10.0f * k, 42.0f * k, 8.0f + k);
+    bar.faces[1] = patch(2, 42, 22, 44);
+    bar.faces[3] = patch(2, 44, 22, 46);
+    bar.faces[4] = patch(0, 44, 2, 46);
+    bar.faces[5] = patch(22, 44, 24, 46);
+    elements.push_back(bar);
+    IconElement flag;
+    flag.from = glm::vec3(8.0f - 10.0f * k, 0.0f, 8.0f + k);
+    flag.to = glm::vec3(8.0f + 10.0f * k, 40.0f * k, 8.0f + 2.0f * k);
+    flag.faces[1] = patch(1, 0, 21, 1);
+    flag.faces[3] = patch(1, 1, 21, 41);
+    flag.faces[4] = patch(0, 1, 1, 41);
+    flag.faces[5] = patch(21, 1, 22, 41);
+    elements.push_back(flag);
+    drawModelIcon(x, y, size, elements, glm::vec3(30.0f, 20.0f, 0.0f), glm::vec3(0.0f, -3.25f, 0.0f), 0.5325f, tint, true);
 }
 
 void Application::openLoom(const glm::ivec3& block)

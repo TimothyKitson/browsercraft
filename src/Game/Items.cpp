@@ -431,6 +431,9 @@ int flatIconFor(BlockId id)
     if (isTripwireHook(id)) return Tiles::ItemTripwireHook;
     if (isChain(id)) return Tiles::ItemChain;
     if (isBell(id)) return Tiles::ItemBell;
+    if (id == Blocks::BrewingStand) return Tiles::ItemBrewingStand;
+    if (id == Blocks::Lantern || id == Blocks::LanternHanging) return Tiles::ItemLantern;
+    if (id == Blocks::SoulLantern || id == Blocks::SoulLanternHanging) return Tiles::ItemSoulLantern;
     if (isChiseledBookshelf(id)) return Tiles::ShelfOccupiedTile;
     if (id == Blocks::DragonEgg) return Tiles::DragonEggTile;
     if (id == Blocks::HeavyCore) return Tiles::HeavyCoreTile;
