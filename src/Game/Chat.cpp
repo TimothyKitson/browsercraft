@@ -1244,8 +1244,19 @@ std::vector<std::string> Chat::suggest(const std::string& draft)
     else if (name == "data" && index == 1) use({ "get" });
     else if (name == "data" && index == 2) use({ "block", "entity" });
     else if (name == "loot" && index == 1) use({ "give", "spawn" });
-    else if (name == "place" && index == 1) use({ "feature" });
-    else if (name == "place" && index == 2) use({ "acacia", "azalea_tree", "birch", "cherry", "crimson_fungus", "dark_oak", "fancy_oak", "huge_brown_mushroom",
+    else if (name == "place" && index == 1) use({ "feature", "jigsaw", "structure", "template" });
+    else if (name == "place" && index == 2 && words.size() > 1 && lower(words[1]) == "jigsaw")
+        use({ "ancient_city/city_center", "bastion/starts", "pillager_outpost/base_plates", "trail_ruins/tower", "trial_chambers/chamber/end",
+              "village/desert/town_centers", "village/plains/town_centers", "village/savanna/town_centers", "village/snowy/town_centers",
+              "village/taiga/town_centers" });
+    else if (name == "place" && index == 2 && words.size() > 1 && lower(words[1]) == "structure")
+        use({ "ancient_city", "bastion_remnant", "buried_treasure", "desert_pyramid", "end_city", "fortress", "igloo", "jungle_pyramid", "mansion",
+              "mineshaft", "mineshaft_mesa", "monument", "ocean_ruin_cold", "ocean_ruin_warm", "pillager_outpost", "ruined_portal",
+              "ruined_portal_desert", "ruined_portal_jungle", "ruined_portal_mountain", "ruined_portal_ocean", "ruined_portal_swamp", "shipwreck",
+              "shipwreck_beached", "stronghold", "swamp_hut", "trail_ruins", "trial_chambers", "village_desert", "village_plains",
+              "village_savanna", "village_snowy", "village_taiga" });
+    else if (name == "place" && index == 3 && words.size() > 1 && lower(words[1]) == "jigsaw") use({ "bottom", "city_anchor", "start" });
+    else if (name == "place" && index == 2 && words.size() > 1 && lower(words[1]) == "feature") use({ "acacia", "azalea_tree", "birch", "cherry", "crimson_fungus", "dark_oak", "fancy_oak", "huge_brown_mushroom",
                                                   "huge_red_mushroom", "jungle_tree", "mangrove", "oak", "pine", "spruce", "warped_fungus" });
     else if (name == "forceload" && index == 1) use({ "add", "query", "remove" });
     else if (name == "whitelist" && index == 1) use({ "add", "list", "off", "on", "reload", "remove" });

@@ -1756,7 +1756,7 @@ private:
     void updateBlockEditor();
     void renderBlockEditor();
     bool saveStructure(const glm::ivec3& at, const StructureState& state, std::string& message);
-    bool loadStructure(const glm::ivec3& at, const StructureState& state, std::string& message);
+    bool loadStructure(const glm::ivec3& at, const StructureState& state, std::string& message, bool fillCorner = false);
     std::vector<glm::ivec3> m_markerSpots;
     float m_markerScan = 0.0f;
     void pinCreativeMarkers();

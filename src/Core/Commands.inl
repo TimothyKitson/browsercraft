@@ -1135,27 +1135,24 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
     {
         const std::string kind = arg(0), what = bareId(arg(1));
         glm::vec3 at = origin;
-        if (args.size() >= 5 && !(coordinateNear(arg(2), origin.x, at.x) && coordinateNear(arg(3), origin.y, at.y) && coordinateNear(arg(4), origin.z, at.z)))
+        const size_t posAt = kind == "jigsaw" ? 4 : 2;
+        if (args.size() >= posAt + 3 &&
+            !(coordinateNear(arg(posAt), origin.x, at.x) && coordinateNear(arg(posAt + 1), origin.y, at.y) && coordinateNear(arg(posAt + 2), origin.z, at.z)))
             return false;
-        if (kind == "structure" && m_world)
-        {
+        auto spotText = [&]() {
+            const glm::ivec3 block = glm::ivec3(glm::floor(at));
+            return std::to_string(block.x) + ", " + std::to_string(block.y) + ", " + std::to_string(block.z);
+        };
+        auto placeStructure = [&](const std::string& id) {
             WorldGen::Placed placedKind = WorldGen::Placed::Count;
             int style = 0;
-            if (!WorldGen::placedKind(what, placedKind, style))
-            {
-                output = "There is no structure with type \"minecraft:" + what + "\"";
-                return false;
-            }
+            if (!WorldGen::placedKind(id, placedKind, style)) return -1;
             const int chunkX = static_cast<int>(std::floor(at.x / static_cast<float>(Chunk::SX)));
             const int chunkZ = static_cast<int>(std::floor(at.z / static_cast<float>(Chunk::SZ)));
             const int reach = WorldGen::placedReach(placedKind);
             for (int dz = -reach; dz <= reach; ++dz)
                 for (int dx = -reach; dx <= reach; ++dx)
-                    if (!m_world->chunkAt(chunkX + dx, chunkZ + dz))
-                    {
-                        output = "That position is not loaded";
-                        return false;
-                    }
+                    if (!m_world->chunkAt(chunkX + dx, chunkZ + dz)) return -2;
             const WorldGen::PlacedStart start{ placedKind, static_cast<int>(m_dimension), chunkX, chunkZ, style };
             const WorldGen& gen = m_world->generator();
             int changed = 0;
@@ -1165,11 +1162,7 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
                     const Chunk* live = m_world->chunkAt(chunkX + dx, chunkZ + dz);
                     Chunk scratch(live->position());
                     scratch.blocks() = live->blocks();
-                    if (!gen.stampPlaced(scratch, start))
-                    {
-                        output = "Failed to place structure";
-                        return false;
-                    }
+                    if (!gen.stampPlaced(scratch, start)) return 0;
                     const std::vector<BlockId>& before = live->blocks();
                     const std::vector<BlockId>& after = scratch.blocks();
                     std::vector<std::pair<int, BlockId>> edits;
@@ -1187,21 +1180,74 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
                         ++changed;
                     }
                 }
-            if (changed == 0)
-            {
-                output = "Failed to place structure";
-                return false;
-            }
+            if (changed == 0) return 0;
             m_placedStarts.push_back(start);
             m_world->generator().setPlaced(m_placedStarts);
-            const glm::ivec3 block = glm::ivec3(glm::floor(at));
-            output = "Generated structure \"minecraft:" + what + "\" at " + std::to_string(block.x) + ", " + std::to_string(block.y) + ", " + std::to_string(block.z);
+            return 1;
+        };
+        if (kind == "structure" && m_world)
+        {
+            const int made = placeStructure(what);
+            if (made == -1) output = "There is no structure with type \"minecraft:" + what + "\"";
+            else if (made == -2) output = "That position is not loaded";
+            else if (made == 0) output = "Failed to place structure";
+            else output = "Generated structure \"minecraft:" + what + "\" at " + spotText();
+            return made == 1;
+        }
+        if (kind == "jigsaw" && m_world)
+        {
+            static const struct { const char* pool; const char* structure; } STARTS[] = {
+                { "village/plains/town_centers", "village_plains" }, { "village/desert/town_centers", "village_desert" },
+                { "village/savanna/town_centers", "village_savanna" }, { "village/snowy/town_centers", "village_snowy" },
+                { "village/taiga/town_centers", "village_taiga" }, { "bastion/starts", "bastion_remnant" },
+                { "pillager_outpost/base_plates", "pillager_outpost" }, { "ancient_city/city_center", "ancient_city" },
+                { "trail_ruins/tower", "trail_ruins" }, { "trial_chambers/chamber/end", "trial_chambers" },
+            };
+            const char* structure = nullptr;
+            for (const auto& entry : STARTS)
+                if (what == entry.pool) structure = entry.structure;
+            if (!structure)
+            {
+                output = "There is no template pool with type \"minecraft:" + what + "\"";
+                return false;
+            }
+            const int depth = arg(3).empty() ? 7 : std::atoi(arg(3).c_str());
+            if (arg(2).empty() || depth < 1 || depth > 20)
+            {
+                output = "Usage: /place jigsaw <pool> <target> <max_depth> [x y z]";
+                return false;
+            }
+            const int made = placeStructure(structure);
+            output = made == 1 ? "Generated jigsaw at " + spotText() : made == -2 ? "That position is not loaded" : "Failed to generate jigsaw";
+            return made == 1;
+        }
+        if (kind == "template" && m_world)
+        {
+            StructureState state;
+            state.name = what;
+            state.offset = glm::ivec3(0);
+            const std::string turn = bareId(arg(5)), flip = bareId(arg(6));
+            state.rotation = turn == "clockwise_90" ? 1 : turn == "180" ? 2 : turn == "counterclockwise_90" ? 3 : 0;
+            state.mirror = flip == "left_right" ? 1 : flip == "front_back" ? 2 : 0;
+            if (!arg(7).empty()) state.integrity = std::clamp(static_cast<float>(std::atof(arg(7).c_str())), 0.0f, 1.0f);
+            if (!arg(8).empty()) state.seed = static_cast<uint32_t>(std::strtoul(arg(8).c_str(), nullptr, 10));
+            std::string message;
+            if (!std::filesystem::exists(m_savePath + "/structures/" + state.name + ".bin"))
+            {
+                output = "There is no template with id \"minecraft:" + what + "\"";
+                return false;
+            }
+            if (!loadStructure(glm::ivec3(glm::floor(at)), state, message, true))
+            {
+                output = "Failed to place template";
+                return false;
+            }
+            output = "Loaded template \"minecraft:" + what + "\" at " + spotText();
             return true;
         }
         if (kind != "feature" || !m_world)
         {
-            output = kind == "jigsaw" ? "Jigsaw pools are not supported; use /place structure <id> [x y z]"
-                                      : "Usage: /place feature <id> [x y z] or /place structure <id> [x y z]";
+            output = "Usage: /place feature|jigsaw|structure|template <id> [x y z]";
             return false;
         }
         struct WorldCells : Saplings::Cells
@@ -1233,7 +1279,7 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
         if (what == "huge_red_mushroom" || what == "huge_brown_mushroom") placed = Saplings::hugeMushroom(cells, spot, what == "huge_red_mushroom", seed, true);
         if (what == "crimson_fungus_planted" || what == "warped_fungus_planted" || what == "crimson_fungus" || what == "warped_fungus")
             placed = Saplings::hugeFungus(cells, spot, what.rfind("warped", 0) == 0, seed);
-        output = placed ? "Placed feature \"minecraft:" + what + "\" at " + std::to_string(spot.x) + ", " + std::to_string(spot.y) + ", " + std::to_string(spot.z)
+        output = placed ? "Placed \"minecraft:" + what + "\" at " + std::to_string(spot.x) + ", " + std::to_string(spot.y) + ", " + std::to_string(spot.z)
                         : "Failed to place feature";
         return placed;
     }

@@ -23687,7 +23687,7 @@ bool Application::saveStructure(const glm::ivec3& at, const StructureState& stat
     return static_cast<bool>(out);
 }
 
-bool Application::loadStructure(const glm::ivec3& at, const StructureState& state, std::string& message)
+bool Application::loadStructure(const glm::ivec3& at, const StructureState& state, std::string& message, bool fillCorner)
 {
     if (!m_world || m_savePath.empty())
     {
@@ -23732,7 +23732,7 @@ bool Application::loadStructure(const glm::ivec3& at, const StructureState& stat
                 stored = transformBlock(static_cast<BlockId>(stored), state.rotation & 3, state.mirror);
                 if (soaked) stored = static_cast<uint16_t>(stored | WATERLOGGED);
                 const glm::ivec3 p = origin + glm::ivec3(lx, y, lz);
-                if (p == at || p.y < 0 || p.y >= Chunk::SY) continue;
+                if ((p == at && !fillCorner) || p.y < 0 || p.y >= Chunk::SY) continue;
                 m_world->setBlock(p.x, p.y, p.z, static_cast<BlockId>(stored));
                 m_net.onLocalBlockChange(p.x, p.y, p.z, static_cast<BlockId>(stored));
             }
@@ -31846,6 +31846,34 @@ void Application::runCheatAudit()
         report(!unknown && unknownSaid.find("There is no structure") != std::string::npos, "/place structure names unknown structures", unknownSaid);
         const auto [far, farSaid] = run("/place structure igloo ~5000 ~ ~5000");
         report(!far && farSaid == "That position is not loaded", "/place structure refuses unloaded ground", farSaid);
+        {
+            const auto [ruin, ruinSaid] = run("/place jigsaw minecraft:trail_ruins/tower minecraft:bottom 7 ~40 ~ ~");
+            const auto [nowhere, nowhereSaid] = run("/place jigsaw minecraft:nowhere minecraft:bottom 7");
+            report(ruin && ruinSaid.rfind("Generated jigsaw at", 0) == 0 && !nowhere && nowhereSaid.find("There is no template pool") != std::string::npos,
+                   "/place jigsaw grows a start pool into its structure and names unknown pools", ruinSaid + " / " + nowhereSaid);
+            const glm::ivec3 corner = glm::ivec3(glm::floor(m_player.position)) + glm::ivec3(6, 8, 6);
+            for (int x = 0; x < 3; ++x)
+                for (int y = 0; y < 3; ++y)
+                    for (int z = 0; z < 3; ++z)
+                        m_world->setBlock(corner.x + x, corner.y + y, corner.z + z, (x + y + z) % 2 == 0 ? Blocks::Bookshelf : Blocks::DiamondOre);
+            StructureState box;
+            box.name = "audit_box";
+            box.offset = glm::ivec3(0);
+            box.size = glm::ivec3(3);
+            std::string savedSaid;
+            const bool saved = saveStructure(corner, box, savedSaid);
+            const glm::ivec3 copy = corner + glm::ivec3(0, 0, 5);
+            const auto [loaded, loadedSaid] = run("/place template minecraft:audit_box " + std::to_string(copy.x) + " " + std::to_string(copy.y) + " " +
+                                                  std::to_string(copy.z));
+            bool same = true;
+            for (int x = 0; x < 3; ++x)
+                for (int y = 0; y < 3; ++y)
+                    for (int z = 0; z < 3; ++z)
+                        if (m_world->getBlock(copy.x + x, copy.y + y, copy.z + z) != m_world->getBlock(corner.x + x, corner.y + y, corner.z + z)) same = false;
+            const auto [missing, missingSaid] = run("/place template minecraft:no_such_template");
+            report(saved && loaded && same && !missing && missingSaid.find("There is no template") != std::string::npos,
+                   "/place template loads a structure block's saved template block for block", loadedSaid + " / " + missingSaid);
+        }
         run("/time set noon");
         m_player.position = glm::vec3(static_cast<float>(midX) - 8.5f, static_cast<float>(ground + 34), static_cast<float>(midZ) - 34.5f);
         m_player.velocity = glm::vec3(0.0f);
