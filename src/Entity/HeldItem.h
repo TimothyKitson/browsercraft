@@ -96,10 +96,12 @@ private:
     float m_equip = 1.0f;
     StackId m_shown = Blocks::Air;
     int m_tileOverride = -1;
+    uint32_t m_look = 0;
     bool m_leftHanded = false;
 
 public:
     void setTileOverride(int tile) { m_tileOverride = tile; }
+    void setLook(uint32_t enchantments) { m_look = enchantments; }
     void setShieldLook(int baseColour, const Banners::Design& layers)
     {
         m_hasLook = true;

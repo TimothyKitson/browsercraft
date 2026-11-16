@@ -4,6 +4,9 @@
 #include "Renderer/Atlas.h"
 #include "Renderer/Camera.h"
 #include "Renderer/Shader.h"
+#include "Renderer/ItemTint.h"
+#include "Game/Banners.h"
+#include "Game/Enchanting.h"
 #include "Core/GLFunctions.h"
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
@@ -15,7 +18,8 @@
 
 namespace
 {
-    const std::vector<int> CHUNK_LAYOUT = { 3, 2, 1, 1, 1, 1 };
+    const std::vector<int> CHUNK_LAYOUT = { 3, 2, 1, 1, 1, 1, 1 };
+    float g_tint = ItemTint::NEUTRAL;
 
     // Where the hand goes, in the camera's own frame, and it is
     // Minecraft's: the vanilla client translates to
@@ -139,6 +143,7 @@ namespace
             out.push_back(sky);
             out.push_back(blockLight);
             out.push_back(face);
+            out.push_back(g_tint);
         }
     }
 
@@ -169,6 +174,7 @@ namespace
             out.push_back(sky);
             out.push_back(blockLight);
             out.push_back(face);
+            out.push_back(g_tint);
         }
     }
 
@@ -742,28 +748,45 @@ void HeldItem::appendSpyglass(const glm::mat4& toWorld, float sky, float blockLi
 
 void HeldItem::appendSprite(const glm::mat4& toWorld, StackId stack, float sky, float blockLight)
 {
-    const TileUV uv = tileUV(m_tileOverride >= 0 ? m_tileOverride : atlasTileFor(stack));
-
     const glm::mat4 model = toWorld * displayMatrix(stack == Items::Mace ? MACE_DISPLAY
                                                                          : ITEM_DISPLAY);
 
-    const int tile = m_tileOverride >= 0 ? m_tileOverride : atlasTileFor(stack);
-    (void)uv;
-    for (const SpriteFace& face : Atlas::extrudedSprite(tile))
-    {
-        Quad q;
-        q.shade = face.shade;
-        for (int k = 0; k < 4; ++k)
+    auto layer = [&](int tile, float tint, float thick) {
+        g_tint = tint;
+        const glm::mat4 shaped = model * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.5f)) *
+                                 glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, thick)) *
+                                 glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5f));
+        for (const SpriteFace& face : Atlas::extrudedSprite(tile))
         {
-            q.corner[k] = place(model, face.corner[k].x, face.corner[k].y, face.corner[k].z);
-            q.u[k] = face.u[k];
-            q.v[k] = face.v[k];
+            Quad q;
+            q.shade = face.shade;
+            for (int k = 0; k < 4; ++k)
+            {
+                q.corner[k] = place(shaped, face.corner[k].x, face.corner[k].y, face.corner[k].z);
+                q.u[k] = face.u[k];
+                q.v[k] = face.v[k];
+            }
+            const glm::vec3 middle = (q.corner[0] + q.corner[1] + q.corner[2] + q.corner[3]) * 0.25f;
+            const glm::vec3 local = (face.corner[0] + face.corner[2]) * 0.5f;
+            const glm::vec3 inside = place(shaped, local.x - face.normal.x, local.y - face.normal.y, local.z - face.normal.z);
+            pushFacing(m_vertices, q, middle + (inside - middle) * 0.01f, sky, blockLight);
         }
-        const glm::vec3 middle = (q.corner[0] + q.corner[1] + q.corner[2] + q.corner[3]) * 0.25f;
-        const glm::vec3 local = (face.corner[0] + face.corner[2]) * 0.5f;
-        const glm::vec3 inside = place(model, local.x - face.normal.x, local.y - face.normal.y, local.z - face.normal.z);
-        pushFacing(m_vertices, q, middle + (inside - middle) * 0.01f, sky, blockLight);
+        g_tint = ItemTint::NEUTRAL;
+    };
+
+    const bool dyed = Enchanting::colourOf(m_look) != 0u;
+    const uint32_t dye = Enchanting::colourOf(m_look) & 0xFFFFFFu;
+    if (m_tileOverride < 0 && dyed && stack >= Items::LeatherHelmet && stack <= Items::LeatherBoots)
+    {
+        const int piece = static_cast<int>(stack - Items::LeatherHelmet);
+        layer(Tiles::ItemLeatherBaseFirst + piece, ItemTint::packed(dye), 1.0f);
+        layer(Tiles::ItemLeatherOverlayFirst + piece, ItemTint::NEUTRAL, 1.06f);
+        return;
     }
+    layer(m_tileOverride >= 0 ? m_tileOverride : atlasTileFor(stack), ItemTint::NEUTRAL, 1.0f);
+    if (stack == Items::WolfArmor && (dyed || ((m_look >> 24) & 0x1Fu) != 0u))
+        layer(Tiles::ItemWolfArmorOverlay,
+              ItemTint::packed(dyed ? dye : Banners::dyeRgb(static_cast<int>((m_look >> 24) & 0x1Fu) - 1)), 1.06f);
 }
 
 void HeldItem::render(Shader& chunkShader, const Camera& camera, const PlayerSkin& skin,

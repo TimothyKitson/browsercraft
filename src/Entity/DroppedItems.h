@@ -144,6 +144,7 @@ public:
         glm::vec3 axisX{ 1.0f, 0.0f, 0.0f };
         glm::vec3 axisY{ 0.0f, 1.0f, 0.0f };
         glm::vec3 axisZ{ 0.0f, 0.0f, 1.0f };
+        uint32_t enchantments = 0;
     };
     void hold(const Held& one) { m_held.push_back(one); }
     void clearPinned() { m_pinned.clear(); m_cargo.clear(); m_held.clear(); }
@@ -193,6 +194,7 @@ private:
     };
 
     std::vector<Item> m_items;
+    float m_tint = 1056832.0f;
     uint32_t m_nextSerial = 1;
     std::vector<std::pair<uint32_t, int>> m_wanted;
     struct Falling

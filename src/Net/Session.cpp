@@ -836,7 +836,7 @@ void Session::handleAsGuest(const Packet& packet, World* world)
                 mob.size = static_cast<int8_t>(reader.u8());
                 mob.profession = static_cast<int8_t>(reader.u8());
                 mob.shulkerColour = static_cast<int8_t>(reader.u8());
-                mob.armourDye = static_cast<int8_t>(reader.u8());
+                mob.armourDye = static_cast<int>(reader.u32());
                 mob.flags = reader.u16();
                 mob.horseArmour = reader.u16();
                 for (uint16_t& slot : mob.gear) slot = reader.u16();
@@ -995,7 +995,7 @@ void Session::broadcastMobs(const std::vector<MobSnap>& mobs)
         out.u8(static_cast<uint8_t>(static_cast<int8_t>(mob.size)));
         out.u8(static_cast<uint8_t>(static_cast<int8_t>(mob.profession)));
         out.u8(static_cast<uint8_t>(static_cast<int8_t>(mob.shulkerColour)));
-        out.u8(static_cast<uint8_t>(static_cast<int8_t>(mob.armourDye)));
+        out.u32(static_cast<uint32_t>(mob.armourDye));
         out.u16(mob.flags);
         out.u16(mob.horseArmour);
         for (uint16_t slot : mob.gear) out.u16(slot);

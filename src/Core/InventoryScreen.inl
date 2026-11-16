@@ -777,9 +777,9 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
         else
             m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size,
                               uv.u0, uv.vTop, uv.u1, uv.vBottom, tint);
-        if (id == Items::WolfArmor && ((enchantments >> 24) & 0x1Fu) != 0u)
+        if (id == Items::WolfArmor && (dyedWith != 0u || ((enchantments >> 24) & 0x1Fu) != 0u))
         {
-            const unsigned int c = Banners::dyeRgb(static_cast<int>((enchantments >> 24) & 0x1Fu) - 1);
+            const unsigned int c = dyedWith != 0u ? (dyedWith & 0xFFFFFFu) : Banners::dyeRgb(static_cast<int>((enchantments >> 24) & 0x1Fu) - 1);
             const TileUV dyeUV = tileUV(Tiles::ItemWolfArmorOverlay);
             m_ui.texturedQuad(m_atlas.textureId(), x, y, size, size, dyeUV.u0, dyeUV.vTop, dyeUV.u1, dyeUV.vBottom,
                               glm::vec4(((c >> 16) & 255u) / 255.0f, ((c >> 8) & 255u) / 255.0f, (c & 255u) / 255.0f, 1.0f) * tint);

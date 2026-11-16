@@ -1107,7 +1107,7 @@ private:
     PlayerPose gearPose(const Mob& mob) const;
     PlayerPose remotePose(uint32_t id, const Net::RemotePlayer& player);
     PlayerPose localPose();
-    void holdPlayerItems(const PlayerPose& pose, bool slim, uint16_t rightItem, uint16_t leftItem);
+    void holdPlayerItems(const PlayerPose& pose, bool slim, uint16_t rightItem, uint16_t leftItem, uint32_t rightDye = 0, uint32_t leftDye = 0);
     void tickLanTest(float deltaTime);
     void playMobSound(const MobSound& sound);
     void sufferStrike(const MobStrike& strike);

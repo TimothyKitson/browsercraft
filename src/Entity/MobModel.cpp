@@ -694,7 +694,7 @@ std::vector<std::string> MobModel::coatOverlaysOf(const Mob& mob) const
                 if (mob.armourDye() >= 0)
                 {
                     char tint[8];
-                    std::snprintf(tint, sizeof(tint), "%06X", Banners::dyeRgb(mob.armourDye()));
+                    std::snprintf(tint, sizeof(tint), "%06X", static_cast<unsigned int>(mob.armourDye()) & 0xFFFFFFu);
                     layers.push_back(root + "wolf/wolf_armor_overlay.png#" + tint);
                 }
                 const float left = 1.0f - static_cast<float>(mob.armourWear()) / 64.0f;

@@ -6,6 +6,9 @@
 #include "Audio/AudioEngine.h"
 #include "Renderer/Shader.h"
 #include "Renderer/Atlas.h"
+#include "Renderer/ItemTint.h"
+#include "Game/Enchanting.h"
+#include "Game/Banners.h"
 #include "Core/GLFunctions.h"
 #include <algorithm>
 #include <cmath>
@@ -18,7 +21,7 @@ namespace
     constexpr float SPIN_SPEED = 1.5f;      // radians per second
     constexpr float BOB_HEIGHT = 0.08f;
 
-    const std::vector<int> CHUNK_LAYOUT = { 3, 2, 1, 1, 1, 1 };
+    const std::vector<int> CHUNK_LAYOUT = { 3, 2, 1, 1, 1, 1, 1 };
 
     // Unit cube faces in the same order and winding as the chunk mesher.
     struct FaceDef
@@ -465,6 +468,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
                 m_vertices.push_back(sky);
                 m_vertices.push_back(blockLight);
                 m_vertices.push_back(6.0f);
+                m_vertices.push_back(m_tint);
             }
         }
     }
@@ -492,7 +496,30 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
                 m_vertices.push_back(sky);
                 m_vertices.push_back(blockLight);
                 m_vertices.push_back(6.0f);
+                m_vertices.push_back(m_tint);
             }
+        }
+    };
+
+    auto emitItem = [&](StackId id, uint32_t enchantments, const glm::vec3& origin, const glm::vec3& ax, const glm::vec3& ay,
+                        const glm::vec3& az, float sky, float blockLight) {
+        const uint32_t dye = Enchanting::colourOf(enchantments) & 0xFFFFFFu;
+        const bool dyed = Enchanting::colourOf(enchantments) != 0u;
+        if (dyed && id >= Items::LeatherHelmet && id <= Items::LeatherBoots)
+        {
+            const int piece = static_cast<int>(id - Items::LeatherHelmet);
+            m_tint = ItemTint::packed(dye);
+            emitSprite(Tiles::ItemLeatherBaseFirst + piece, origin, ax, ay, az, sky, blockLight);
+            m_tint = ItemTint::NEUTRAL;
+            emitSprite(Tiles::ItemLeatherOverlayFirst + piece, origin, ax, ay, az * 1.06f, sky, blockLight);
+            return;
+        }
+        emitSprite(atlasTileFor(id), origin, ax, ay, az, sky, blockLight);
+        if (id == Items::WolfArmor && (dyed || ((enchantments >> 24) & 0x1Fu) != 0u))
+        {
+            m_tint = ItemTint::packed(dyed ? dye : Banners::dyeRgb(static_cast<int>((enchantments >> 24) & 0x1Fu) - 1));
+            emitSprite(Tiles::ItemWolfArmorOverlay, origin, ax, ay, az * 1.06f, sky, blockLight);
+            m_tint = ItemTint::NEUTRAL;
         }
     };
 
@@ -509,13 +536,13 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
         const glm::vec3 side = glm::normalize(glm::cross(forward, upward)) * held.size;
         if (held.placed)
         {
-            emitSprite(atlasTileFor(held.item), held.origin, held.axisX, held.axisY, held.axisZ, sky, blockLight);
+            emitItem(held.item, held.enchantments, held.origin, held.axisX, held.axisY, held.axisZ, sky, blockLight);
             continue;
         }
         const glm::vec3 along = forward * (held.size * 0.5f);
         const glm::vec3 up = upward * (held.size * 0.5f);
         const glm::vec3 centre = held.grip + along * 0.6f;
-        emitSprite(atlasTileFor(held.item), centre - along - up, along * 2.0f, up * 2.0f, side, sky, blockLight);
+        emitItem(held.item, held.enchantments, centre - along - up, along * 2.0f, up * 2.0f, side, sky, blockLight);
     }
 
     const float half = SIZE * 0.5f;
@@ -555,6 +582,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
             m_vertices.push_back(sky);
             m_vertices.push_back(blockLight);
             m_vertices.push_back(6.0f); // face 6: skip tangent-space normal mapping
+            m_vertices.push_back(m_tint);
         };
 
         if (isFlatSprite(item.block))
@@ -568,7 +596,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
             const glm::vec3 across(spriteHalf * c, 0.0f, spriteHalf * s);
             const glm::vec3 up(0.0f, SPRITE_SIZE, 0.0f);
             const glm::vec3 depth(-s * SPRITE_SIZE, 0.0f, c * SPRITE_SIZE);
-            emitSprite(atlasTileFor(item.block), foot - across, across * 2.0f, up, depth, sky, blockLight);
+            emitItem(item.block, item.enchantments, foot - across, across * 2.0f, up, depth, sky, blockLight);
             continue;
         }
 
@@ -642,6 +670,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
                 m_vertices.push_back(sky);
                 m_vertices.push_back(blockLight);
                 m_vertices.push_back(6.0f);
+                m_vertices.push_back(m_tint);
             }
         }
     }
@@ -675,6 +704,7 @@ void DroppedItems::render(Shader& chunkShader, const World& world)
             m_vertices.push_back(sky);
             m_vertices.push_back(blockLight);
             m_vertices.push_back(6.0f);
+            m_vertices.push_back(m_tint);
         };
 
         // Across the wall, which is the horizontal perpendicular to

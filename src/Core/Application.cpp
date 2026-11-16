@@ -3587,7 +3587,7 @@ bool Application::frame()
             m_startupScreen == "bucket" || m_startupScreen == "ladder" ||
             m_startupScreen == "stairs" || m_startupScreen == "fence" || m_startupScreen == "models" || m_startupScreen == "shapes" ||
             m_startupScreen == "door" || m_startupScreen == "hand" ||
-            m_startupScreen == "handempty" || m_startupScreen == "handitem" ||
+            m_startupScreen == "handempty" || m_startupScreen == "handitem" || m_startupScreen == "dyeditems" ||
             m_startupScreen == "creativeinv" || m_startupScreen == "creativesearch" || m_startupScreen == "eggs" || m_startupScreen == "potions" ||
             m_startupScreen == "xp" ||
             m_startupScreen == "shelf" || m_startupScreen == "enchant" ||
@@ -3657,7 +3657,7 @@ bool Application::frame()
                                   m_startupScreen != "fence" &&
                                   m_startupScreen != "models" &&
                                   m_startupScreen != "door" &&
-                                  m_startupScreen != "hand" &&
+                                  m_startupScreen != "hand" && m_startupScreen != "dyeditems" &&
                                   m_startupScreen != "handempty" &&
                                   m_startupScreen != "handitem" &&
                                   m_startupScreen != "xp" &&
@@ -5228,7 +5228,7 @@ bool Application::frame()
                         Mob& wolf = m_entities.mobs().back();
                         while (!wolf.tamed()) wolf.tameWith(Items::Bone);
                         wolf.setHorseArmour(Items::WolfArmor);
-                        wolf.setArmourDye(11);
+                        wolf.setArmourDye(static_cast<int>(Banners::dyeRgb(11)));
                         wolf.setArmourWear(30);
                         wolf.setYaw(180.0f);
                     }
@@ -8465,6 +8465,39 @@ bool Application::frame()
                                             glm::vec3(0.0f, 1.0f, 0.0f);
                     m_orbs.spawnOne(where, Experience::ORB_VALUES[10 - i]);
                 }
+            }
+
+            if (m_startupScreen == "dyeditems")
+            {
+                m_camera.setOrientation(0.0f, -38.0f);
+                m_camera.addLook(0.0f, 0.0f, 0.0f);
+                const int px = static_cast<int>(std::floor(m_player.position.x));
+                const int py = static_cast<int>(std::floor(m_player.position.y));
+                const int pz = static_cast<int>(std::floor(m_player.position.z));
+                for (int ax = -1; ax <= 6; ++ax)
+                    for (int az = -4; az <= 4; ++az)
+                    {
+                        for (int ay = 0; ay <= 4; ++ay) m_world->setBlock(px + ax, py + ay, pz + az, Blocks::Air);
+                        m_world->setBlock(px + ax, py - 1, pz + az, Blocks::Stone);
+                    }
+                m_inventory.clear();
+                ItemStack chest{ Items::LeatherChestplate, 1 };
+                chest.enchantments = Enchanting::withColour(chest.enchantments, 0x1B02E26u);
+                m_inventory.addStack(chest);
+                m_inventory.setSelectedSlot(0);
+                const struct { StackId id; uint32_t rgb; } SHOWN[] = {
+                    { Items::LeatherHelmet, 0x3C44AAu }, { Items::LeatherLeggings, 0x5E7C16u }, { Items::LeatherBoots, 0xF9FFFEu },
+                    { Items::LeatherHelmet, 0u }, { Items::WolfArmor, 0xC74EBDu }, { Items::WolfArmor, 0u },
+                };
+                for (int i = 0; i < 6; ++i)
+                {
+                    ItemStack one{ SHOWN[i].id, 1 };
+                    if (SHOWN[i].rgb != 0u) one.enchantments = Enchanting::withColour(one.enchantments, 0x1000000u | SHOWN[i].rgb);
+                    m_drops.spawnStack(glm::vec3(px + 2.5f + (i / 3) * 1.0f, py + 0.1f, pz - 1.0f + (i % 3) * 1.0f), one);
+                }
+                m_world->setBlock(px + 6, py, pz - 3, Blocks::Bookshelf);
+                m_world->setBlock(px + 6, py, pz,     Blocks::DiamondOre);
+                m_world->setBlock(px + 6, py, pz + 3, Blocks::EndPortalFrame);
             }
 
             if (m_startupScreen == "hand" || m_startupScreen == "handempty" ||
@@ -19310,8 +19343,10 @@ void Application::handlePlacement()
                 {
                     wolf->setHorseArmour(Items::WolfArmor);
                     wolf->setArmourWear(stack.damage);
-                    const int dye = static_cast<int>((stack.enchantments >> 24) & 0x1Fu) - 1;
-                    wolf->setArmourDye(dye);
+                    const uint32_t mixed = Enchanting::colourOf(stack.enchantments);
+                    const int legacy = static_cast<int>((stack.enchantments >> 24) & 0x1Fu) - 1;
+                    wolf->setArmourDye(mixed != 0u ? static_cast<int>(mixed & 0xFFFFFFu)
+                                                   : legacy >= 0 ? static_cast<int>(Banners::dyeRgb(legacy)) : -1);
                     if (!m_player.creative()) stack.clear();
                     m_audio.play(Sound::DigStone, 0.6f, 1.3f);
                     return;
@@ -19320,7 +19355,7 @@ void Application::handlePlacement()
                 {
                     award("husbandry/remove_wolf_armor", "remove_wolf_armor");
                     ItemStack armour{ Items::WolfArmor, 1, wolf->armourWear() };
-                    if (wolf->armourDye() >= 0) armour.enchantments = static_cast<uint32_t>(wolf->armourDye() + 1) << 24;
+                    if (wolf->armourDye() >= 0) armour.enchantments = Enchanting::withColour(0u, 0x1000000u | static_cast<uint32_t>(wolf->armourDye()));
                     wolf->setHorseArmour(0);
                     wolf->setArmourWear(0);
                     wolf->setArmourDye(-1);
@@ -24204,6 +24239,7 @@ void Application::renderHand()
                                       : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0)
                                    : (m_bobber.active && held.id == Items::FishingRod) ? static_cast<int>(Tiles::ItemFishingRodCast) : -1);
     m_heldItem.setLeftHanded(m_leftHanded);
+    m_heldItem.setLook(held.enchantments);
     m_heldItem.clearShieldLook();
     if (held.id == Items::Shield && (held.enchantments >> 24) != 0u)
     {
@@ -24225,6 +24261,7 @@ void Application::renderHand()
     if (off.empty()) return;
     m_offhandItem.setTileOverride(crossbowIcon(off, true) >= 0 ? crossbowIcon(off, true) : animatedIcon(off));
     m_offhandItem.setLeftHanded(!m_leftHanded);
+    m_offhandItem.setLook(off.enchantments);
     m_offhandItem.clearShieldLook();
     if (off.id == Items::Shield && (off.enchantments >> 24) != 0u)
     {
@@ -26331,6 +26368,7 @@ std::string Application::mobRow(const Mob& mob) const
     const int flags = (mob.noAI() ? 1 : 0) | (mob.silent() ? 2 : 0) | (mob.invulnerable() ? 4 : 0);
     if (flags) row << " F " << flags;
     if (mob.horseStatsSet()) row << " H " << mob.maxHealth() << ' ' << mob.horseSpeedAttribute() << ' ' << mob.horseJumpAttribute();
+    if (mob.horseArmour() != 0 && (mob.armourDye() >= 0 || mob.armourWear() > 0)) row << " D " << mob.armourDye() << ' ' << mob.armourWear();
     const auto packed = m_vehicleChests.find(mob.serial());
     if (packed != m_vehicleChests.end())
     {
@@ -26471,6 +26509,16 @@ void Application::placePendingMobs()
             {
                 mob.setHorseStats(bred, pace, spring);
                 mob.setHealth(std::max(1, health));
+            }
+            more = static_cast<bool>(in >> marker);
+        }
+        if (more && marker == "D")
+        {
+            int dye = -1, wear = 0;
+            if (in >> dye >> wear)
+            {
+                mob.setArmourDye(dye);
+                mob.setArmourWear(wear);
             }
             more = static_cast<bool>(in >> marker);
         }
@@ -28042,7 +28090,7 @@ PlayerPose Application::localPose()
     return pose;
 }
 
-void Application::holdPlayerItems(const PlayerPose& pose, bool slim, uint16_t rightItem, uint16_t leftItem)
+void Application::holdPlayerItems(const PlayerPose& pose, bool slim, uint16_t rightItem, uint16_t leftItem, uint32_t rightDye, uint32_t leftDye)
 {
     struct Display { glm::vec3 rotation, translation; float scale; };
     static const Display GENERATED[2]{ { { 0.0f, 0.0f, 0.0f }, { 0.0f, 3.0f, 1.0f }, 0.55f }, { { 0.0f, 0.0f, 0.0f }, { 0.0f, 3.0f, 1.0f }, 0.55f } };
@@ -28104,6 +28152,7 @@ void Application::holdPlayerItems(const PlayerPose& pose, bool slim, uint16_t ri
         held.axisY = vy;
         held.axisZ = vz;
         held.origin = centre - (vx + vy) * 0.5f;
+        held.enchantments = right ? rightDye : leftDye;
         m_drops.hold(held);
     }
 }
@@ -28156,7 +28205,9 @@ void Application::pinFramedItems()
     {
         const uint16_t mainHeld = m_inventory.selected().empty() ? 0 : m_inventory.selected().id;
         const uint16_t offHeld = m_inventory.slot(Inventory::OFFHAND).empty() ? 0 : m_inventory.slot(Inventory::OFFHAND).id;
-        holdPlayerItems(localPose(), activeSkin().armWidth() < 4, m_leftHanded ? offHeld : mainHeld, m_leftHanded ? mainHeld : offHeld);
+        const uint32_t mainLook = m_inventory.selected().enchantments, offLook = m_inventory.slot(Inventory::OFFHAND).enchantments;
+        holdPlayerItems(localPose(), activeSkin().armWidth() < 4, m_leftHanded ? offHeld : mainHeld, m_leftHanded ? mainHeld : offHeld,
+                        m_leftHanded ? offLook : mainLook, m_leftHanded ? mainLook : offLook);
     }
     for (const Mob& mob : m_entities.mobs())
     {

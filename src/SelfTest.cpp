@@ -5736,8 +5736,13 @@ namespace
         g[0] = ItemStack{ Items::WolfArmor, 1, 10 };
         g[1] = ItemStack{ Items::DyeBlue, 1 };
         const CraftOutput dyed = Crafting::match(g, 3);
-        check(dyed.id == Items::WolfArmor && dyed.damage == 10 && ((dyed.enchantments >> 24) & 0x1Fu) == static_cast<uint32_t>(Items::DyeBlue - Items::DyeWhite + 1),
+        check(dyed.id == Items::WolfArmor && dyed.damage == 10 && (Enchanting::colourOf(dyed.enchantments) & 0xFFFFFFu) == 0x3C44AAu,
               "and a dye colours it, keeping its wear");
+        g[0] = ItemStack{ Items::WolfArmor, 1, 10, dyed.enchantments };
+        g[1] = ItemStack{ Items::DyeYellow, 1 };
+        const CraftOutput mixed = Crafting::match(g, 3);
+        check(mixed.id == Items::WolfArmor && (Enchanting::colourOf(mixed.enchantments) & 0xFFFFFFu) == 0xD4BF9Bu,
+              "and a second dye mixes with the first, as leather's does");
         check(!Enchanting::glints(Items::WolfArmor, dyed.enchantments), "without making it shine");
         check(itemDurability(Items::WolfArmor) == 64, "it lasts sixty-four points");
         check(itemDurability(Items::Bow) == 384 && itemDurability(Items::Shears) == 238 && itemDurability(Items::FlintAndSteel) == 64 &&

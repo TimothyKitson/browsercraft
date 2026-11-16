@@ -1714,28 +1714,6 @@ namespace Crafting
         return out;
     }
 
-    CraftOutput matchWolfArmourDye(const ItemStack* grid, int size)
-    {
-        CraftOutput out;
-        const ItemStack* armour = nullptr;
-        int dyes = 0, dye = -1, others = 0;
-        for (int i = 0; i < 9; ++i)
-        {
-            if (i % 3 >= size || i / 3 >= size) continue;
-            const ItemStack& cell = grid[i];
-            if (cell.empty()) continue;
-            if (cell.id == Items::WolfArmor && !armour) armour = &cell;
-            else if (cell.id >= Items::DyeWhite && cell.id <= Items::DyeBlack) { ++dyes; dye = static_cast<int>(cell.id - Items::DyeWhite); }
-            else ++others;
-        }
-        if (!armour || dyes != 1 || others > 0) return out;
-        out.id = Items::WolfArmor;
-        out.count = 1;
-        out.damage = armour->damage;
-        out.enchantments = static_cast<uint32_t>(dye + 1) << 24;
-        return out;
-    }
-
     CraftOutput matchLeatherDye(const ItemStack* grid, int size)
     {
         CraftOutput out;
@@ -1746,7 +1724,8 @@ namespace Crafting
             if (i % 3 >= size || i / 3 >= size) continue;
             const ItemStack& cell = grid[i];
             if (cell.empty()) continue;
-            const bool dyeable = (cell.id >= Items::LeatherHelmet && cell.id <= Items::LeatherBoots) || cell.id == Items::LeatherHorseArmor;
+            const bool dyeable = (cell.id >= Items::LeatherHelmet && cell.id <= Items::LeatherBoots) || cell.id == Items::LeatherHorseArmor ||
+                                 cell.id == Items::WolfArmor;
             if (dyeable)
             {
                 if (armour) return out;
@@ -1834,8 +1813,6 @@ namespace Crafting
         if (painting.valid()) return painting;
         const CraftOutput tipped = matchTippedArrows(grid, size);
         if (tipped.valid()) return tipped;
-        const CraftOutput dyedArmour = matchWolfArmourDye(grid, size);
-        if (dyedArmour.valid()) return dyedArmour;
         const CraftOutput dyedLeather = matchLeatherDye(grid, size);
         if (dyedLeather.valid()) return dyedLeather;
         const CraftOutput firework = Fireworks::match(grid, size);
