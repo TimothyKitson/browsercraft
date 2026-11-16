@@ -9,6 +9,9 @@
 #include "Armour.h"
 #include "Banners.h"
 #include "Enchanting.h"
+#include "RecipeBook.h"
+#include <map>
+#include <set>
 #include <algorithm>
 
 uint32_t mixLeatherColour(uint32_t had, const std::vector<int>& dyes)
@@ -202,14 +205,6 @@ namespace
         // which is Minecraft's. It used to take gunpowder, because
         // there was no blaze to get the powder from.
         { true,  0, 0, { Items::EnderPearl, Items::BlazePowder }, 2, Items::EyeOfEnder, 1 },
-
-        // The frames. In Minecraft these are only found in
-        // strongholds, and there are none; without a recipe the End is
-        // somewhere you can only reach from the command line.
-        { false, 3, 3, { Blocks::EndStone,  Blocks::EndStone,  Blocks::EndStone,
-                         Blocks::EndStone,  Items::EnderPearl, Blocks::EndStone,
-                         Blocks::EndStone,  Blocks::EndStone,  Blocks::EndStone },
-          0, Blocks::EndPortalFrame, 4 },
 
         // A shield: planks round an iron boss.
         { false, 3, 3, { Blocks::Planks,    Items::IronIngot,  Blocks::Planks,
@@ -515,7 +510,9 @@ namespace
           Items::FishingRod, 1 },
         { false, 2, 2, { Items::FishingRod, Blocks::Air, Blocks::Air, Items::Carrot }, 0, Items::CarrotOnAStick, 1 },
         { false, 1, 3, { Items::AmethystShard, Items::CopperIngot, Items::CopperIngot }, 0, Items::Spyglass, 1 },
-        { false, 1, 2, { Items::StringItem, Items::Leather }, 0, Items::Bundle, 1 },
+        { false, 3, 3, { Items::StringItem, Items::RabbitHide, Items::StringItem,
+                         Items::RabbitHide, _, Items::RabbitHide,
+                         Items::RabbitHide, Items::RabbitHide, Items::RabbitHide }, 0, Items::Bundle, 1 },
         { false, 3, 3, { Items::GoldIngot, Items::GoldIngot, Items::GoldIngot, Items::GoldIngot, Items::Apple, Items::GoldIngot,
                          Items::GoldIngot, Items::GoldIngot, Items::GoldIngot }, 0, Items::GoldenApple, 1 },
         { false, 3, 3, { Items::GoldNugget, Items::GoldNugget, Items::GoldNugget, Items::GoldNugget, Items::Carrot, Items::GoldNugget,
@@ -1500,22 +1497,144 @@ namespace
         return result;
     }
 
-    bool matchesShaped(const Recipe& recipe, const ItemStack* grid, int size)
+    bool matchesShaped(const Recipe& recipe, const ItemStack* grid, int size, bool mirrored)
     {
         int x0 = 0, y0 = 0, width = 0, height = 0;
         if (!trim(grid, size, x0, y0, width, height)) return false;
-        if (width != recipe.width || height != recipe.height) return false;
+
+        int rx0 = recipe.width, ry0 = recipe.height, rx1 = -1, ry1 = -1;
+        for (int y = 0; y < recipe.height; ++y)
+            for (int x = 0; x < recipe.width; ++x)
+                if (recipe.pattern[y * recipe.width + x] != _)
+                {
+                    rx0 = std::min(rx0, x); rx1 = std::max(rx1, x);
+                    ry0 = std::min(ry0, y); ry1 = std::max(ry1, y);
+                }
+        if (rx1 < 0) return false;
+        if (width != rx1 - rx0 + 1 || height != ry1 - ry0 + 1) return false;
 
         for (int y = 0; y < height; ++y)
             for (int x = 0; x < width; ++x)
             {
                 const ItemStack& cell = grid[(y0 + y) * 3 + (x0 + x)];
-                const StackId wanted = recipe.pattern[y * recipe.width + x];
+                const int px = mirrored ? width - 1 - x : x;
+                const StackId wanted = recipe.pattern[(ry0 + y) * recipe.width + (rx0 + px)];
                 if (wanted == _ && !cell.empty()) return false;
                 if (wanted != _ && (cell.empty() || !satisfies(wanted, cell.id, recipe.result))) return false;
             }
 
         return true;
+    }
+
+    struct VanillaSource
+    {
+        bool shapeless;
+        int width, height;
+        const char* name;
+        const char* group;
+        const char* result;
+        int count;
+        const char* cells[9];
+    };
+
+    const VanillaSource VANILLA_SOURCES[] = {
+#include "VanillaRecipes.inl"
+    };
+
+    const std::map<std::string, std::vector<StackId>>& stacksByName()
+    {
+        static const std::map<std::string, std::vector<StackId>> names = [] {
+            std::map<std::string, std::vector<StackId>> out;
+            for (int block = 1; isBlockId(block); block = nextBlockId(block))
+                out[RecipeBook::vanillaIdOf(static_cast<StackId>(block))].push_back(static_cast<StackId>(block));
+            for (StackId item = Items::FIRST; item < Items::Count; ++item) out[RecipeBook::vanillaIdOf(item)].push_back(item);
+            return out;
+        }();
+        return names;
+    }
+
+    std::vector<StackId> optionsNamed(const char* text)
+    {
+        std::vector<StackId> out;
+        std::string name;
+        auto add = [&](StackId id) {
+            if (id != Blocks::Air && std::find(out.begin(), out.end(), id) == out.end()) out.push_back(id);
+        };
+        for (const char* c = text;; ++c)
+        {
+            if (*c == '|' || *c == 0)
+            {
+                if (!name.empty())
+                {
+                    add(RecipeBook::stackNamed(name));
+                    const auto found = stacksByName().find(name);
+                    if (found != stacksByName().end())
+                        for (StackId id : found->second) add(id);
+                }
+                name.clear();
+                if (*c == 0) break;
+                continue;
+            }
+            name += *c;
+        }
+        return out;
+    }
+
+    bool offers(const std::vector<StackId>& options, StackId have)
+    {
+        return std::find(options.begin(), options.end(), have) != options.end();
+    }
+
+    bool matchesVanillaShaped(const Crafting::VanillaRecipe& recipe, const ItemStack* grid, int size, bool mirrored)
+    {
+        int x0 = 0, y0 = 0, width = 0, height = 0;
+        if (!trim(grid, size, x0, y0, width, height)) return false;
+        if (width != recipe.width || height != recipe.height) return false;
+        for (int y = 0; y < height; ++y)
+            for (int x = 0; x < width; ++x)
+            {
+                const ItemStack& cell = grid[(y0 + y) * 3 + (x0 + x)];
+                const int px = mirrored ? width - 1 - x : x;
+                const std::vector<StackId>& wanted = recipe.cells[static_cast<size_t>(y * recipe.width + px)];
+                if (wanted.empty() && !cell.empty()) return false;
+                if (!wanted.empty() && (cell.empty() || !offers(wanted, cell.id))) return false;
+            }
+        return true;
+    }
+
+    bool assignShapeless(const Crafting::VanillaRecipe& recipe, size_t ingredient, const std::vector<int>& filled, std::vector<bool>& used,
+                         const ItemStack* grid)
+    {
+        if (ingredient == recipe.cells.size()) return true;
+        for (size_t k = 0; k < filled.size(); ++k)
+        {
+            if (used[k] || !offers(recipe.cells[ingredient], grid[filled[k]].id)) continue;
+            used[k] = true;
+            if (assignShapeless(recipe, ingredient + 1, filled, used, grid)) return true;
+            used[k] = false;
+        }
+        return false;
+    }
+
+    bool matchesVanillaShapeless(const Crafting::VanillaRecipe& recipe, const ItemStack* grid, int size)
+    {
+        std::vector<int> filled;
+        for (int y = 0; y < size; ++y)
+            for (int x = 0; x < size; ++x)
+                if (!grid[y * 3 + x].empty()) filled.push_back(y * 3 + x);
+        if (filled.size() != recipe.cells.size()) return false;
+        std::vector<bool> used(filled.size(), false);
+        return assignShapeless(recipe, 0, filled, used, grid);
+    }
+
+    const std::set<std::string>& vanillaResults()
+    {
+        static const std::set<std::string> names = [] {
+            std::set<std::string> out;
+            for (const VanillaSource& source : VANILLA_SOURCES) out.insert(source.result);
+            return out;
+        }();
+        return names;
     }
 
     bool matchesShapeless(const Recipe& recipe, const ItemStack* grid, int size)
@@ -1823,12 +1942,23 @@ namespace Crafting
         if (stew.valid()) return stew;
         const CraftOutput copy = matchBookCopy(grid, size);
         if (copy.valid()) return copy;
-        for (const Recipe& recipe : RECIPES)
-        {
-            const bool hit = recipe.shapeless ? matchesShapeless(recipe, grid, size)
-                                              : matchesShaped(recipe, grid, size);
-            if (hit) return CraftOutput{ inWoodOf(recipe.result, grid, size), recipe.resultCount };
-        }
+        for (int mirrored = 0; mirrored < 2; ++mirrored)
+            for (const VanillaRecipe& recipe : vanillaRecipes())
+            {
+                if (mirrored && recipe.shapeless) continue;
+                const bool hit = recipe.shapeless ? matchesVanillaShapeless(recipe, grid, size)
+                                                  : matchesVanillaShaped(recipe, grid, size, mirrored != 0);
+                if (hit) return CraftOutput{ recipe.result, recipe.count };
+            }
+        for (int mirrored = 0; mirrored < 2; ++mirrored)
+            for (const Recipe& recipe : RECIPES)
+            {
+                if (mirrored && recipe.shapeless) continue;
+                if (vanillaResults().count(RecipeBook::vanillaIdOf(recipe.result))) continue;
+                const bool hit = recipe.shapeless ? matchesShapeless(recipe, grid, size)
+                                                  : matchesShaped(recipe, grid, size, mirrored != 0);
+                if (hit) return CraftOutput{ inWoodOf(recipe.result, grid, size), recipe.resultCount };
+            }
         const CraftOutput dyed = matchDyeing(grid, size);
         if (dyed.valid()) return dyed;
 
@@ -2003,4 +2133,58 @@ Crafting::TableRecipe Crafting::tableRecipe(int index)
     out.result = recipe.result;
     out.resultCount = recipe.resultCount;
     return out;
+}
+
+const std::vector<Crafting::VanillaRecipe>& Crafting::vanillaRecipes()
+{
+    static const std::vector<VanillaRecipe> table = [] {
+        std::map<std::string, StackId> madeByTable;
+        for (const Recipe& recipe : RECIPES) madeByTable.emplace(RecipeBook::vanillaIdOf(recipe.result), recipe.result);
+        std::vector<VanillaRecipe> out;
+        for (const VanillaSource& source : VANILLA_SOURCES)
+        {
+            VanillaRecipe recipe;
+            recipe.shapeless = source.shapeless;
+            recipe.width = source.width;
+            recipe.height = source.height;
+            const auto made = madeByTable.find(source.result);
+            recipe.result = made != madeByTable.end() ? made->second : RecipeBook::stackNamed(source.result);
+            recipe.count = source.count;
+            recipe.group = source.group;
+            recipe.name = source.name;
+            if (recipe.result == Blocks::Air) continue;
+            const int cells = source.shapeless ? 9 : source.width * source.height;
+            bool complete = true;
+            for (int k = 0; k < cells; ++k)
+            {
+                if (source.shapeless && !source.cells[k]) break;
+                const char* text = source.cells[k] ? source.cells[k] : "";
+                std::vector<StackId> options = optionsNamed(text);
+                if (*text && options.empty()) complete = false;
+                recipe.cells.push_back(std::move(options));
+            }
+            if (!complete) continue;
+            if (!recipe.shapeless)
+            {
+                int x0 = recipe.width, y0 = recipe.height, x1 = -1, y1 = -1;
+                for (int y = 0; y < recipe.height; ++y)
+                    for (int x = 0; x < recipe.width; ++x)
+                        if (!recipe.cells[static_cast<size_t>(y * recipe.width + x)].empty())
+                        {
+                            x0 = std::min(x0, x); x1 = std::max(x1, x);
+                            y0 = std::min(y0, y); y1 = std::max(y1, y);
+                        }
+                if (x1 < 0) continue;
+                std::vector<std::vector<StackId>> shrunk;
+                for (int y = y0; y <= y1; ++y)
+                    for (int x = x0; x <= x1; ++x) shrunk.push_back(recipe.cells[static_cast<size_t>(y * recipe.width + x)]);
+                recipe.cells = std::move(shrunk);
+                recipe.width = x1 - x0 + 1;
+                recipe.height = y1 - y0 + 1;
+            }
+            out.push_back(std::move(recipe));
+        }
+        return out;
+    }();
+    return table;
 }

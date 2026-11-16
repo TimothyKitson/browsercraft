@@ -81,6 +81,7 @@ public:
     // chosen point in a swing or a swap rather than waiting one out.
     void setSwingForTest(float secondsLeft) { m_swing = secondsLeft; }
     float swingLeft() const { return m_swing; }
+    void setEating(const glm::vec2& ticksLeftAndTotal) { m_eating = ticksLeftAndTotal; }
     void setEquipForTest(float raised) { m_equip = raised; }
 
     // `stack` is what the hotbar has selected; Blocks::Air draws a bare
@@ -94,6 +95,7 @@ private:
     Mesh m_mesh;
     std::vector<float> m_vertices;
     float m_swing = 0.0f;
+    glm::vec2 m_eating{ -1.0f };
     float m_equip = 1.0f;
     StackId m_shown = Blocks::Air;
     int m_tileOverride = -1;

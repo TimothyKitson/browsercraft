@@ -1009,6 +1009,7 @@ private:
     float attackStrength() const;
     float attackPeriod() const;
     float m_eatTimer = 0.0f;
+    bool m_useOff = false;
     float m_crumbClock = 0.0f;
     float m_bushSting = 0.0f;
     float m_hiveClock = 0.0f;
@@ -2116,7 +2117,6 @@ private:
     void renderAir(float rightX, float y);
     void renderEffectIcons(float w);
     void drawInventoryEffects(float panelRight, float panelTop, float w);
-    void renderEatProgress(float cx, float cy);
     void handleEating(float deltaTime);
     void handleBrushing(float deltaTime);
     float m_brushTime = 0.0f;

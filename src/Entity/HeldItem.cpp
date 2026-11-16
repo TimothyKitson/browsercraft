@@ -303,6 +303,21 @@ glm::mat4 HeldItem::pose(const glm::mat4& camera, bool item, bool, bool) const
     const float lift = std::sin(std::sqrt(p) * PI * 2.0f);
     const float punch = std::sin(p * PI);
 
+    if (item && m_eating.x >= 0.0f && m_eating.y > 0.0f)
+    {
+        const float f = m_eating.x;
+        const float g = f / m_eating.y;
+        glm::mat4 m(1.0f);
+        if (g < 0.8f) m = glm::translate(m, glm::vec3(0.0f, std::abs(std::cos(f / 4.0f * PI) * 0.1f), 0.0f));
+        const float h = 1.0f - std::pow(g, 27.0f);
+        m = glm::translate(m, glm::vec3(h * 0.6f, h * -0.5f, 0.0f));
+        m = m * mcRotate(glm::vec3(0.0f, 1.0f, 0.0f), h * 90.0f);
+        m = m * mcRotate(glm::vec3(1.0f, 0.0f, 0.0f), h * 10.0f);
+        m = m * mcRotate(glm::vec3(0.0f, 0.0f, 1.0f), h * 30.0f);
+        m = glm::translate(m, glm::vec3(ITEM_RIGHT, -ITEM_DOWN - EQUIP_DROP * (1.0f - m_equip), -ITEM_FORWARD));
+        return camera * FLIP_FORWARD * m;
+    }
+
     if (item)
     {
         glm::mat4 m(1.0f);

@@ -16,10 +16,9 @@ namespace
     using RecipeBook::Group;
     using RecipeBook::Recipe;
 
-    constexpr int PLANKS_FAMILY = 100000;
-    constexpr int DYE_FAMILY = 200000;
-    constexpr int CHEST_BOAT_FAMILY = 300000;
     constexpr int COOKING_FAMILY = 400000;
+    constexpr int VANILLA_FAMILY = 500000;
+    constexpr int VANILLA_GROUP_FAMILY = 600000;
 
     std::vector<StackId> allPlanks()
     {
@@ -38,46 +37,6 @@ namespace
         if (wanted == Blocks::Planks) return allPlanks();
         if (wanted == Items::Coal && result != Blocks::CoalBlock) return { Items::Coal, Items::Charcoal };
         return { wanted };
-    }
-
-    bool woodFamily(StackId result)
-    {
-        return result == Items::Boat || result == Blocks::DoorLowShutNorth || result == Blocks::OakTrapdoor || result == Items::Sign ||
-               result == Blocks::PlankSlab || result == Blocks::PlankStairsNorth || result == Blocks::OakFence ||
-               result == gateOf(0, false, 0) || result == buttonOf(2, 0, 0, false) || result == plateOf(4, false);
-    }
-
-    StackId inWood(StackId result, int wood)
-    {
-        if (result == Items::Boat) return wood < BOAT_WOODS ? boatOfWood(wood, false) : static_cast<StackId>(Blocks::Air);
-        if (result == Blocks::DoorLowShutNorth) return doorBaseOf(wood);
-        if (result == Blocks::OakTrapdoor) return trapdoorBaseOf(wood);
-        if (result == Items::Sign) return signItemOfWood(wood);
-        if (wood == 0) return result;
-        if (result == Blocks::PlankSlab)
-        {
-            for (int m = 0; m < SLAB_MATERIALS; ++m)
-                if (slabMaterialWood(m) == wood) return slabOf(m, 0);
-            return static_cast<StackId>(Blocks::Air);
-        }
-        if (result == Blocks::PlankStairsNorth)
-        {
-            for (int m = 0; m < STAIRS_MATERIALS; ++m)
-                if (stairsMaterialWood(m) == wood) return stairsOf(m, false, 0);
-            return static_cast<StackId>(Blocks::Air);
-        }
-        if (result == Blocks::OakFence) return fenceOfWood(wood);
-        if (result == gateOf(0, false, 0)) return gateOf(wood, false, 0);
-        if (result == buttonOf(2, 0, 0, false)) return buttonOf(2 + wood, 0, 0, false);
-        if (result == plateOf(4, false)) return plateOf(4 + wood, false);
-        return result;
-    }
-
-    std::vector<std::vector<StackId>> ring(StackId around, StackId middle)
-    {
-        std::vector<std::vector<StackId>> cells(9, std::vector<StackId>{ around });
-        cells[4] = { middle };
-        return cells;
     }
 
     Recipe shaped(int width, int height, std::vector<std::vector<StackId>> cells, StackId result, int count, int family)
@@ -104,58 +63,31 @@ namespace
     std::vector<Recipe> buildCrafting()
     {
         std::vector<Recipe> out;
+        std::set<std::string> covered;
+        std::map<std::string, int> groups;
+        const std::vector<Crafting::VanillaRecipe>& vanilla = Crafting::vanillaRecipes();
+        for (size_t i = 0; i < vanilla.size(); ++i)
+        {
+            const Crafting::VanillaRecipe& recipe = vanilla[i];
+            covered.insert(RecipeBook::vanillaIdOf(recipe.result));
+            int family = VANILLA_FAMILY + static_cast<int>(i);
+            if (!recipe.group.empty())
+                family = groups.emplace(recipe.group, VANILLA_GROUP_FAMILY + static_cast<int>(groups.size())).first->second;
+            out.push_back(recipe.shapeless ? shapeless(recipe.cells, recipe.result, recipe.count, family)
+                                           : shaped(recipe.width, recipe.height, recipe.cells, recipe.result, recipe.count, family));
+        }
+
         for (int i = 0; i < Crafting::tableSize(); ++i)
         {
             const Crafting::TableRecipe table = Crafting::tableRecipe(i);
             if (table.result == Blocks::Air || table.resultCount <= 0) continue;
+            if (covered.count(RecipeBook::vanillaIdOf(table.result))) continue;
             const int cellCount = table.shapeless ? table.inputCount : table.width * table.height;
-            bool usesPlanks = false;
-            for (int c = 0; c < cellCount; ++c) usesPlanks = usesPlanks || table.pattern[c] == Blocks::Planks;
-            const bool isPlankResult = isBlockStack(table.result) && isPlanks(asBlock(table.result));
-            const int family = isPlankResult ? PLANKS_FAMILY : i;
-            if (woodFamily(table.result) && usesPlanks)
-            {
-                for (int wood = 0; wood < WOOD_COUNT; ++wood)
-                {
-                    const StackId result = inWood(table.result, wood);
-                    if (result == Blocks::Air) continue;
-                    std::vector<std::vector<StackId>> cells;
-                    for (int c = 0; c < cellCount; ++c)
-                        cells.push_back(table.pattern[c] == Blocks::Planks ? std::vector<StackId>{ planksOfWood(wood) }
-                                                                          : optionsFor(table.pattern[c], table.result));
-                    out.push_back(table.shapeless ? shapeless(cells, result, table.resultCount, family)
-                                                  : shaped(table.width, table.height, cells, result, table.resultCount, family));
-                }
-                continue;
-            }
             std::vector<std::vector<StackId>> cells;
             for (int c = 0; c < cellCount; ++c) cells.push_back(optionsFor(table.pattern[c], table.result));
-            out.push_back(table.shapeless ? shapeless(cells, table.result, table.resultCount, family)
-                                          : shaped(table.width, table.height, cells, table.result, table.resultCount, family));
+            out.push_back(table.shapeless ? shapeless(cells, table.result, table.resultCount, i)
+                                          : shaped(table.width, table.height, cells, table.result, table.resultCount, i));
         }
-
-        std::vector<StackId> wools;
-        for (int colour = 0; colour < DYE_COLOURS; ++colour) wools.push_back(woolOfColour(colour));
-        for (int colour = 0; colour < DYE_COLOURS; ++colour)
-        {
-            const StackId dye = dyeOfColour(colour);
-            std::vector<StackId> others;
-            for (StackId wool : wools)
-                if (wool != woolOfColour(colour)) others.push_back(wool);
-            out.push_back(shapeless({ { dye }, others }, woolOfColour(colour), 1, DYE_FAMILY + 0));
-            out.push_back(shaped(3, 3, ring(Blocks::Terracotta, dye), colourIn(Blocks::TerracottaFirst, colour), 8, DYE_FAMILY + 1));
-            out.push_back(shaped(3, 3, ring(Blocks::Glass, dye), colourIn(Blocks::StainedGlassFirst, colour), 8, DYE_FAMILY + 2));
-            out.push_back(shaped(3, 3, ring(Blocks::GlassPane, dye), colourIn(Blocks::StainedGlassPaneFirst, colour), 8, DYE_FAMILY + 3));
-            out.push_back(shapeless({ { dye }, { Blocks::Sand }, { Blocks::Sand }, { Blocks::Sand }, { Blocks::Sand },
-                                      { Blocks::Gravel }, { Blocks::Gravel }, { Blocks::Gravel }, { Blocks::Gravel } },
-                                    colourIn(Blocks::ConcretePowderFirst, colour), 8, DYE_FAMILY + 4));
-            out.push_back(shapeless({ { Blocks::Candle }, { dye } }, candleOf(colour + 1, 1, false), 1, DYE_FAMILY + 5));
-        }
-        for (int wood = 0; wood < BOAT_WOODS; ++wood)
-            out.push_back(shapeless({ { Blocks::Chest }, { boatOfWood(wood, false) } }, boatOfWood(wood, true), 1, CHEST_BOAT_FAMILY));
-        std::vector<std::vector<StackId>> frame(9, std::vector<StackId>{ Items::Stick });
-        frame[4] = wools;
-        out.push_back(shaped(3, 3, frame, Items::Painting, 1, CHEST_BOAT_FAMILY + 1));
         return out;
     }
 
@@ -536,15 +468,24 @@ StackId RecipeBook::stackNamed(const std::string& id)
     static const std::map<std::string, StackId> NAMES = [] {
         std::map<std::string, StackId> out;
         for (int block = 1; isBlockId(block); block = nextBlockId(block))
-            out.emplace(idOf(static_cast<StackId>(block)), static_cast<StackId>(block));
-        for (StackId item = Items::FIRST; item < Items::Count; ++item) out.emplace(idOf(item), item);
+        {
+            const auto placed = out.emplace(idOf(static_cast<StackId>(block)), static_cast<StackId>(block));
+            if (!placed.second && !isObtainable(asBlock(placed.first->second)) && isObtainable(static_cast<BlockId>(block)))
+                placed.first->second = static_cast<StackId>(block);
+        }
+        for (StackId item = Items::FIRST; item < Items::Count; ++item)
+        {
+            const auto placed = out.emplace(idOf(item), item);
+            if (!placed.second && isBlockStack(placed.first->second) && !isObtainable(asBlock(placed.first->second)))
+                placed.first->second = item;
+        }
         static const std::pair<const char*, StackId> ALIASES[] = {
             { "grass_block", Blocks::Grass }, { "oak_planks", Blocks::Planks }, { "crafting_table", Blocks::CraftingTable },
             { "ender_eye", Items::EyeOfEnder }, { "dragon_breath", Items::DragonsBreath }, { "hay_block", Blocks::HayBale },
             { "wooden_pickaxe", Items::WoodPickaxe }, { "golden_carrot", Items::GoldenCarrot }, { "potion", Items::Potion },
             { "map", Items::EmptyMap }, { "cod", Items::RawCod }, { "salmon", Items::RawSalmon }, { "beef", Items::RawBeef },
             { "porkchop", Items::RawPorkchop }, { "chicken", Items::RawChicken }, { "mutton", Items::RawMutton },
-            { "rabbit", Items::RawRabbit }, { "cooked_beef", Items::Steak }, { "red_bed", static_cast<StackId>(Blocks::BedFirst) },
+            { "rabbit", Items::RawRabbit }, { "cooked_beef", Items::Steak }, { "red_bed", static_cast<StackId>(Blocks::BedFirst + 112) },
             { "oak_boat", Items::Boat }, { "white_banner", static_cast<StackId>(Blocks::BannerFirst) },
             { "lava_bucket", Items::LavaBucket }, { "water_bucket", Items::WaterBucket }, { "milk_bucket", Items::MilkBucket },
             { "pufferfish_bucket", Items::PufferfishBucket }, { "axolotl_bucket", Items::AxolotlBucket },

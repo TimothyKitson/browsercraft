@@ -663,12 +663,21 @@ namespace
             }
             ++checked;
             const CraftOutput made = Crafting::match(grid, 3);
-            if (made.id == wanted && made.count == count) { ++right; continue; }
+            if ((made.id == wanted || (made.id != Blocks::Air && RecipeBook::vanillaIdOf(made.id) == result)) && made.count == count) { ++right; continue; }
             ++wrong;
             std::printf("wrong %s gives %s x%d, wants %s x%d\n", name.c_str(),
                         made.id == Blocks::Air ? "nothing" : RecipeBook::vanillaIdOf(made.id).c_str(), made.count, result.c_str(), count);
         }
         std::printf("%d checked, %d right, %d wrong, %d skipped\n", checked, right, wrong, missingParts);
+        for (int i = 0; i < Crafting::tableSize(); ++i)
+        {
+            const Crafting::TableRecipe table = Crafting::tableRecipe(i);
+            const std::string made = RecipeBook::vanillaIdOf(table.result);
+            bool covered = false;
+            for (const Crafting::VanillaRecipe& recipe : Crafting::vanillaRecipes()) covered = covered || RecipeBook::vanillaIdOf(recipe.result) == made;
+            if (!covered) std::printf("extra %s x%d\n", made.c_str(), table.resultCount);
+        }
+        std::printf("%zu vanilla recipes in use\n", Crafting::vanillaRecipes().size());
         return 0;
     }
 

@@ -17735,7 +17735,8 @@ void Application::handleBrushing(float deltaTime)
 
 void Application::handleEating(float deltaTime)
 {
-    ItemStack& stack = m_inventory.selected();
+    if (!m_keys.down(m_input, Action::Use)) m_useOff = false;
+    ItemStack& stack = m_useOff ? m_inventory.slot(Inventory::OFFHAND) : m_inventory.selected();
     const bool holding = inGame() && !m_player.creative() && m_keys.down(m_input, Action::Use);
 
     const Food::Bite bite = Food::chew(holding && !stack.empty(), stack.id,
@@ -17859,7 +17860,7 @@ void Application::handleEating(float deltaTime)
 // able to drink one.
 void Application::handleDrinking(float deltaTime)
 {
-    ItemStack& stack = m_inventory.selected();
+    ItemStack& stack = m_useOff ? m_inventory.slot(Inventory::OFFHAND) : m_inventory.selected();
     const bool drinkable = stack.id == Items::Potion || stack.id == Items::MilkBucket;
     const bool holding = inGame() && m_keys.down(m_input, Action::Use) &&
                          drinkable && !stack.empty();
@@ -18449,6 +18450,7 @@ void Application::handlePlacement()
         return;
 
     const float mainSwing = m_heldItem.swingLeft();
+    const auto offBefore = mark();
     std::swap(m_inventory.selected(), m_inventory.slot(Inventory::OFFHAND));
     useHand();
     std::swap(m_inventory.selected(), m_inventory.slot(Inventory::OFFHAND));
@@ -18457,6 +18459,10 @@ void Application::handlePlacement()
         m_heldItem.setSwingForTest(mainSwing);
         m_offhandItem.swing();
     }
+    const ItemStack& off = m_inventory.slot(Inventory::OFFHAND);
+    if (mark() == offBefore && !off.empty() &&
+        (Food::isEdible(off.id) || off.id == Items::Potion || off.id == Items::MilkBucket))
+        m_useOff = true;
 }
 
 void Application::useHand()
@@ -24429,6 +24435,22 @@ void Application::renderHand()
                                    ? (m_bowDraw >= 0.9f ? Tiles::BowPulling2
                                       : m_bowDraw >= 0.65f ? Tiles::BowPulling1 : Tiles::BowPulling0)
                                    : (m_bobber.active && held.id == Items::FishingRod) ? static_cast<int>(Tiles::ItemFishingRodCast) : -1);
+    auto eatingWith = [&](bool offHand) {
+        if (m_useOff != offHand) return glm::vec2(-1.0f);
+        const ItemStack& using_ = offHand ? m_inventory.slot(Inventory::OFFHAND) : held;
+        if (m_eatTimer > 0.0f && !using_.empty())
+        {
+            const float ticks = Food::eatSeconds(using_.id) * 20.0f;
+            return glm::vec2(std::max(0.0f, ticks - m_eatTimer * 20.0f), ticks);
+        }
+        if (m_drinkTimer > 0.0f && !using_.empty())
+        {
+            const float ticks = Food::EAT_SECONDS * 20.0f;
+            return glm::vec2(std::max(0.0f, ticks - m_drinkTimer * 20.0f), ticks);
+        }
+        return glm::vec2(-1.0f);
+    };
+    m_heldItem.setEating(eatingWith(false));
     m_heldItem.setLeftHanded(m_leftHanded);
     m_heldItem.setLook(held.enchantments);
     m_heldItem.clearShieldLook();
@@ -24451,6 +24473,7 @@ void Application::renderHand()
     const ItemStack& off = m_inventory.slot(Inventory::OFFHAND);
     if (off.empty()) return;
     m_offhandItem.setTileOverride(crossbowIcon(off, true) >= 0 ? crossbowIcon(off, true) : animatedIcon(off));
+    m_offhandItem.setEating(eatingWith(true));
     m_offhandItem.setLeftHanded(!m_leftHanded);
     m_offhandItem.setLook(off.enchantments);
     m_offhandItem.clearShieldLook();
@@ -29394,20 +29417,6 @@ void Application::renderEffectIcons(float w)
     }
 }
 
-void Application::renderEatProgress(float cx, float cy)
-{
-    if (m_eatTimer <= 0.0f) return;
-
-    const float fraction = std::min(1.0f, m_eatTimer / Food::eatSeconds(m_inventory.selected().id));
-    const float width = 48.0f;
-    const float height = 3.0f;
-    const float x = cx - width * 0.5f;
-    const float y = cy + 12.0f;
-
-    m_ui.quad(x - 1.0f, y - 1.0f, width + 2.0f, height + 2.0f, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
-    m_ui.quad(x, y, width * fraction, height, glm::vec4(0.85f, 0.7f, 0.35f, 0.95f));
-}
-
 // A pocket cut out of the trees with the three blocks every screenshot
 // carries standing in it, and torches, because under a closed jungle
 // canopy the light is nothing at all -- true of a jungle, and useless
@@ -29828,7 +29837,6 @@ void Application::renderHud()
         renderArmour(barX, heartTop - 10.0f);
         renderFood(barX + HOTBAR_WIDTH, h - 39.0f);
         renderAir(barX + HOTBAR_WIDTH, h - 49.0f);
-        renderEatProgress(cx, cy);
     }
 
     // Name of the held block, above the hotbar, where Minecraft puts

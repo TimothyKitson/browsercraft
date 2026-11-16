@@ -7552,9 +7552,10 @@ namespace
         check(Crafting::match(echo, 3).id == Items::RecoveryCompass, "eight echo shards round a compass make a recovery compass");
 
         ItemStack sack[9];
-        sack[1].id = Items::StringItem; sack[4].id = Items::Leather;
+        for (int i : { 0, 2 }) sack[i].id = Items::StringItem;
+        for (int i : { 1, 3, 5, 6, 7, 8 }) sack[i].id = Items::RabbitHide;
         for (ItemStack& cell : sack) if (cell.id != Blocks::Air) cell.count = 1;
-        check(Crafting::match(sack, 3).id == Items::Bundle, "string over leather makes a bundle");
+        check(Crafting::match(sack, 3).id == Items::Bundle, "string and rabbit hide make a bundle");
         check(maxStackOf(Items::Bundle) == 1 && maxStackOf(Items::GoatHorn) == 1, "bundles and horns are one to a slot");
         check(EntityManager::breaksHorn(Blocks::Stone) && EntityManager::breaksHorn(Blocks::Log) && EntityManager::breaksHorn(Blocks::PackedIce) &&
               !EntityManager::breaksHorn(Blocks::Dirt) && !EntityManager::breaksHorn(Blocks::Air),
@@ -12615,7 +12616,7 @@ namespace
             const StackId wanted[9] = {
                 Items::IronIngot, Items::IronIngot,     Items::IronIngot,
                 Items::IronIngot, Blocks::CraftingTable, Items::IronIngot,
-                Items::Redstone,  Blocks::PistonNorth,   Items::Redstone };
+                Items::Redstone,  Blocks::Dropper,       Items::Redstone };
             for (int i = 0; i < 9; ++i) { bench[i].id = wanted[i]; bench[i].count = 1; }
             const CraftOutput out = Crafting::match(bench, 3);
             check(out.valid() && out.id == Blocks::Crafter, "and a crafter can be made at all");
@@ -12634,11 +12635,13 @@ namespace
             check(made.valid() && made.id == Blocks::PistonNorth, "a piston can be made");
 
             ItemStack sticky[9];
-            sticky[0].id = Blocks::PistonNorth; sticky[0].count = 1;
-            sticky[1].id = Items::MagmaCream;   sticky[1].count = 1;
+            sticky[0].id = Items::Slimeball;    sticky[0].count = 1;
+            sticky[3].id = Blocks::PistonNorth; sticky[3].count = 1;
             const CraftOutput stuck = Crafting::match(sticky, 2);
             check(stuck.valid() && stuck.id == Blocks::StickyPistonNorth,
-                  "and made sticky with what a magma cube leaves");
+                  "and made sticky with a slimeball on top");
+            sticky[0].id = Items::MagmaCream;
+            check(!Crafting::match(sticky, 2).valid(), "but not with magma cream");
         }
     }
 
@@ -13084,10 +13087,10 @@ namespace
                   "a breeze rod makes four wind charges");
 
             ItemStack mace[9];
-            mace[0].id = Items::BreezeRod;  mace[0].count = 1;
-            mace[1].id = Items::IronIngot;  mace[1].count = 1;
+            mace[0].id = Blocks::HeavyCore; mace[0].count = 1;
+            mace[3].id = Items::BreezeRod;  mace[3].count = 1;
             const CraftOutput made = Crafting::match(mace, 2);
-            check(made.valid() && made.id == Items::Mace, "and a rod with iron makes the mace");
+            check(made.valid() && made.id == Items::Mace, "and a heavy core on a breeze rod makes the mace");
             check(itemInfo(Items::Mace).maxStack == 1, "which does not stack");
         }
     }
@@ -15379,10 +15382,7 @@ namespace
         ItemStack frame[9];
         for (int i = 0; i < 9; ++i) { frame[i].id = Blocks::EndStone; frame[i].count = 1; }
         frame[4].id = Items::EnderPearl;
-        const CraftOutput frames = Crafting::match(frame, 3);
-        check(frames.valid() && frames.id == Blocks::EndPortalFrame,
-              "end stone round a pearl makes frames");
-        check(frames.count == 4, "four at a time, so a ring takes three castings");
+        check(!Crafting::match(frame, 3).valid(), "end portal frames cannot be crafted, as in Minecraft");
 
         // An enderman has to actually give you the pearl, or none of
         // the above can be started.
@@ -16963,8 +16963,8 @@ namespace
         }
         {
             Inventory bench;
-            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Blocks::PistonNorth, 1 };
-            bench.slot(Inventory::CRAFT_FIRST + 1) = ItemStack{ Items::Slimeball, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 0) = ItemStack{ Items::Slimeball, 1 };
+            bench.slot(Inventory::CRAFT_FIRST + 3) = ItemStack{ Blocks::PistonNorth, 1 };
             bench.refreshCraftResult();
             check(bench.slot(Inventory::CRAFT_RESULT).id == Blocks::StickyPistonNorth,
                   "a slimeball makes a piston sticky, which is Minecraft's own recipe");
@@ -18379,6 +18379,36 @@ namespace
         red[3] = ItemStack{ Items::NetherBrick, 1 };
         red[4] = ItemStack{ Items::NetherWart, 1 };
         check(Crafting::match(red, 3).id == Blocks::RedNetherBricks, "wart and nether brick make red nether bricks");
+        {
+            check(Crafting::vanillaRecipes().size() == 887, "all 887 of 1.21.1's crafting recipes are in the table");
+            auto grid3 = [](std::initializer_list<StackId> cells) {
+                std::array<ItemStack, 9> out{};
+                int k = 0;
+                for (StackId id : cells) { if (id != Blocks::Air) out[static_cast<size_t>(k)] = ItemStack{ id, 1 }; ++k; }
+                return out;
+            };
+            const StackId _n = Blocks::Air;
+            auto anvil = grid3({ Blocks::IronBlock, Blocks::IronBlock, Blocks::IronBlock, _n, Items::IronIngot, _n,
+                                 Items::IronIngot, Items::IronIngot, Items::IronIngot });
+            check(Crafting::match(anvil.data(), 3).id == RecipeBook::stackNamed("anvil"), "an anvil takes three iron blocks and four ingots");
+            auto ingots = grid3({ Items::IronIngot, Items::IronIngot, Items::IronIngot, _n, Items::IronIngot, _n,
+                                  Items::IronIngot, Items::IronIngot, Items::IronIngot });
+            check(!Crafting::match(ingots.data(), 3).valid(), "and seven ingots alone make nothing");
+            auto observer = grid3({ Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone, Items::Redstone, Items::Redstone,
+                                    Items::NetherQuartz, Blocks::Cobblestone, Blocks::Cobblestone, Blocks::Cobblestone });
+            check(Crafting::match(observer.data(), 3).id == RecipeBook::stackNamed("observer"), "an observer takes nether quartz");
+            auto stand = grid3({ _n, Items::BlazeRod, _n, Blocks::Blackstone, Blocks::Blackstone, Blocks::Blackstone });
+            check(Crafting::match(stand.data(), 3).id == RecipeBook::stackNamed("brewing_stand"), "a brewing stand takes a rod over blackstone too");
+            auto lantern = grid3({ Items::IronNugget, Items::IronNugget, Items::IronNugget, Items::IronNugget, Blocks::Torch,
+                                   Items::IronNugget, Items::IronNugget, Items::IronNugget, Items::IronNugget });
+            check(Crafting::match(lantern.data(), 3).id == RecipeBook::stackNamed("lantern"), "a lantern is nuggets round a torch");
+            auto axe = grid3({ Blocks::Cobblestone, Blocks::Cobblestone, _n, Items::Stick, Blocks::Cobblestone, _n, Items::Stick, _n, _n });
+            auto axeMirror = grid3({ _n, Blocks::Cobblestone, Blocks::Cobblestone, _n, Blocks::Cobblestone, Items::Stick, _n, _n, Items::Stick });
+            check(Crafting::match(axe.data(), 3).id == Crafting::match(axeMirror.data(), 3).id && Crafting::match(axe.data(), 3).valid(),
+                  "a shaped recipe works mirrored, as Minecraft's do");
+            auto bowl = grid3({ Blocks::SprucePlanks, _n, Blocks::SprucePlanks, _n, Blocks::SprucePlanks, _n });
+            check(Crafting::match(bowl.data(), 3).id == Items::Bowl && Crafting::match(bowl.data(), 3).count == 4, "three planks in a V make four bowls");
+        }
         check(blockMaterial(Blocks::PolishedBlackstone) == Material::Stone, "polished blackstone wants a pickaxe");
 
         ItemStack redSand[9];

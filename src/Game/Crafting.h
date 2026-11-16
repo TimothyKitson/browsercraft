@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include "World/Block.h"
 #include "Items.h"
 #include <vector>
@@ -55,6 +56,18 @@ namespace Crafting
     };
     int tableSize();
     TableRecipe tableRecipe(int index);
+
+    struct VanillaRecipe
+    {
+        bool shapeless = false;
+        int width = 0, height = 0;
+        std::vector<std::vector<StackId>> cells;
+        StackId result = 0;
+        int count = 0;
+        std::string group;
+        std::string name;
+    };
+    const std::vector<VanillaRecipe>& vanillaRecipes();
 }
 
 uint32_t mixLeatherColour(uint32_t had, const std::vector<int>& dyes);
