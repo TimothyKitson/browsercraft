@@ -57,6 +57,7 @@ struct WorldGenOptions
     std::vector<std::pair<BlockId, int>> layers;
     Biome biome = Biome::Plains;
     Biomes::Kind kind = Biomes::Kind::Plains;
+    int flatBase = -64;
 };
 const char* biomeId(Biome biome);
 const char* biomeTitle(Biome biome);
@@ -268,10 +269,10 @@ public:
     // where somebody digging will actually run into one.
     static constexpr float GEODE_CHANCE = 0.006f;
     static constexpr uint32_t GEODE_SALT = 55123u;
-    static constexpr int GEODE_MIN = 16;
-    static constexpr int GEODE_MAX = 46;
+    static constexpr int GEODE_MIN = -58;
+    static constexpr int GEODE_MAX = 30;
 
-    static constexpr int CITY_FLOOR = 8;
+    static constexpr int CITY_FLOOR = -51;
     static constexpr int CITY_HALF = 20;
     static constexpr int CITY_TALL = 14;
 
@@ -367,8 +368,8 @@ public:
     // How high a fortress's walkways run above the lava, and how far
     // down a mineshaft's corridors are.
     static constexpr int FORTRESS_FLOOR = NETHER_LAVA_LEVEL + 12;
-    static constexpr int MINESHAFT_MIN = 14;
-    static constexpr int MINESHAFT_MAX = 44;
+    static constexpr int MINESHAFT_MIN = -40;
+    static constexpr int MINESHAFT_MAX = 40;
     static constexpr int END_ISLAND_LEVEL = 58;
 
     using Options = WorldGenOptions;

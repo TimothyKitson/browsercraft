@@ -1060,7 +1060,7 @@ void Player::update(float deltaTime, const World& world, const Controls& control
     }
 
     // Falling out of the world shouldn't trap you forever.
-    if (position.y < -8.0f && !exempt())
+    if (position.y < static_cast<float>(Chunk::MIN_Y - 64) && !exempt())
     {
         cause = "outOfWorld";
         damage(2);

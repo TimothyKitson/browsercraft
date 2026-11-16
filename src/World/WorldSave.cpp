@@ -17,6 +17,8 @@ namespace
     // chunk into noise -- the version check rejects it instead and
     // the world is generated again, which is what that check is for.
     constexpr uint16_t FORMAT_VERSION = 3;
+    constexpr uint16_t TALL_CHUNK_VERSION = 384;
+    constexpr int LEGACY_HEIGHT = 128;
     constexpr uint16_t ITEM_BASE = 4096;
     constexpr uint16_t FIRST_ITEM_BASE = 1024;
 
@@ -89,7 +91,7 @@ void WorldSave::saveChunk(const std::string& saveDirectory, const Chunk& chunk)
     if (!out) return;
 
     write(out, CHUNK_MAGIC);
-    write(out, FORMAT_VERSION);
+    write(out, TALL_CHUNK_VERSION);
 
     // Run-length encode: voxel terrain is extremely repetitive, so this
     // typically shrinks a 32 KB chunk to a few hundred bytes.
@@ -114,18 +116,33 @@ bool WorldSave::loadChunk(const std::string& saveDirectory, Chunk& chunk)
     uint32_t magic = 0;
     uint16_t version = 0;
     if (!read(in, magic) || !read(in, version)) return false;
-    if (magic != CHUNK_MAGIC || version != FORMAT_VERSION) return false;
+    if (magic != CHUNK_MAGIC || (version != FORMAT_VERSION && version != TALL_CHUNK_VERSION)) return false;
 
-    std::vector<BlockId>& blocks = chunk.blocks();
+    const bool tall = version == TALL_CHUNK_VERSION;
+    const size_t total = tall ? static_cast<size_t>(Chunk::BLOCK_COUNT) : static_cast<size_t>(LEGACY_HEIGHT * Chunk::LAYER);
+    std::vector<BlockId> read_(total, Blocks::Air);
     size_t i = 0;
-    while (i < blocks.size())
+    while (i < total)
     {
         BlockId id = 0;
         uint16_t run = 0;
         if (!read(in, id) || !read(in, run)) return false;
         if (run == 0) return false;
-        for (uint16_t k = 0; k < run && i < blocks.size(); ++k)
-            blocks[i++] = id;
+        for (uint16_t k = 0; k < run && i < total; ++k)
+            read_[i++] = id;
+    }
+    std::vector<BlockId>& blocks = chunk.blocks();
+    if (tall)
+    {
+        blocks.swap(read_);
+        return true;
+    }
+    const size_t floor = static_cast<size_t>(-Chunk::MIN_Y) * Chunk::LAYER;
+    for (size_t k = 0; k < total; ++k)
+    {
+        const int y = static_cast<int>(k / Chunk::LAYER);
+        if (y <= 2 && (read_[k] & ~WATERLOGGED) == Blocks::Bedrock) continue;
+        blocks[floor + k] = read_[k];
     }
     return true;
 }

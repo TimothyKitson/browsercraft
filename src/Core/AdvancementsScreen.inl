@@ -72,7 +72,7 @@ void Application::tickAdvancements(float deltaTime)
     else if (m_fallTracking)
     {
         m_fallTracking = false;
-        if (m_player.onGround && m_player.health > 0 && m_fallPeakY >= static_cast<float>(Chunk::SY - 1) && m_player.position.y <= 6.0f)
+        if (m_player.onGround && m_player.health > 0 && m_fallPeakY >= static_cast<float>(Chunk::MAX_Y - 1) && m_player.position.y <= static_cast<float>(Chunk::MIN_Y + 5))
             award("adventure/fall_from_world_height", "fall_from_world_height");
     }
     if (Mob* mount = riddenMob(); mount && mount->typeId() == MobId::Strider && m_dimension == Dimension::Overworld &&

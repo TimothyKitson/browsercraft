@@ -29,6 +29,7 @@ namespace Worlds
         std::string layers = "minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block";
         std::string biome = "minecraft:plains";
         std::string border;
+        int height = 384;
     };
 
     std::vector<std::string> metaLines(const Meta& meta);

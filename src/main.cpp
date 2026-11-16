@@ -98,7 +98,7 @@ namespace
 
                 for (int lx = 0; lx < Chunk::SX; ++lx)
                     for (int lz = 0; lz < Chunk::SZ; ++lz)
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                             if (chunk.getBlock(lx, y, lz) == Blocks::Chest)
                                 chests[{ cx * Chunk::SX + lx, cz * Chunk::SZ + lz }] =
                                     static_cast<BlockId>(y);
@@ -177,7 +177,7 @@ namespace
                 Chunk chunk(ChunkPos{ cx, cz });
                 generator.generate(chunk);
 
-                for (int y = 0; y < BANDS * BAND_HEIGHT && y < Chunk::SY; ++y)
+                for (int y = 0; y < BANDS * BAND_HEIGHT && y < Chunk::MAX_Y; ++y)
                 {
                     const int band = y / BAND_HEIGHT;
                     for (int lz = 0; lz < Chunk::SZ; ++lz)
@@ -292,7 +292,7 @@ namespace
                 {
                     Chunk chunk(ChunkPos{ cx, cz });
                     gen.generate(chunk);
-                    for (int y = 0; y < Chunk::SY; ++y)
+                    for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                         for (int lx = 0; lx < Chunk::SX; ++lx)
                             for (int lz = 0; lz < Chunk::SZ; ++lz)
                                 if (belongs(chunk.getBlock(lx, y, lz))) ++found;
@@ -671,7 +671,7 @@ namespace
                 {
                     Chunk chunk(ChunkPos{ x, z });
                     gen.generate(chunk);
-                    for (int y = 0; y < Chunk::SY; ++y)
+                    for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                         for (int lx = 0; lx < Chunk::SX; ++lx)
                             for (int lz = 0; lz < Chunk::SZ; ++lz)
                                 reachable.insert(chunk.getBlock(lx, y, lz));
@@ -1387,7 +1387,7 @@ namespace
                         const int z0 = (dz < 0) ? Chunk::SZ - 1 : 0;
                         const int z1 = (dz > 0) ? 0 : Chunk::SZ - 1;
 
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                             for (int z = z0; z <= z1; ++z)
                                 for (int x = x0; x <= x1; ++x)
                                 {
@@ -1457,7 +1457,7 @@ namespace
                         // Topmost solid block of a column that is under water.
                         int surface = -1;
                         bool submerged = false;
-                        for (int y = Chunk::SY - 1; y > 0; --y)
+                        for (int y = Chunk::MAX_Y - 1; y > Chunk::MIN_Y; --y)
                         {
                             const BlockId b = chunk.getBlock(x, y, z);
                             if (isWater(b)) submerged = true;

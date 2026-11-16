@@ -45,7 +45,7 @@ void fillSkyColumns(Chunk& chunk, uint8_t top)
         for (int z = 0; z < Chunk::SZ; ++z)
         {
             uint8_t level = top;
-            for (int y = Chunk::SY - 1; y >= 0; --y)
+            for (int y = Chunk::MAX_Y - 1; y >= Chunk::MIN_Y; --y)
             {
                 const uint8_t attenuation = lightAttenuation(chunk.getBlock(x, y, z));
                 if (attenuation >= 15) level = 0;
@@ -102,7 +102,7 @@ Chunk* World::chunkAt(int chunkX, int chunkZ) const
 
 BlockId World::getBlock(int x, int y, int z) const
 {
-    if (y < 0 || y >= Chunk::SY) return Blocks::Air;
+    if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) return Blocks::Air;
     Chunk* chunk = chunkAt(floorDiv(x, Chunk::SX), floorDiv(z, Chunk::SZ));
     if (!chunk) return Blocks::Air;
     if (chunk->state.load() < ChunkState::Generated) return Blocks::Air;
@@ -111,8 +111,8 @@ BlockId World::getBlock(int x, int y, int z) const
 
 uint8_t World::skyLight(int x, int y, int z) const
 {
-    if (y < 0) return 0;
-    if (y >= Chunk::SY) return 15;
+    if (y < Chunk::MIN_Y) return 0;
+    if (y >= Chunk::MAX_Y) return 15;
     Chunk* chunk = chunkAt(floorDiv(x, Chunk::SX), floorDiv(z, Chunk::SZ));
     if (!chunk) return 0;
     return chunk->skyLight(floorMod(x, Chunk::SX), y, floorMod(z, Chunk::SZ));
@@ -120,7 +120,7 @@ uint8_t World::skyLight(int x, int y, int z) const
 
 uint8_t World::blockLightAt(int x, int y, int z) const
 {
-    if (y < 0 || y >= Chunk::SY) return 0;
+    if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) return 0;
     Chunk* chunk = chunkAt(floorDiv(x, Chunk::SX), floorDiv(z, Chunk::SZ));
     if (!chunk) return 0;
     return chunk->blockLight(floorMod(x, Chunk::SX), y, floorMod(z, Chunk::SZ));
@@ -128,7 +128,7 @@ uint8_t World::blockLightAt(int x, int y, int z) const
 
 void World::setSkyLight(int x, int y, int z, uint8_t value)
 {
-    if (y < 0 || y >= Chunk::SY) return;
+    if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) return;
     Chunk* chunk = chunkAt(floorDiv(x, Chunk::SX), floorDiv(z, Chunk::SZ));
     if (!chunk) return;
     chunk->setSkyLight(floorMod(x, Chunk::SX), y, floorMod(z, Chunk::SZ), value);
@@ -137,7 +137,7 @@ void World::setSkyLight(int x, int y, int z, uint8_t value)
 
 void World::setBlockLight(int x, int y, int z, uint8_t value)
 {
-    if (y < 0 || y >= Chunk::SY) return;
+    if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) return;
     Chunk* chunk = chunkAt(floorDiv(x, Chunk::SX), floorDiv(z, Chunk::SZ));
     if (!chunk) return;
     chunk->setBlockLight(floorMod(x, Chunk::SX), y, floorMod(z, Chunk::SZ), value);
@@ -165,7 +165,7 @@ void World::markNeighboursDirty(ChunkPos pos)
 
 bool World::waterlogged(int x, int y, int z) const
 {
-    if (y < 0 || y >= Chunk::SY) return false;
+    if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) return false;
     Chunk* chunk = chunkAt(floorDiv(x, Chunk::SX), floorDiv(z, Chunk::SZ));
     if (!chunk || chunk->state.load() < ChunkState::Generated) return false;
     return chunk->waterlogged(floorMod(x, Chunk::SX), y, floorMod(z, Chunk::SZ));
@@ -184,7 +184,7 @@ BlockId World::rawBlock(int x, int y, int z) const
 
 void World::setWaterlogged(int x, int y, int z, bool on)
 {
-    if (y < 0 || y >= Chunk::SY) return;
+    if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) return;
     const int chunkX = floorDiv(x, Chunk::SX);
     const int chunkZ = floorDiv(z, Chunk::SZ);
     Chunk* chunk = chunkAt(chunkX, chunkZ);
@@ -209,7 +209,7 @@ void World::setWaterlogged(int x, int y, int z, bool on)
 
 void World::setBlock(int x, int y, int z, BlockId id)
 {
-    if (y < 0 || y >= Chunk::SY) return;
+    if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) return;
 
     const int chunkX = floorDiv(x, Chunk::SX);
     const int chunkZ = floorDiv(z, Chunk::SZ);
@@ -291,7 +291,7 @@ void World::relightColumn(int worldX, int worldZ)
     // as brightly as a meadow at noon -- which, besides looking wrong,
     // meant no hostile mob could ever spawn in the whole dimension.
     uint8_t level = (m_generator.dimension() == Dimension::Overworld) ? 15 : 0;
-    for (int y = Chunk::SY - 1; y >= 0; --y)
+    for (int y = Chunk::MAX_Y - 1; y >= Chunk::MIN_Y; --y)
     {
         const uint8_t attenuation = lightAttenuation(chunk->getBlock(lx, y, lz));
         if (attenuation >= 15) level = 0;
@@ -324,22 +324,22 @@ void World::seedChunkLight(Chunk& chunk)
     const int baseZ = chunk.position().z * Chunk::SZ;
 
     auto localSky = [&](int lx, int ly, int lz) -> int {
-        if (ly < 0) return 0;
-        if (ly >= Chunk::SY) return 15;
+        if (ly < Chunk::MIN_Y) return 0;
+        if (ly >= Chunk::MAX_Y) return 15;
         if (lx >= 0 && lx < Chunk::SX && lz >= 0 && lz < Chunk::SZ)
             return chunk.skyLight(lx, ly, lz);
         return skyLight(baseX + lx, ly, baseZ + lz);
     };
 
     auto localOpaque = [&](int lx, int ly, int lz) -> bool {
-        if (ly < 0) return true;
-        if (ly >= Chunk::SY) return false;
+        if (ly < Chunk::MIN_Y) return true;
+        if (ly >= Chunk::MAX_Y) return false;
         if (lx >= 0 && lx < Chunk::SX && lz >= 0 && lz < Chunk::SZ)
             return isOpaque(chunk.getBlock(lx, ly, lz));
         return isOpaque(getBlock(baseX + lx, ly, baseZ + lz));
     };
 
-    for (int y = 0; y < Chunk::SY; ++y)
+    for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
     {
         for (int lz = 0; lz < Chunk::SZ; ++lz)
         {
@@ -391,7 +391,7 @@ void World::processLightQueues(int nodeBudget)
             const int nx = node.x + NEIGHBOUR_DX[d];
             const int ny = node.y + NEIGHBOUR_DY[d];
             const int nz = node.z + NEIGHBOUR_DZ[d];
-            if (ny < 0 || ny >= Chunk::SY) continue;
+            if (ny < Chunk::MIN_Y || ny >= Chunk::MAX_Y) continue;
             if (!chunkAt(floorDiv(nx, Chunk::SX), floorDiv(nz, Chunk::SZ))) continue;
 
             const uint8_t neighbourLevel = skyLight(nx, ny, nz);
@@ -421,7 +421,7 @@ void World::processLightQueues(int nodeBudget)
             const int nx = node.x + NEIGHBOUR_DX[d];
             const int ny = node.y + NEIGHBOUR_DY[d];
             const int nz = node.z + NEIGHBOUR_DZ[d];
-            if (ny < 0 || ny >= Chunk::SY) continue;
+            if (ny < Chunk::MIN_Y || ny >= Chunk::MAX_Y) continue;
             if (!chunkAt(floorDiv(nx, Chunk::SX), floorDiv(nz, Chunk::SZ))) continue;
 
             const uint8_t neighbourLevel = blockLightAt(nx, ny, nz);
@@ -453,7 +453,7 @@ void World::processLightQueues(int nodeBudget)
             const int nx = node.x + NEIGHBOUR_DX[d];
             const int ny = node.y + NEIGHBOUR_DY[d];
             const int nz = node.z + NEIGHBOUR_DZ[d];
-            if (ny < 0 || ny >= Chunk::SY) continue;
+            if (ny < Chunk::MIN_Y || ny >= Chunk::MAX_Y) continue;
             if (!chunkAt(floorDiv(nx, Chunk::SX), floorDiv(nz, Chunk::SZ))) continue;
 
             const uint8_t attenuation = lightAttenuation(getBlock(nx, ny, nz));
@@ -487,7 +487,7 @@ void World::processLightQueues(int nodeBudget)
             const int nx = node.x + NEIGHBOUR_DX[d];
             const int ny = node.y + NEIGHBOUR_DY[d];
             const int nz = node.z + NEIGHBOUR_DZ[d];
-            if (ny < 0 || ny >= Chunk::SY) continue;
+            if (ny < Chunk::MIN_Y || ny >= Chunk::MAX_Y) continue;
             if (!chunkAt(floorDiv(nx, Chunk::SX), floorDiv(nz, Chunk::SZ))) continue;
 
             const uint8_t attenuation = lightAttenuation(getBlock(nx, ny, nz));
@@ -524,6 +524,23 @@ void World::buildSnapshot(const Chunk& chunk, MeshSnapshot& snapshot) const
     snapshot.pos = chunk.position();
     const int baseX = chunk.position().x * Chunk::SX;
     const int baseZ = chunk.position().z * Chunk::SZ;
+    snapshot.lowest = Chunk::MAX_Y;
+    snapshot.highest = Chunk::MIN_Y - 1;
+    {
+        const std::vector<BlockId>& own = chunk.blocks();
+        for (int i = 0; i < Chunk::BLOCK_COUNT; ++i)
+            if (own[static_cast<size_t>(i)] != Blocks::Air)
+            {
+                snapshot.lowest = Chunk::yOfIndex(i);
+                break;
+            }
+        for (int i = Chunk::BLOCK_COUNT - 1; i >= 0; --i)
+            if (own[static_cast<size_t>(i)] != Blocks::Air)
+            {
+                snapshot.highest = Chunk::yOfIndex(i);
+                break;
+            }
+    }
 
     for (int z = -MeshSnapshot::PAD; z < Chunk::SZ + MeshSnapshot::PAD; ++z)
     {
@@ -544,7 +561,7 @@ void World::buildSnapshot(const Chunk& chunk, MeshSnapshot& snapshot) const
             snapshot.foliage[cell] = colours.foliageTint[column];
             snapshot.water[cell] = colours.waterTint[column];
 
-            for (int y = 0; y < Chunk::SY; ++y)
+            for (int y = std::max(Chunk::MIN_Y, snapshot.lowest - 1); y <= std::min(Chunk::MAX_Y - 1, snapshot.highest + 1); ++y)
             {
                 const int index = MeshSnapshot::index(x, y, z);
                 if (source)
@@ -607,10 +624,8 @@ void World::queueGeneration(const glm::vec3& playerPosition)
         m_activeJobs.fetch_add(1);
 
         m_pool.enqueue([this, raw]() {
-            if (WorldSave::loadChunk(m_saveDirectory, *raw))
-                raw->loadedFromDisk = true;
-            else
-                m_generator.generate(*raw);
+            m_generator.generate(*raw);
+            if (WorldSave::loadChunk(m_saveDirectory, *raw)) raw->loadedFromDisk = true;
             m_generator.paintTints(*raw);
 
             fillSkyColumns(*raw, (m_generator.dimension() == Dimension::Overworld)
@@ -879,7 +894,7 @@ RaycastHit World::raycast(const glm::vec3& origin, const glm::vec3& direction, f
             normal = glm::ivec3(0, 0, -step.z);
         }
 
-        if (voxel.y < -1 || voxel.y > Chunk::SY + 1) break;
+        if (voxel.y < Chunk::MIN_Y - 1 || voxel.y > Chunk::MAX_Y + 1) break;
     }
 
     return hit;
@@ -909,7 +924,7 @@ bool World::hasLineOfSight(const glm::vec3& from, const glm::vec3& to) const
 int World::bubbleColumnAt(int x, int y, int z) const
 {
     if (getBlock(x, y, z) != Blocks::Water) return 0;
-    for (int below = y - 1; below > 0 && y - below < Chunk::SY; --below)
+    for (int below = y - 1; below > Chunk::MIN_Y && y - below < Chunk::SY; --below)
     {
         const BlockId here = getBlock(x, below, z);
         if (here == Blocks::Water) continue;

@@ -31,8 +31,8 @@ namespace TrialChamber
     // How deep the floor sits. Deep enough to be underground anywhere
     // in the world, shallow enough that the ores around it are worth
     // the walk.
-    constexpr int FLOOR_MIN = 16;
-    constexpr int FLOOR_MAX = 34;
+    constexpr int FLOOR_MIN = -40;
+    constexpr int FLOOR_MAX = -20;
 
     static_assert(GRID % 2 == 1, "the chamber needs a middle room to centre on");
 

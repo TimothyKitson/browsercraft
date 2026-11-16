@@ -11,7 +11,7 @@ namespace
 {
     constexpr float SPAWN_INTERVAL = 4.0f;  // seconds between attempts
     constexpr int ATTEMPTS_PER_WAVE = 8;
-    constexpr int WORLD_TOP = 120;
+    constexpr int WORLD_TOP = Chunk::MAX_Y - 2;
     constexpr int HOSTILE_MAX_LIGHT = 7;    // dark enough for monsters
     constexpr int PASSIVE_MIN_LIGHT = 9;
     constexpr float CREATURE_WAVE_SECONDS = 20.0f;
@@ -61,7 +61,7 @@ namespace
 
         bool standable(const glm::ivec3& feet) const override
         {
-            if (feet.y < 1 || feet.y + clearance >= Chunk::SY) return false;
+            if (feet.y < Chunk::MIN_Y + 1 || feet.y + clearance >= Chunk::MAX_Y) return false;
             if (!isSolid(world->getBlock(feet.x, feet.y - 1, feet.z))) return false;
 
             for (int i = 0; i < clearance; ++i)
@@ -173,7 +173,7 @@ void EntityManager::populateChunk(const World& world, int chunkX, int chunkZ)
             for (int tries = 0; !placed && tries < 4; ++tries)
             {
                 int y = -1;
-                for (int down = WORLD_TOP; down > 1; --down)
+                for (int down = WORLD_TOP; down > Chunk::MIN_Y + 1; --down)
                 {
                     const BlockId here = world.getBlock(x, down, z);
                     if (isLiquid(here)) break;
@@ -215,7 +215,7 @@ float EntityManager::random01()
 
 int EntityManager::surfaceBelow(const World& world, int x, int startY, int z) const
 {
-    for (int y = std::min(startY, WORLD_TOP); y > 1; --y)
+    for (int y = std::min(startY, WORLD_TOP); y > Chunk::MIN_Y + 1; --y)
     {
         if (!standable(world.getBlock(x, y, z))) continue;
 
@@ -226,7 +226,7 @@ int EntityManager::surfaceBelow(const World& world, int x, int startY, int z) co
         return y + 1; // standing position, one above the ground
     }
 
-    return -1;
+    return Chunk::MIN_Y - 1;
 }
 
 namespace
@@ -344,7 +344,7 @@ MobId EntityManager::seaSpecies(int index)
 
 int EntityManager::lavaSurfaceBelow(const World& world, int x, int startY, int z) const
 {
-    for (int y = std::min(startY, WORLD_TOP); y > 1; --y)
+    for (int y = std::min(startY, WORLD_TOP); y > Chunk::MIN_Y + 1; --y)
     {
         if (!isLava(world.getBlock(x, y, z))) continue;
         if (world.getBlock(x, y + 1, z) != Blocks::Air) continue;
@@ -355,7 +355,7 @@ int EntityManager::lavaSurfaceBelow(const World& world, int x, int startY, int z
         return y;
     }
 
-    return -1;
+    return Chunk::MIN_Y - 1;
 }
 
 int EntityManager::caveSpeciesCount()
@@ -516,17 +516,16 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         // floor by construction.
         const int surface = surfaceBelow(world, x, ceiling, z);
 
-        if (surface < 0) continue;
+        if (surface <= Chunk::MIN_Y) continue;
 
         const bool underground = digging && surface > 20;
 
         int y = surface;
         if (underground)
         {
-            const int from = 6 + static_cast<int>(random01() *
-                                                  static_cast<float>(surface - 14));
+            const int from = Chunk::MIN_Y + 6 + static_cast<int>(random01() * static_cast<float>(surface - 14 - Chunk::MIN_Y));
             y = surfaceBelow(world, x, from, z);
-            if (y < 0 || y >= surface - 3) continue;   // that was the surface again
+            if (y <= Chunk::MIN_Y || y >= surface - 3) continue;
         }
 
         const BlockId ground = world.getBlock(x, y - 1, z);
@@ -657,7 +656,7 @@ void EntityManager::trySpawnWave(const World& world, const glm::vec3& playerPosi
         if (onLava)
         {
             const int top = lavaSurfaceBelow(world, x, ceiling, z);
-            if (top < 0) continue;
+            if (top < Chunk::MIN_Y) continue;
             mobFeet.y = static_cast<float>(top);
         }
         // A bat is the one passive thing that belongs in the dark, so
@@ -888,7 +887,7 @@ bool EntityManager::spawnPatrol(const World& world, const glm::vec3& playerPosit
     const int x = static_cast<int>(std::floor(playerPosition.x + std::cos(angle) * reach));
     const int z = static_cast<int>(std::floor(playerPosition.z + std::sin(angle) * reach));
     int ground = -1;
-    for (int y = std::min(Chunk::SY - 2, static_cast<int>(playerPosition.y) + 24); y > static_cast<int>(playerPosition.y) - 24 && y > 1; --y)
+    for (int y = std::min(Chunk::MAX_Y - 2, static_cast<int>(playerPosition.y) + 24); y > static_cast<int>(playerPosition.y) - 24 && y > Chunk::MIN_Y + 1; --y)
         if (isSolid(world.getBlock(x, y - 1, z)) && !isSolid(world.getBlock(x, y, z)) && !isSolid(world.getBlock(x, y + 1, z)))
         {
             ground = y;

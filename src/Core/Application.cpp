@@ -3629,7 +3629,7 @@ bool Application::frame()
             m_startupScreen == "jungle" || m_startupScreen == "savanna" ||
             m_startupScreen == "crimson" || m_startupScreen == "warped" || m_startupScreen == "soulvalley" || m_startupScreen == "deltas" || m_startupScreen == "badlands" ||
             m_startupScreen == "redstone" || m_startupScreen == "chamber" ||
-            m_startupScreen == "cave" || m_startupScreen == "dripstone" ||
+            m_startupScreen == "cave" || m_startupScreen == "dripstone" || m_startupScreen == "deep" ||
             m_startupScreen == "mineshaft" || m_startupScreen == "pyramid" ||
             m_startupScreen == "temple" || m_startupScreen == "igloo" ||
             m_startupScreen == "portalruin" || m_startupScreen == "outpost" ||
@@ -3665,7 +3665,7 @@ bool Application::frame()
                                   m_startupScreen != "fence" &&
                                   m_startupScreen != "models" &&
                                   m_startupScreen != "door" &&
-                                  m_startupScreen != "hand" && m_startupScreen != "dyeditems" &&
+                                  m_startupScreen != "hand" && m_startupScreen != "dyeditems" && m_startupScreen != "deep" &&
                                   m_startupScreen != "handempty" &&
                                   m_startupScreen != "handitem" &&
                                   m_startupScreen != "xp" &&
@@ -6912,7 +6912,7 @@ bool Application::frame()
                             Chunk probe(ChunkPos{ cx, cz });
                             gen.generate(probe);
 
-                            for (int y = 2; y < Chunk::SY && !found; ++y)
+                            for (int y = Chunk::MIN_Y + 2; y < Chunk::MAX_Y && !found; ++y)
                                 for (int lx = 0; lx < Chunk::SX && !found; ++lx)
                                     for (int lz = 0; lz < Chunk::SZ && !found; ++lz)
                                     {
@@ -7392,8 +7392,9 @@ bool Application::frame()
             // has to be found in a chunk the world has not loaded yet,
             // so the generator is run on a chunk of its own to look --
             // the same thing --oreinfo does to count ore.
-            if (m_startupScreen == "cave" || m_startupScreen == "dripstone")
+            if (m_startupScreen == "cave" || m_startupScreen == "dripstone" || m_startupScreen == "deep")
             {
+                const bool deep = m_startupScreen == "deep";
                 const WorldGen::CaveKind wanted = m_startupScreen == "cave"
                                                       ? WorldGen::CaveKind::Lush
                                                       : WorldGen::CaveKind::Dripstone;
@@ -7407,7 +7408,7 @@ bool Application::frame()
                         for (int cx = -radius; cx <= radius && !found; ++cx)
                         {
                             if (std::max(std::abs(cx), std::abs(cz)) != radius) continue;
-                            if (gen.caveKindAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8) != wanted)
+                            if (!deep && gen.caveKindAt(cx * Chunk::SX + 8, cz * Chunk::SZ + 8) != wanted)
                                 continue;
 
                             Chunk probe(ChunkPos{ cx, cz });
@@ -7416,7 +7417,7 @@ bool Application::frame()
                             // A pocket with room to stand in and a
                             // floor under it, rather than the first
                             // air it happens to find.
-                            for (int y = 12; y < 54 && !found; ++y)
+                            for (int y = deep ? -52 : 12; y < (deep ? -20 : 54) && !found; ++y)
                                 for (int lz = 2; lz < Chunk::SZ - 2 && !found; ++lz)
                                     for (int lx = 2; lx < Chunk::SX - 2 && !found; ++lx)
                                     {
@@ -7439,7 +7440,7 @@ bool Application::frame()
                     m_camera.setOrientation(0.0f, -6.0f);
                     m_camera.addLook(0.0f, 0.0f, 0.0f);
 
-                    m_pendingArena = true;
+                    m_pendingArena = !deep;
                     m_arenaKind = ArenaKind::CaveProps;
                     m_arenaX = stand.x;
                     m_arenaY = stand.y;
@@ -9947,7 +9948,7 @@ void Application::waitForSpawnChunk()
                 // not from the top of the world. In the Nether the top of
                 // the world is the underside of the bedrock roof, and
                 // starting there parked the player in the ceiling cavern.
-                const int from = std::min(Chunk::SY - 4,
+                const int from = std::min(Chunk::MAX_Y - 4,
                                           static_cast<int>(m_player.position.y) + 8);
                 for (int y = from; y > 1; --y)
                 {
@@ -12041,7 +12042,7 @@ Maps::Data* Application::mapData(int id)
 
 unsigned int Application::mapColourAt(int x, int z, int& height)
 {
-    const int top = std::min(Chunk::SY - 1, static_cast<int>(m_player.position.y) + 40);
+    const int top = std::min(Chunk::MAX_Y - 1, static_cast<int>(m_player.position.y) + 40);
     const int bottom = std::max(1, static_cast<int>(m_player.position.y) - 60);
     for (int y = top; y >= bottom; --y)
     {
@@ -12409,7 +12410,7 @@ void Application::tickConduits(float deltaTime)
         m_conduitSweepTimer = 0.25f;
         m_conduitSweepLayer = (m_conduitSweepLayer + 1) % 25;
         const int y = py - 12 + m_conduitSweepLayer;
-        if (y > 0 && y < Chunk::SY)
+        if (y > Chunk::MIN_Y && y < Chunk::MAX_Y)
             for (int z = pz - 24; z <= pz + 24; ++z)
                 for (int x = px - 24; x <= px + 24; ++x)
                 {
@@ -12526,7 +12527,7 @@ void Application::tickBeacons(float deltaTime)
 
         const int tiers = Beacon::tiersUnder(ground, bx, by, bz);
         if (tiers <= 0) continue;
-        if (!Beacon::seesSky(ground, bx, by, bz, Chunk::SY)) continue;
+        if (!Beacon::seesSky(ground, bx, by, bz, Chunk::MAX_Y)) continue;
         lit.push_back(glm::ivec3(bx, by, bz));
 
         // In range of this one, not merely in the world with it.
@@ -13304,7 +13305,7 @@ void Application::lairsAround(const WorldGen& gen, int px, int py, int pz)
                 const int x = px + static_cast<int>(m_growthSeed % 24u) - 12;
                 const int z = pz + static_cast<int>((m_growthSeed >> 8) % 24u) - 12;
                 const int y = py + static_cast<int>((m_growthSeed >> 16) % 9u) - 4;
-                if (y < 1 || y + 2 >= Chunk::SY) continue;
+                if (y < Chunk::MIN_Y + 1 || y + 2 >= Chunk::MAX_Y) continue;
 
                 if (m_world->getBlock(x, y, z) != Blocks::NetherPortal) continue;
 
@@ -13606,7 +13607,7 @@ void Application::tickTridents(float deltaTime)
                 break;
             }
         }
-        if (loyalty > 0 && !t.returning && (t.stuck || t.struck || t.age > 4.0f || t.position.y < -10.0f))
+        if (loyalty > 0 && !t.returning && (t.stuck || t.struck || t.age > 4.0f || t.position.y < static_cast<float>(Chunk::MIN_Y - 10)))
             t.returning = true;
 
         Arrow visual;
@@ -13629,7 +13630,7 @@ void Application::tickTridents(float deltaTime)
             m_tridents.erase(m_tridents.begin() + static_cast<long>(i));
             continue;
         }
-        if (t.position.y < -64.0f || (!t.stuck && t.age > 60.0f))
+        if (t.position.y < static_cast<float>(Chunk::MIN_Y - 64) || (!t.stuck && t.age > 60.0f))
         {
             m_tridents.erase(m_tridents.begin() + static_cast<long>(i));
             continue;
@@ -13655,12 +13656,12 @@ void Application::strikeLightning()
     int best = 1 << 30;
     for (int dx = -32; dx <= 32; ++dx)
         for (int dz = -32; dz <= 32; ++dz)
-            for (int y = std::max(1, feet.y - 24); y <= std::min(Chunk::SY - 2, feet.y + 40); ++y)
+            for (int y = std::max(Chunk::MIN_Y + 1, feet.y - 24); y <= std::min(Chunk::MAX_Y - 2, feet.y + 40); ++y)
             {
                 const BlockId here = m_world->getBlock(cx + dx, y, cz + dz);
                 if (!isLightningRod(here)) continue;
                 bool open = true;
-                for (int above = y + 1; above < Chunk::SY && open; ++above)
+                for (int above = y + 1; above < Chunk::MAX_Y && open; ++above)
                     if (isOpaque(m_world->getBlock(cx + dx, above, cz + dz))) open = false;
                 if (!open) continue;
                 const int distance = dx * dx + dz * dz;
@@ -13689,8 +13690,8 @@ void Application::strikeLightning()
     }
     else
     {
-        int top = Chunk::SY - 1;
-        while (top > 0 && m_world->getBlock(cx, top, cz) == Blocks::Air) --top;
+        int top = Chunk::MAX_Y - 1;
+        while (top > Chunk::MIN_Y && m_world->getBlock(cx, top, cz) == Blocks::Air) --top;
         strike = glm::vec3(cx + 0.5f, top + 1.0f, cz + 0.5f);
     }
 
@@ -14057,7 +14058,7 @@ void Application::tickVibrations(float deltaTime)
                 for (int dy = -12; dy <= 12; ++dy)
                 {
                     const int y = centre.y + dy;
-                    if (y < 0 || y >= Chunk::SY) continue;
+                    if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) continue;
                     if (isAnySculkSensor(m_world->getBlock(centre.x + dx, y, centre.z + dz)))
                         m_sensorSpots.push_back(glm::ivec3(centre.x + dx, y, centre.z + dz));
                 }
@@ -14286,7 +14287,7 @@ void Application::spawnRaidWave()
         const float angle = static_cast<float>((seed >> 4) % 360u + static_cast<uint32_t>(attempt) * 45u) * 0.01745329f;
         const int x = static_cast<int>(std::floor(m_raid.centre.x + std::cos(angle) * Raids::SPAWN_DISTANCE));
         const int z = static_cast<int>(std::floor(m_raid.centre.z + std::sin(angle) * Raids::SPAWN_DISTANCE));
-        int y = std::min(Chunk::SY - 3, static_cast<int>(m_raid.centre.y) + 24);
+        int y = std::min(Chunk::MAX_Y - 3, static_cast<int>(m_raid.centre.y) + 24);
         while (y > 1 && !isSolid(m_world->getBlock(x, y - 1, z))) --y;
         if (isFluid(m_world->getBlock(x, y, z)) || isFluid(m_world->getBlock(x, y - 1, z))) continue;
         if (m_world->getBlock(x, y, z) != Blocks::Air || m_world->getBlock(x, y + 1, z) != Blocks::Air) continue;
@@ -17787,7 +17788,7 @@ void Application::handleEating(float deltaTime)
             const int dz = static_cast<int>((roll >> 16) % 17u) - 8;
             const int dy = static_cast<int>((roll >> 24) % 17u) - 8;
             const glm::ivec3 to(from.x + dx, from.y + dy, from.z + dz);
-            if (to.y < 1 || to.y >= Chunk::SY - 2) continue;
+            if (to.y < Chunk::MIN_Y + 1 || to.y >= Chunk::MAX_Y - 2) continue;
             if (!isSolid(m_world->getBlock(to.x, to.y - 1, to.z))) continue;
             if (isSolid(m_world->getBlock(to.x, to.y, to.z)) || isSolid(m_world->getBlock(to.x, to.y + 1, to.z))) continue;
             if (isLiquid(m_world->getBlock(to.x, to.y, to.z))) continue;
@@ -20513,6 +20514,13 @@ void Application::handlePlacement()
     const BlockId clicked = m_world->getBlock(hit.block.x, hit.block.y, hit.block.z);
     const glm::ivec3 target = replaceable(clicked) ? hit.block : hit.previous;
     if (!m_border.containsBlock(target.x, target.z)) return;
+    if (target.y < Chunk::MIN_Y) return;
+    if (target.y >= Chunk::MAX_Y)
+    {
+        m_actionbarText = "Height limit for building is " + std::to_string(Chunk::MAX_Y);
+        m_actionbarShownAt = SDL_GetTicks();
+        return;
+    }
     const BlockId existing = m_world->getBlock(target.x, target.y, target.z);
     if (existing != Blocks::Air && !isLiquid(existing) && !isLightBlock(existing) && !replaceable(existing)) return;
 
@@ -21542,7 +21550,7 @@ void Application::renderWorldShaded()
     {
         if (chunk->opaqueMesh.empty() && chunk->transparentMesh.empty()) continue;
         if (!frustum.intersectsAABB(chunk->aabbMin(), chunk->aabbMax())) continue;
-        const glm::vec3 center = chunk->worldOrigin() + glm::vec3(Chunk::SX * 0.5f, Chunk::SY * 0.5f, Chunk::SZ * 0.5f);
+        const glm::vec3 center = chunk->worldOrigin() + glm::vec3(Chunk::SX * 0.5f, (Chunk::MIN_Y + Chunk::MAX_Y) * 0.5f, Chunk::SZ * 0.5f);
         visible.push_back({ chunk.get(), glm::length(center - camera.position) });
     }
 
@@ -21697,7 +21705,7 @@ void Application::renderWorld()
         if (chunk->opaqueMesh.empty() && chunk->transparentMesh.empty()) continue;
         if (!frustum.intersectsAABB(chunk->aabbMin(), chunk->aabbMax())) continue;
 
-        const glm::vec3 center = chunk->worldOrigin() + glm::vec3(Chunk::SX * 0.5f, Chunk::SY * 0.5f, Chunk::SZ * 0.5f);
+        const glm::vec3 center = chunk->worldOrigin() + glm::vec3(Chunk::SX * 0.5f, (Chunk::MIN_Y + Chunk::MAX_Y) * 0.5f, Chunk::SZ * 0.5f);
         visible.push_back({ chunk.get(), glm::length(center - camera.position) });
     }
 
@@ -21872,7 +21880,7 @@ void Application::renderDebugLines(const glm::mat4& view, const glm::mat4& proje
             {
                 if ((dx == 0 || dx == 16) && (dz == 0 || dz == 16)) continue;
                 outer.push_back(glm::vec3(static_cast<float>(cx + dx), 0.0f, static_cast<float>(cz + dz)));
-                outer.push_back(glm::vec3(static_cast<float>(cx + dx), static_cast<float>(Chunk::SY), static_cast<float>(cz + dz)));
+                outer.push_back(glm::vec3(static_cast<float>(cx + dx), static_cast<float>(Chunk::MAX_Y), static_cast<float>(cz + dz)));
             }
         for (int k = 0; k <= 16; k += 2)
         {
@@ -21882,11 +21890,11 @@ void Application::renderDebugLines(const glm::mat4& view, const glm::mat4& proje
                 const bool corner = (column.x == cx || column.x == cx + 16) && (column.y == cz || column.y == cz + 16);
                 std::vector<glm::vec3>& into = corner ? inner : grid;
                 into.push_back(glm::vec3(column.x, 0.0f, column.y));
-                into.push_back(glm::vec3(column.x, static_cast<float>(Chunk::SY), column.y));
+                into.push_back(glm::vec3(column.x, static_cast<float>(Chunk::MAX_Y), column.y));
             }
         }
         const int playerY = static_cast<int>(std::floor(m_player.position.y));
-        for (int y = std::max(0, playerY - 32) & ~1; y <= std::min(Chunk::SY, playerY + 32); y += 2)
+        for (int y = std::max(Chunk::MIN_Y, playerY - 32) & ~1; y <= std::min(Chunk::MAX_Y, playerY + 32); y += 2)
         {
             const float fy = static_cast<float>(y);
             const glm::vec3 a(cx, fy, cz), b(cx + 16, fy, cz), c(cx + 16, fy, cz + 16), d(cx, fy, cz + 16);
@@ -22104,7 +22112,7 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             if (m_world)
             {
                 const glm::ivec3 at = glm::ivec3(command.position);
-                if (at.y < 0 || at.y >= Chunk::SY)
+                if (at.y < Chunk::MIN_Y || at.y >= Chunk::MAX_Y)
                 {
                     output = "That position is out of the world.";
                     return false;
@@ -22573,7 +22581,7 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
                 output = "Too many blocks in the specified area (maximum 32768, specified " + std::to_string(volume) + ")";
                 return false;
             }
-            if (lo.y < 0 || hi.y >= Chunk::SY)
+            if (lo.y < Chunk::MIN_Y || hi.y >= Chunk::MAX_Y)
             {
                 output = "That position is out of the world.";
                 return false;
@@ -22615,7 +22623,7 @@ bool Application::runCommand(const std::string& line, const glm::vec3& origin, b
             {
                 const glm::ivec3 to = glm::ivec3(glm::floor(command.position3));
                 const glm::ivec3 size = hi - lo + 1;
-                if (to.y < 0 || to.y + size.y > Chunk::SY)
+                if (to.y < Chunk::MIN_Y || to.y + size.y > Chunk::MAX_Y)
                 {
                     output = "That position is out of the world.";
                     return false;
@@ -23732,7 +23740,7 @@ bool Application::loadStructure(const glm::ivec3& at, const StructureState& stat
                 stored = transformBlock(static_cast<BlockId>(stored), state.rotation & 3, state.mirror);
                 if (soaked) stored = static_cast<uint16_t>(stored | WATERLOGGED);
                 const glm::ivec3 p = origin + glm::ivec3(lx, y, lz);
-                if ((p == at && !fillCorner) || p.y < 0 || p.y >= Chunk::SY) continue;
+                if ((p == at && !fillCorner) || p.y < Chunk::MIN_Y || p.y >= Chunk::MAX_Y) continue;
                 m_world->setBlock(p.x, p.y, p.z, static_cast<BlockId>(stored));
                 m_net.onLocalBlockChange(p.x, p.y, p.z, static_cast<BlockId>(stored));
             }
@@ -24071,7 +24079,7 @@ void Application::reelBobber()
     {
         const glm::ivec3 cell = glm::ivec3(glm::floor(m_bobber.position));
         bool openSky = true;
-        for (int y = cell.y + 1; y < Chunk::SY && openSky; ++y)
+        for (int y = cell.y + 1; y < Chunk::MAX_Y && openSky; ++y)
             if (isOpaque(m_world->getBlock(cell.x, y, cell.z))) openSky = false;
         const bool jungle = m_world->generator().biomeAt(cell.x, cell.z) == Biome::Jungle;
         const uint32_t seed = m_bobber.rolls * 2654435761u + static_cast<uint32_t>(m_elapsedSeconds * 37.0f);
@@ -24123,7 +24131,7 @@ void Application::tickFishing(float deltaTime)
     if (m_bobber.inWater)
     {
         int top = cell.y;
-        while (top < Chunk::SY - 1 && isWater(m_world->getBlock(cell.x, top + 1, cell.z))) ++top;
+        while (top < Chunk::MAX_Y - 1 && isWater(m_world->getBlock(cell.x, top + 1, cell.z))) ++top;
         const float surface = static_cast<float>(top) + 0.88f;
         const float dip = m_bobber.bite > 0.0f ? -0.25f : 0.0f;
         const float target = surface + dip + 0.03f * std::sin(m_bobber.age * 3.0f);
@@ -24135,7 +24143,7 @@ void Application::tickFishing(float deltaTime)
         if (std::fabs(m_bobber.position.y - surface) < 0.4f)
         {
             bool openSky = true;
-            for (int y = top + 1; y < Chunk::SY && openSky; ++y)
+            for (int y = top + 1; y < Chunk::MAX_Y && openSky; ++y)
                 if (isOpaque(m_world->getBlock(cell.x, y, cell.z))) openSky = false;
             const uint32_t seed = m_bobber.rolls++ * 2246822519u + static_cast<uint32_t>(cell.x * 31 + cell.z * 17);
             if (m_bobber.wait < 0.0f && m_bobber.approach <= 0.0f && m_bobber.bite <= 0.0f)
@@ -25172,7 +25180,7 @@ namespace
 
         BlockId at(int x, int y, int z) const override
         {
-            if (y < 0) return Blocks::Bedrock;
+            if (y < Chunk::MIN_Y) return Blocks::Bedrock;
             const Chunk* chunk = world->chunkAt(World::floorDiv(x, Chunk::SX), World::floorDiv(z, Chunk::SZ));
             if (!chunk || chunk->state.load() < ChunkState::Generated) return Blocks::Bedrock;
             return world->fluidAt(x, y, z);
@@ -25291,7 +25299,7 @@ void Application::queueBeams()
     m_beams.clear();
     if (!m_world) return;
     const float t = m_beamClock;
-    const float top = static_cast<float>(Chunk::SY + 64);
+    const float top = static_cast<float>(Chunk::MAX_Y + 64);
 
     for (const glm::ivec3& b : m_litBeacons)
     {
@@ -26710,9 +26718,9 @@ void Application::tickColdAndThaw()
         const uint32_t r = roll();
         const int x = cx + static_cast<int>(r % (REACH * 2u)) - REACH;
         const int z = cz + static_cast<int>((r >> 8) % (REACH * 2u)) - REACH;
-        int top = Chunk::SY - 1;
-        while (top > 0 && m_world->getBlock(x, top, z) == Blocks::Air) --top;
-        if (top <= 0 || top >= Chunk::SY - 1) continue;
+        int top = Chunk::MAX_Y - 1;
+        while (top > Chunk::MIN_Y && m_world->getBlock(x, top, z) == Blocks::Air) --top;
+        if (top <= Chunk::MIN_Y || top >= Chunk::MAX_Y - 1) continue;
         if (!m_world->generator().freezesAt(x, z)) continue;
         const BlockId surface = m_world->getBlock(x, top, z);
         if (surface == Blocks::Water && m_world->blockLightAt(x, top + 1, z) < 10)
@@ -26738,7 +26746,7 @@ void Application::tickColdAndThaw()
         const int x = cx + static_cast<int>(r % 32u) - 16;
         const int z = cz + static_cast<int>((r >> 8) % 32u) - 16;
         const int y = cy + static_cast<int>((r >> 16) % 17u) - 8;
-        if (y < 1 || y >= Chunk::SY - 1) continue;
+        if (y < Chunk::MIN_Y + 1 || y >= Chunk::MAX_Y - 1) continue;
         const BlockId here = m_world->getBlock(x, y, z);
         if (here != Blocks::Ice && !isSnowLayer(here)) continue;
         int light = m_world->blockLightAt(x, y, z);
@@ -31381,7 +31389,7 @@ void Application::tickPlates(float deltaTime)
 void Application::checkFalling(const glm::ivec3& at)
 {
     if (!m_world || m_net.role() == Net::Role::Guest) return;
-    for (int y = at.y; y < Chunk::SY; ++y)
+    for (int y = at.y; y < Chunk::MAX_Y; ++y)
     {
         const BlockId block = m_world->getBlock(at.x, y, at.z);
         if (!fallsByGravity(block)) return;
@@ -31395,7 +31403,7 @@ void Application::checkFalling(const glm::ivec3& at)
 void Application::dropStalactites(const glm::ivec3& from)
 {
     if (!m_world || m_net.role() == Net::Role::Guest) return;
-    for (int y = from.y; y > 0; --y)
+    for (int y = from.y; y > Chunk::MIN_Y; --y)
     {
         if (m_world->getBlock(from.x, y, from.z) != Blocks::DripstoneDown) return;
         m_world->setBlock(from.x, y, from.z, Blocks::Air);
@@ -31429,7 +31437,7 @@ void Application::landFalling(const DroppedItems::Landing& landing)
 {
     const glm::ivec3 at = landing.cell;
     BlockId block = landing.block;
-    if (at.y < 0 || at.y >= Chunk::SY) return;
+    if (at.y < Chunk::MIN_Y || at.y >= Chunk::MAX_Y) return;
     if (block == Blocks::DripstoneDown)
     {
         crushUnder(at, std::min(40, static_cast<int>(std::ceil(std::max(0.0f, landing.fallen - 1.0f))) * 6), "stalactite");

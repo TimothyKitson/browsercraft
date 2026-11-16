@@ -214,7 +214,7 @@ void DroppedItems::updateFalling(float deltaTime, const World& world, std::vecto
         const int z = static_cast<int>(std::floor(falling.position.z + 0.5f));
         int stop = -1000;
         for (int y = static_cast<int>(std::floor(falling.position.y)); y >= static_cast<int>(std::floor(next)); --y)
-            if (y < 0 || !canFallThrough(world.getBlock(x, y, z)))
+            if (y < Chunk::MIN_Y || !canFallThrough(world.getBlock(x, y, z)))
             {
                 stop = y + 1;
                 break;

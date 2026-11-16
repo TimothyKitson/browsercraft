@@ -209,7 +209,7 @@ bool Farming::growBambooAt(World& world, const glm::ivec3& cane)
     // stops, which is what keeps a grove a grove rather than a wall
     // from the floor to the sky.
     int height = 0;
-    for (int y = cane.y; y >= 0; --y)
+    for (int y = cane.y; y >= Chunk::MIN_Y; --y)
     {
         const BlockId here = world.getBlock(cane.x, y, cane.z);
         if (here == Blocks::Bamboo) { ++height; continue; }

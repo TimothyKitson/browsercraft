@@ -572,7 +572,7 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
             const int x = static_cast<int>(std::floor(cx + std::cos(angle) * reach));
             const int z = static_cast<int>(std::floor(cz + std::sin(angle) * reach));
             int y = m_world->generator().surfaceHeight(x, z) + 1;
-            if (y <= 0 || y >= Chunk::SY - 2) continue;
+            if (y <= Chunk::MIN_Y || y >= Chunk::MAX_Y - 2) continue;
             if (isLiquid(m_world->getBlock(x, y - 1, z)) || isLava(m_world->getBlock(x, y, z))) continue;
             m_player.position = glm::vec3(x + 0.5f, static_cast<float>(y), z + 0.5f);
             m_player.velocity = glm::vec3(0.0f);
@@ -1174,7 +1174,7 @@ bool Application::runMoreCommand(const std::string& name, const std::vector<std:
                     {
                         const int lx = index % Chunk::SX;
                         const int lz = (index / Chunk::SX) % Chunk::SZ;
-                        const int ly = index / (Chunk::SX * Chunk::SZ);
+                        const int ly = Chunk::yOfIndex(index);
                         m_world->setBlock(baseX + lx, ly, baseZ + lz, block);
                         m_net.onLocalBlockChange(baseX + lx, ly, baseZ + lz, block);
                         ++changed;

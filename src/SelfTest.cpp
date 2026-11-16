@@ -128,6 +128,7 @@
 #include <map>
 #include <tuple>
 #include <filesystem>
+#include <fstream>
 
 namespace
 {
@@ -522,7 +523,7 @@ namespace
                         for (int lx = 0; lx < Chunk::SX; ++lx)
                         {
                             const int ground = generator.surfaceHeight(chunk.position().x * Chunk::SX + lx, chunk.position().z * Chunk::SZ + lz);
-                            for (int y = Chunk::SY - 1; y > ground; --y)
+                            for (int y = Chunk::MAX_Y - 1; y > ground; --y)
                                 if (chunk.getBlock(lx, y, lz) == Blocks::PackedIce)
                                 {
                                     tallest = std::max(tallest, y - ground);
@@ -542,7 +543,7 @@ namespace
                 generator.generate(chunk);
                 for (int lz = 1; lz < Chunk::SZ - 1; ++lz)
                     for (int lx = 1; lx < Chunk::SX - 1; ++lx)
-                        for (int y = 6; y < Chunk::SY - 4; ++y)
+                        for (int y = 6; y < Chunk::MAX_Y - 4; ++y)
                         {
                             if (chunk.getBlock(lx, y, lz) != Blocks::DripstoneBlock || chunk.getBlock(lx, y + 1, lz) != Blocks::DripstoneBlock ||
                                 chunk.getBlock(lx, y + 2, lz) != Blocks::DripstoneBlock)
@@ -5223,7 +5224,7 @@ namespace
                     auto chunkOf = [](int v, int size) { return v >= 0 ? v / size : -((-v + size - 1) / size); };
                     Chunk chunk(ChunkPos{ chunkOf(ruinX, Chunk::SX) + dx, chunkOf(ruinZ, Chunk::SZ) + dz });
                     generator.generate(chunk);
-                    for (int y = 0; y < Chunk::SY; ++y)
+                    for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                                 if (isSuspiciousGravel(chunk.getBlock(lx, y, lz))) ++gravel;
@@ -6241,12 +6242,19 @@ namespace
         WorldGen flatGen(1234u, Dimension::Overworld, flat);
         Chunk chunk(ChunkPos{ 3, -2 });
         flatGen.generate(chunk);
-        check(chunk.getBlock(5, 0, 5) == Blocks::Bedrock && chunk.getBlock(5, 2, 5) == Blocks::Dirt && chunk.getBlock(5, 3, 5) == Blocks::Grass &&
-              chunk.getBlock(5, 4, 5) == Blocks::Air, "a superflat chunk is its layers and nothing else");
-        check(flatGen.surfaceHeight(999, -999) == 3 && flatGen.biomeAt(50, 50) == Biome::Desert, "and is one height and one biome");
+        check(chunk.getBlock(5, -64, 5) == Blocks::Bedrock && chunk.getBlock(5, -62, 5) == Blocks::Dirt && chunk.getBlock(5, -61, 5) == Blocks::Grass &&
+              chunk.getBlock(5, -60, 5) == Blocks::Air, "a superflat chunk is its layers and nothing else, from the bottom of the world at -64");
+        check(flatGen.surfaceHeight(999, -999) == -61 && flatGen.biomeAt(50, 50) == Biome::Desert, "and is one height and one biome");
         int sx = 0, sy = 0, sz = 0;
         flatGen.findSpawn(sx, sy, sz);
-        check(sx == 8 && sz == 8 && sy == 5, "you start above the middle of it");
+        check(sx == 8 && sz == 8 && sy == -59, "you start above the middle of it");
+        WorldGen::Options legacyFlat = flat;
+        legacyFlat.flatBase = 0;
+        WorldGen legacyGen(1234u, Dimension::Overworld, legacyFlat);
+        Chunk legacyChunk(ChunkPos{ 3, -2 });
+        legacyGen.generate(legacyChunk);
+        check(legacyChunk.getBlock(5, 0, 5) == Blocks::Bedrock && legacyChunk.getBlock(5, 3, 5) == Blocks::Grass && legacyGen.surfaceHeight(0, 0) == 3,
+              "a superflat world made before the taller world keeps its floor at 0");
         WorldGen::Options empty;
         empty.type = WorldGen::Options::Type::Flat;
         empty.layers = { { Blocks::Air, 1 } };
@@ -6507,7 +6515,7 @@ namespace
                 const Biomes::Kind kind = generator.kindAt(x, 10, z);
                 caves[0] += kind == Biomes::Kind::LushCaves;
                 caves[1] += kind == Biomes::Kind::DripstoneCaves;
-                caves[2] += kind == Biomes::Kind::DeepDark;
+                caves[2] += generator.kindAt(x, -45, z) == Biomes::Kind::DeepDark;
             }
         check(caves[0] > 0 && caves[1] > 0 && caves[2] > 0, "and lush caves, dripstone caves and the deep dark lie underneath");
 
@@ -6526,7 +6534,7 @@ namespace
                     Chunk chunk(ChunkPos{ Structures::squareOf(x, Chunk::SX), Structures::squareOf(z, Chunk::SZ) });
                     nether.generate(chunk);
                     int count = 0;
-                    for (int y = 0; y < Chunk::SY; ++y)
+                    for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                             {
@@ -9717,7 +9725,7 @@ namespace
                     Chunk chunk(ChunkPos{ cx, cz });
                     generator.generate(chunk);
 
-                    for (int y = 0; y < Chunk::SY; ++y)
+                    for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                             {
@@ -9788,7 +9796,7 @@ namespace
                         Chunk chunk(ChunkPos{ cx, cz });
                         generator.generate(chunk);
 
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                             for (int lz = 0; lz < Chunk::SZ; ++lz)
                                 for (int lx = 0; lx < Chunk::SX; ++lx)
                                     switch (chunk.getBlock(lx, y, lz))
@@ -9832,7 +9840,7 @@ namespace
                         Chunk chunk(ChunkPos{ cx, cz });
                         generator.generate(chunk);
 
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                             for (int lz = 0; lz < Chunk::SZ; ++lz)
                                 for (int lx = 0; lx < Chunk::SX; ++lx)
                                 {
@@ -10054,7 +10062,7 @@ namespace
                             generator.surfaceHeight(wx, wz) < WorldGen::SEA_LEVEL - 1;
                         if (wet) ++seaFloors; else ++landColumns;
 
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                         {
                             const BlockId block = chunk.getBlock(lx, y, lz);
                             if (!isWaterPlant(block) && !isCoralBlock(block)) continue;
@@ -10102,13 +10110,13 @@ namespace
 
                 for (int lx = 0; lx < Chunk::SX; ++lx)
                     for (int lz = 0; lz < Chunk::SZ; ++lz)
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                             if (isCoralBlock(chunk.getBlock(lx, y, lz)))
                             {
                                 check(generator.reefWater(cx * Chunk::SX + lx,
                                                           cz * Chunk::SZ + lz),
                                       "coral only ever stands in warm water");
-                                lx = Chunk::SX; lz = Chunk::SZ; y = Chunk::SY;
+                                lx = Chunk::SX; lz = Chunk::SZ; y = Chunk::MAX_Y;
                             }
             }
 
@@ -10216,7 +10224,7 @@ namespace
                 Chunk chunk(ChunkPos{ cx, cz });
                 generator.generate(chunk);
 
-                for (int y = 0; y < Chunk::SY; ++y)
+                for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                     for (int lx = 0; lx < Chunk::SX; ++lx)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                         {
@@ -10305,7 +10313,7 @@ namespace
                         Chunk chunk(ChunkPos{ cx, cz });
                         nether.generate(chunk);
 
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                                 for (int lz = 0; lz < Chunk::SZ; ++lz)
                                 {
@@ -10355,7 +10363,7 @@ namespace
                         Chunk chunk(ChunkPos{ cx, cz });
                         end.generate(chunk);
 
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                                 for (int lz = 0; lz < Chunk::SZ; ++lz)
                                 {
@@ -10426,7 +10434,7 @@ namespace
                     {
                         Chunk chunk(ChunkPos{ cx, cz });
                         over.generate(chunk);
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                                 for (int lz = 0; lz < Chunk::SZ; ++lz)
                                     if (chunk.getBlock(lx, y, lz) == Blocks::Chest ||
@@ -10526,7 +10534,7 @@ namespace
                             Chunk chunk(ChunkPos{ cx + dx, cz + dz });
                             generator.generate(chunk);
 
-                            for (int y = 0; y < Chunk::SY; ++y)
+                            for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                                 for (int lx = 0; lx < Chunk::SX; ++lx)
                                     for (int lz = 0; lz < Chunk::SZ; ++lz)
                                         switch (chunk.getBlock(lx, y, lz))
@@ -10574,7 +10582,7 @@ namespace
                         Chunk chunk(ChunkPos{ cx + dx, cz + dz });
                         generator.generate(chunk);
 
-                        for (int y = 0; y < Chunk::SY; ++y)
+                        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                                 for (int lz = 0; lz < Chunk::SZ; ++lz)
                                     if (isVine(chunk.getBlock(lx, y, lz)))
@@ -10608,7 +10616,7 @@ namespace
                     Chunk chunk(ChunkPos{ cx, cz });
                     generator.generate(chunk);
 
-                    for (int y = 0; y < Chunk::SY; ++y)
+                    for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                         for (int lx = 0; lx < Chunk::SX; ++lx)
                             for (int lz = 0; lz < Chunk::SZ; ++lz)
                                 switch (chunk.getBlock(lx, y, lz))
@@ -10934,7 +10942,7 @@ namespace
                 Chunk chunk(ChunkPos{ cx, cz });
                 end.generate(chunk);
 
-                for (int y = 0; y < Chunk::SY; ++y)
+                for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                     for (int lx = 0; lx < Chunk::SX; ++lx)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             switch (chunk.getBlock(lx, y, lz))
@@ -11566,7 +11574,7 @@ namespace
                             Chunk chunk(ChunkPos{ cx + dx, cz + dz });
                             generator.generate(chunk);
 
-                            for (int y = 0; y < Chunk::SY; ++y)
+                            for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                                 for (int lx = 0; lx < Chunk::SX; ++lx)
                                     for (int lz = 0; lz < Chunk::SZ; ++lz)
                                     {
@@ -11620,7 +11628,7 @@ namespace
                     check(hollow > 0, "and it is hollow, so there is something to walk into");
 
                     // Underground, where somebody digging will meet it.
-                    check(lowest >= 2, "a geode sits above the bedrock");
+                    check(lowest >= Chunk::MIN_Y + 2, "a geode sits above the bedrock");
                     check(highest <= WorldGen::GEODE_MAX + 8,
                           "and below the surface rather than poking out of a hillside");
 
@@ -11738,7 +11746,7 @@ namespace
                     nether.generate(*chunk);
 
                     for (int y = WorldGen::FORTRESS_FLOOR - 7;
-                         y <= WorldGen::FORTRESS_FLOOR + 9 && y < Chunk::SY; ++y)
+                         y <= WorldGen::FORTRESS_FLOOR + 9 && y < Chunk::MAX_Y; ++y)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                             {
@@ -11806,7 +11814,7 @@ namespace
                         generator.generate(chunk);
 
                         for (int y = WorldGen::MINESHAFT_MIN - 2;
-                             y <= WorldGen::MINESHAFT_MAX + 3 && y < Chunk::SY; ++y)
+                             y <= WorldGen::MINESHAFT_MAX + 3 && y < Chunk::MAX_Y; ++y)
                             for (int lz = 0; lz < Chunk::SZ; ++lz)
                                 for (int lx = 0; lx < Chunk::SX; ++lx)
                                     switch (chunk.getBlock(lx, y, lz))
@@ -12010,7 +12018,7 @@ namespace
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                             {
-                                if (y < 0 || y >= Chunk::SY) continue;
+                                if (y < 0 || y >= Chunk::MAX_Y) continue;
                                 const int wx = cx * Chunk::SX + lx, wz = cz * Chunk::SZ + lz;
                                 if (std::abs(wx - site.x) > Stronghold::MAX_RADIUS || std::abs(wz - site.z) > Stronghold::MAX_RADIUS) continue;
                                 switch (chunk.getBlock(lx, y, lz))
@@ -12123,7 +12131,7 @@ namespace
                         Chunk chunk(ChunkPos{ cx, cz });
                         generator.generate(chunk);
 
-                        for (int y = 0; y < 80 && y < Chunk::SY; ++y)
+                        for (int y = 0; y < 80 && y < Chunk::MAX_Y; ++y)
                             for (int lz = 0; lz < Chunk::SZ; ++lz)
                                 for (int lx = 0; lx < Chunk::SX; ++lx)
                                     switch (chunk.getBlock(lx, y, lz))
@@ -12314,12 +12322,12 @@ namespace
                     Chunk chunk(ChunkPos{ cx, cz });
                     generator.generate(chunk);
 
-                    for (int y = 0; y < 128 && y < Chunk::SY; ++y)
+                    for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                             {
                                 const BlockId block = chunk.getBlock(lx, y, lz);
-                                if (block == Blocks::CopperOre)
+                                if (block == Blocks::CopperOre || block == deepslateOreOf(Blocks::CopperOre))
                                 {
                                     ++copper;
                                     lowest = std::min(lowest, y);
@@ -12330,8 +12338,8 @@ namespace
                 }
 
             check(copper > 0, "there is copper in the ground");
-            check(lowest >= 20, "none of it is down with the diamond");
-            check(highest <= 110, "and none of it is in the clouds");
+            check(lowest >= -24, "none of it is down in the deepest rock: 1.21.1 keeps copper from about -16 up");
+            check(highest <= 112, "and none of it is in the clouds");
             check(copper * 1000 / std::max<long long>(stone, 1) < 40,
                   "and it is a seam rather than the rock itself");
         }
@@ -12817,7 +12825,7 @@ namespace
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                             {
-                                if (y < 0 || y >= Chunk::SY) continue;
+                                if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) continue;
                                 switch (chunk.getBlock(lx, y, lz))
                                 {
                                     case Blocks::TuffBricks: ++brick; break;
@@ -12865,7 +12873,7 @@ namespace
                     generator.generate(chunk);
 
                     int rungs = 0;
-                    for (int y = dry.y + 1; y < Chunk::SY; ++y)
+                    for (int y = dry.y + 1; y < Chunk::MAX_Y; ++y)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                                 if (chunk.getBlock(lx, y, lz) == Blocks::LadderNorth) ++rungs;
@@ -12977,7 +12985,7 @@ namespace
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                             for (int lx = 0; lx < Chunk::SX; ++lx)
                             {
-                                if (y < 0 || y >= Chunk::SY) continue;
+                                if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) continue;
                                 const BlockId block = chunk.getBlock(lx, y, lz);
                                 if (block == Blocks::Vault) ++plain;
                                 if (block == Blocks::OminousVault) ++ominous;
@@ -13366,7 +13374,7 @@ namespace
             Chunk chunk(ChunkPos{ cx, cz });
             generator.generate(chunk);
             int count = 0;
-            for (int y = 0; y < Chunk::SY; ++y)
+            for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                 for (int lz = 0; lz < Chunk::SZ; ++lz)
                     for (int lx = 0; lx < Chunk::SX; ++lx)
                         if (chunk.getBlock(lx, y, lz) == log) ++count;
@@ -13410,7 +13418,7 @@ namespace
 
         long long coal = 0, iron = 0, gold = 0, diamond = 0, emerald = 0, stone = 0;
         int deepestGold = 999, deepestDiamond = 999;
-        int highestGold = -1, highestDiamond = -1;
+        int highestGold = Chunk::MIN_Y - 1, highestDiamond = Chunk::MIN_Y - 1;
         int highestEmerald = -1;
 
         for (int cz = 0; cz < 2; ++cz)
@@ -13419,11 +13427,16 @@ namespace
                 Chunk chunk(ChunkPos{ cx, cz });
                 generator.generate(chunk);
 
-                for (int y = 0; y < 128 && y < Chunk::SY; ++y)
+                for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                     for (int lz = 0; lz < Chunk::SZ; ++lz)
                         for (int lx = 0; lx < Chunk::SX; ++lx)
                         {
-                            switch (chunk.getBlock(lx, y, lz))
+                            BlockId here = chunk.getBlock(lx, y, lz);
+                            for (BlockId ore : { static_cast<BlockId>(Blocks::CoalOre), static_cast<BlockId>(Blocks::IronOre), static_cast<BlockId>(Blocks::GoldOre),
+                                                 static_cast<BlockId>(Blocks::DiamondOre), static_cast<BlockId>(Blocks::EmeraldOre) })
+                                if (here != ore && here == deepslateOreOf(ore)) here = ore;
+                            if (here == Blocks::Deepslate) here = Blocks::Stone;
+                            switch (here)
                             {
                                 case Blocks::Stone: ++stone; break;
                                 case Blocks::CoalOre: ++coal; ++stone; break;
@@ -13458,8 +13471,8 @@ namespace
         check(emerald <= diamond,
               "emerald is rarer than diamond (" + std::to_string(emerald) + " to " +
                   std::to_string(diamond) + ")");
-        check(highestEmerald < 48,
-              "and stays deep, like the rest of what is worth digging for");
+        check(highestEmerald <= 256 && deepestDiamond < 0,
+              "and diamond lies deep, below y 0 where 1.21.1 keeps most of it");
 
         // The ladder the whole tool progression rests on.
         check(coal > iron, "coal is commoner than iron");
@@ -13478,9 +13491,9 @@ namespace
         check(perThousand(diamond) < 3.0, "and diamond rarer still");
 
         // Depth. Diamond near the surface would skip the whole descent.
-        if (highestDiamond >= 0) check(highestDiamond <= 20, "diamond keeps to the deep rock");
-        if (highestGold >= 0) check(highestGold <= 36, "and gold stays well down");
-        check(deepestDiamond >= 0, "and does not go below the world");
+        if (highestDiamond > Chunk::MIN_Y) check(highestDiamond <= 20, "diamond keeps to the deep rock");
+        if (highestGold > Chunk::MIN_Y) check(highestGold <= 36, "and gold stays well down");
+        check(deepestDiamond >= Chunk::MIN_Y, "and does not go below the world");
     }
 
     void testDoors()
@@ -15741,6 +15754,38 @@ namespace
               "a waterlogged chest is saved and loaded with its water");
         std::filesystem::remove_all("selftest-wet", ec);
 
+        {
+            std::filesystem::create_directories("selftest-old/chunks", ec);
+            {
+                std::ofstream old("selftest-old/chunks/c.0.0.dat", std::ios::binary);
+                const uint32_t magic = 0x56584348u;
+                const uint16_t version = 3;
+                old.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
+                old.write(reinterpret_cast<const char*>(&version), sizeof(version));
+                auto run = [&](BlockId id, uint16_t count) {
+                    old.write(reinterpret_cast<const char*>(&id), sizeof(id));
+                    old.write(reinterpret_cast<const char*>(&count), sizeof(count));
+                };
+                run(Blocks::Bedrock, 256);
+                run(Blocks::Stone, static_cast<uint16_t>(256 * 39 + 5 + 5 * 16));
+                run(Blocks::Chest, 1);
+                run(Blocks::Air, static_cast<uint16_t>(128 * 256 - 256 - (256 * 39 + 5 + 5 * 16) - 1));
+            }
+            const WorldGen fresh(4242u);
+            Chunk upgraded(ChunkPos{ 0, 0 });
+            fresh.generate(upgraded);
+            const bool read = WorldSave::loadChunk("selftest-old", upgraded);
+            check(read && upgraded.getBlock(5, 40, 5) == Blocks::Chest && upgraded.getBlock(5, 39, 5) == Blocks::Stone &&
+                      upgraded.getBlock(5, 0, 5) != Blocks::Bedrock && upgraded.getBlock(5, Chunk::MIN_Y, 5) == Blocks::Bedrock,
+                  "a chunk saved by the 128-high world loads into the taller one: its blocks keep their heights, the old bedrock floor gives way to the new rock below, and bedrock is at -64");
+            WorldSave::saveChunk("selftest-old", upgraded);
+            Chunk again(ChunkPos{ 0, 0 });
+            check(WorldSave::loadChunk("selftest-old", again) && again.getBlock(5, 40, 5) == Blocks::Chest &&
+                      again.getBlock(5, Chunk::MIN_Y, 5) == Blocks::Bedrock && again.getBlock(5, -30, 5) == upgraded.getBlock(5, -30, 5),
+                  "and saved again it keeps the whole column from -64 to 319");
+            std::filesystem::remove_all("selftest-old", ec);
+        }
+
         MeshSnapshot snapshot;
         snapshot.pos = ChunkPos{ 0, 0 };
         snapshot.blocks[static_cast<size_t>(MeshSnapshot::index(6, 60, 6))] = Blocks::StoneStairsNorth;
@@ -15835,7 +15880,7 @@ namespace
                 {
                     if (!generator.freezesAt(coldX * 16 + lx, coldZ * 16 + lz)) continue;
                     ++columns;
-                    int top = Chunk::SY - 1;
+                    int top = Chunk::MAX_Y - 1;
                     while (top > 0 && chunk.getBlock(lx, top, lz) == Blocks::Air) --top;
                     const BlockId at = chunk.getBlock(lx, top, lz);
                     if (isSnowLayer(at) || at == Blocks::Ice || at == Blocks::PackedIce || at == Blocks::Snow) ++covered;
@@ -18269,7 +18314,7 @@ namespace
             {
                 Chunk chunk(ChunkPos{ foundX / Chunk::SX, foundZ / Chunk::SZ });
                 generator.generate(chunk);
-                for (int y = 0; y < Chunk::SY; ++y)
+                for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                     for (int lx = 0; lx < Chunk::SX; ++lx)
                         for (int lz = 0; lz < Chunk::SZ; ++lz)
                         {
@@ -18357,7 +18402,7 @@ namespace
             Chunk chunk(ChunkPos{ 0, 0 });
             nether.generate(chunk);
             int ore = 0;
-            for (int y = 0; y < Chunk::SY; ++y)
+            for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
                 for (int x = 0; x < Chunk::SX; ++x)
                     for (int z = 0; z < Chunk::SZ; ++z)
                         if (chunk.getBlock(x, y, z) == Blocks::NetherQuartzOre) ++ore;

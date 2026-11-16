@@ -410,6 +410,7 @@ void Session::sendWorldDeltas(PeerId peer, World& world)
         const Chunk* actual = live;
         if (!actual)
         {
+            world.generator().generate(fromDisk);
             if (!WorldSave::loadChunk(world.saveDirectory(), fromDisk)) continue;
             actual = &fromDisk;
         }
@@ -417,7 +418,7 @@ void Session::sendWorldDeltas(PeerId peer, World& world)
         Chunk pristine(position);
         world.generator().generate(pristine);
 
-        for (int y = 0; y < Chunk::SY; ++y)
+        for (int y = Chunk::MIN_Y; y < Chunk::MAX_Y; ++y)
             for (int z = 0; z < Chunk::SZ; ++z)
                 for (int x = 0; x < Chunk::SX; ++x)
                 {

@@ -2055,7 +2055,7 @@ inline BlockId planksFromLog(BlockId log)
 }
 
 // Where deepslate takes over from stone.
-constexpr int DEEPSLATE_TOP = 18;
+constexpr int DEEPSLATE_TOP = 8;
 inline bool isRailCorner(BlockId id)
 {
     return id >= Blocks::RailNorthEast && id <= Blocks::RailNorthWest;

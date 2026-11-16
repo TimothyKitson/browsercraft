@@ -2930,7 +2930,7 @@ void buildChunkMesh(const MeshSnapshot& snapshot, MeshResult& out)
     t_tint.foliageBase = BiomeColours::fromMap(true, 0.8f, 0.4f);
     t_tint.waterBase = 0x3F76E4u;
 
-    for (int y = 0; y < Chunk::SY; ++y)
+    for (int y = std::max(Chunk::MIN_Y, snapshot.lowest); y <= std::min(Chunk::MAX_Y - 1, snapshot.highest); ++y)
     {
         for (int lz = 0; lz < Chunk::SZ; ++lz)
         {

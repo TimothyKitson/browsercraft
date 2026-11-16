@@ -86,7 +86,8 @@ std::vector<std::string> Worlds::metaLines(const Meta& meta)
                                        "difficulty=" + std::to_string(static_cast<int>(meta.difficulty)),
                                        "difficultyLocked=" + std::string(meta.difficultyLocked ? "1" : "0"),
                                        "layers=" + meta.layers,
-                                       "biome=" + meta.biome };
+                                       "biome=" + meta.biome,
+                                       "height=" + std::to_string(meta.height) };
     if (!meta.border.empty()) lines.push_back("border=" + meta.border);
     return lines;
 }
@@ -94,6 +95,7 @@ std::vector<std::string> Worlds::metaLines(const Meta& meta)
 Worlds::Meta Worlds::parseMeta(const std::vector<std::string>& lines)
 {
     Meta meta;
+    meta.height = 128;
     for (const std::string& line : lines)
     {
         const size_t equals = line.find('=');
@@ -112,6 +114,7 @@ Worlds::Meta Worlds::parseMeta(const std::vector<std::string>& lines)
         else if (key == "layers") meta.layers = value;
         else if (key == "biome") meta.biome = value;
         else if (key == "border") meta.border = value;
+        else if (key == "height") meta.height = std::atoi(value.c_str()) == 128 ? 128 : 384;
     }
     return meta;
 }

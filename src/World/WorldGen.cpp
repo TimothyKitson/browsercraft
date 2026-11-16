@@ -9,7 +9,8 @@
 
 namespace
 {
-    constexpr int MAX_HEIGHT = Chunk::SY - 1;
+    constexpr int MAX_HEIGHT = Chunk::MAX_Y - 1;
+    constexpr int CAVE_LAVA_LEVEL = Chunk::MIN_Y + 9;
 
     float smoothstep(float edge0, float edge1, float x)
     {
@@ -152,9 +153,9 @@ WorldGen::WorldGen(uint32_t seed, Dimension dimension, Options options)
             top += count;
             solid = solid || block != Blocks::Air;
         }
-        top = std::min(top, Chunk::SY - 8);
+        top = std::min(top, Chunk::MAX_Y - 8 - m_options.flatBase);
         m_voidPlatform = !solid;
-        m_flatTop = m_voidPlatform ? VOID_PLATFORM_Y : std::max(0, top - 1);
+        m_flatTop = m_voidPlatform ? VOID_PLATFORM_Y : std::max(m_options.flatBase, m_options.flatBase + top - 1);
     }
 }
 
@@ -188,7 +189,7 @@ int WorldGen::surfaceHeight(int worldX, int worldZ) const
     ridges = std::max(0.0f, ridges - 0.55f) / 0.45f;
     float mountainMask = smoothstep(0.10f, 0.70f, continent);
 
-    float rise = continent * 22.0f + hills * 8.0f + mountainMask * ridges * 52.0f;
+    float rise = continent * 22.0f + hills * 8.0f + mountainMask * ridges * 95.0f;
     if (rise > 0.0f) rise *= m_lift;
     float height = SEA_LEVEL + rise;
 
@@ -588,8 +589,8 @@ Biomes::Kind WorldGen::variantOf(Biome family, int worldX, int worldZ, int heigh
             if (wet > 0.0f) return K::SnowyTaiga;
             return K::SnowyPlains;
         case Biome::Mountains:
-            if (height > SEA_LEVEL + 47) return t < 0.0f ? (v > 0.0f ? K::JaggedPeaks : K::FrozenPeaks) : K::StonyPeaks;
-            if (height > SEA_LEVEL + 39 && t < 0.05f) return wet > 0.05f ? K::Grove : K::SnowySlopes;
+            if (height > SEA_LEVEL + 70) return t < 0.0f ? (v > 0.0f ? K::JaggedPeaks : K::FrozenPeaks) : K::StonyPeaks;
+            if (height > SEA_LEVEL + 52 && t < 0.05f) return wet > 0.05f ? K::Grove : K::SnowySlopes;
             if (t > 0.30f) return K::WindsweptSavanna;
             if (v > 0.4f) return K::WindsweptGravellyHills;
             if (wet > 0.1f) return K::WindsweptForest;
@@ -621,7 +622,7 @@ Biomes::Kind WorldGen::kindAt(int worldX, int y, int worldZ) const
             case CaveKind::Lush: return Biomes::Kind::LushCaves;
             case CaveKind::Dripstone: return Biomes::Kind::DripstoneCaves;
             default:
-                if (y <= CITY_FLOOR + 16) return Biomes::Kind::DeepDark;
+                if (y <= CITY_FLOOR + 16 && surfaceHeight(worldX, worldZ) >= SEA_LEVEL + 12) return Biomes::Kind::DeepDark;
                 break;
         }
     }
@@ -782,8 +783,8 @@ void WorldGen::coverInSnow(Chunk& chunk) const
         {
             const int wx = baseX + lx, wz = baseZ + lz;
             if (!freezesAt(wx, wz)) continue;
-            int top = Chunk::SY - 2;
-            while (top > 0 && chunk.getBlock(lx, top, lz) == Blocks::Air) --top;
+            int top = Chunk::MAX_Y - 2;
+            while (top > Chunk::MIN_Y && chunk.getBlock(lx, top, lz) == Blocks::Air) --top;
             if (top <= 0) continue;
             const BlockId surface = chunk.getBlock(lx, top, lz);
             if (surface == Blocks::Water) { chunk.setBlockRaw(lx, top, lz, Blocks::Ice); continue; }
@@ -797,9 +798,9 @@ void WorldGen::generateFlat(Chunk& chunk) const
 {
     const int baseX = chunk.position().x * Chunk::SX;
     const int baseZ = chunk.position().z * Chunk::SZ;
-    int y = 0;
+    int y = m_options.flatBase;
     for (const auto& [block, count] : m_options.layers)
-        for (int i = 0; i < count && y < Chunk::SY - 8; ++i, ++y)
+        for (int i = 0; i < count && y < Chunk::MAX_Y - 8; ++i, ++y)
             if (block != Blocks::Air)
                 for (int lx = 0; lx < Chunk::SX; ++lx)
                     for (int lz = 0; lz < Chunk::SZ; ++lz) chunk.setBlockRaw(lx, y, lz, block);
@@ -1071,7 +1072,7 @@ void WorldGen::generateNether(Chunk& chunk) const
                 {
                     const int nx = lx + DX[k], ny = y + DY[k], nz = lz + DZ[k];
                     if (nx < 0 || nx >= Chunk::SX || nz < 0 || nz >= Chunk::SZ) continue;
-                    if (ny < 0 || ny >= Chunk::SY) continue;
+                    if (ny < 0 || ny >= Chunk::MAX_Y) continue;
                     const BlockId beside = chunk.getBlock(nx, ny, nz);
                     if (beside == Blocks::Air || isLiquid(beside)) buried = false;
                 }
@@ -1174,7 +1175,7 @@ void WorldGen::generateEnd(Chunk& chunk) const
 
             for (int y = bottom; y <= top; ++y)
             {
-                if (y < 1 || y >= Chunk::SY) continue;
+                if (y < 1 || y >= Chunk::MAX_Y) continue;
 
                 // Erode the underside so an island tapers away rather
                 // than ending in a flat floor.
@@ -1241,17 +1242,18 @@ void WorldGen::generateColumns(Chunk& chunk) const
                 if (hoodoo > 0.32f) spire = std::min(18, static_cast<int>((hoodoo - 0.32f) * 70.0f));
             }
 
-            for (int y = 0; y <= surface + spire; ++y)
+            for (int y = Chunk::MIN_Y; y <= surface + spire; ++y)
             {
                 BlockId block = Blocks::Stone;
 
-                if (y == 0)
+                if (y == Chunk::MIN_Y)
                 {
                     block = Blocks::Bedrock;
                 }
-                else if (y <= 2 && hashToFloat(hashCoords(wx, y, wz, m_seed + 99)) < 0.55f)
+                else if (y < Chunk::MIN_Y + 5 &&
+                         hashToFloat(hashCoords(wx, y, wz, m_seed + 99)) < static_cast<float>(Chunk::MIN_Y + 5 - y) / 5.0f)
                 {
-                    block = Blocks::Bedrock; // ragged bedrock floor
+                    block = Blocks::Bedrock;
                 }
                 else if (y > surface)
                 {
@@ -1443,7 +1445,7 @@ void WorldGen::carveCaves(Chunk& chunk) const
             // Never carve directly under an ocean: that would drain it.
             const int ceiling = (surface < SEA_LEVEL) ? (SEA_LEVEL - 4) : (surface - 2);
 
-            for (int y = 4; y <= ceiling; ++y)
+            for (int y = Chunk::MIN_Y + 4; y <= ceiling; ++y)
             {
                 const float fx = static_cast<float>(wx);
                 const float fy = static_cast<float>(y);
@@ -1468,7 +1470,7 @@ void WorldGen::carveCaves(Chunk& chunk) const
                 {
                     BlockId current = chunk.getBlock(lx, y, lz);
                     if (current != Blocks::Bedrock && current != Blocks::Water)
-                        chunk.setBlockRaw(lx, y, lz, Blocks::Air);
+                        chunk.setBlockRaw(lx, y, lz, y <= CAVE_LAVA_LEVEL ? Blocks::Lava : Blocks::Air);
                 }
             }
         }
@@ -1487,7 +1489,7 @@ bool WorldGen::ravineStart(int chunkX, int chunkZ, glm::vec3& start) const
     };
     start.x = static_cast<float>(chunkX * Chunk::SX) + next() * 16.0f;
     start.z = static_cast<float>(chunkZ * Chunk::SZ) + next() * 16.0f;
-    start.y = 20.0f + next() * 30.0f;
+    start.y = 10.0f + next() * 57.0f;
     return true;
 }
 
@@ -1543,13 +1545,13 @@ void WorldGen::carveRavines(Chunk& chunk) const
                         if (flat >= 1.0f) continue;
                         const int surface = surfaceHeight(wx, wz);
                         const int ceiling = surface < SEA_LEVEL + 2 ? std::min(surface - 4, SEA_LEVEL - 4) : surface + 4;
-                        const int top = std::min(static_cast<int>(y + v * std::sqrt(1.0f - flat)), std::min(ceiling, Chunk::SY - 2));
+                        const int top = std::min(static_cast<int>(y + v * std::sqrt(1.0f - flat)), std::min(ceiling, Chunk::MAX_Y - 2));
                         const int bottom = std::max(2, static_cast<int>(y - v * std::sqrt(1.0f - flat)));
                         for (int cy = bottom; cy <= top; ++cy)
                         {
                             const BlockId current = chunk.getBlock(lx, cy, lz);
                             if (current == Blocks::Bedrock || isLiquid(current)) continue;
-                            chunk.setBlockRaw(lx, cy, lz, cy <= 8 ? Blocks::Lava : Blocks::Air);
+                            chunk.setBlockRaw(lx, cy, lz, cy <= CAVE_LAVA_LEVEL ? Blocks::Lava : Blocks::Air);
                         }
                     }
             }
@@ -1585,13 +1587,13 @@ void WorldGen::dressCaves(Chunk& chunk) const
             const int wz = baseZ + lz;
 
             const CaveKind kind = caveKindAt(wx, wz);
-            const int top = std::min(surfaceHeight(wx, wz) - 3, Chunk::SY - 2);
+            const int top = std::min(surfaceHeight(wx, wz) - 3, Chunk::MAX_Y - 2);
             if (kind != CaveKind::Lush && hashToFloat(hashCoords(wx, 2, wz, m_seed + 7705)) < 0.04f)
             {
                 for (int y = 8; y <= top; ++y)
                 {
                     if (chunk.getBlock(lx, y, lz) != Blocks::Air) continue;
-                    if (y + 1 < Chunk::SY && isOpaque(chunk.getBlock(lx, y + 1, lz)))
+                    if (y + 1 < Chunk::MAX_Y && isOpaque(chunk.getBlock(lx, y + 1, lz)))
                     {
                         chunk.setBlockRaw(lx, y, lz, glowLichenOn(1));
                         break;
@@ -1694,7 +1696,7 @@ void WorldGen::dressCaves(Chunk& chunk) const
                         {
                             const int facing = static_cast<int>(pick * 400.0f) & 3;
                             int stem = 0;
-                            while (stem < 3 && y + stem + 2 < Chunk::SY && chunk.getBlock(lx, y + stem + 1, lz) == Blocks::Air &&
+                            while (stem < 3 && y + stem + 2 < Chunk::MAX_Y && chunk.getBlock(lx, y + stem + 1, lz) == Blocks::Air &&
                                    chunk.getBlock(lx, y + stem + 2, lz) == Blocks::Air)
                                 ++stem;
                             for (int k = 0; k < stem; ++k) chunk.setBlockRaw(lx, y + k, lz, bigDripleafStemOf(facing));
@@ -1746,17 +1748,11 @@ void WorldGen::layDeepslate(Chunk& chunk) const
         {
             const int wx = baseX + lx;
             const int wz = baseZ + lz;
-
-            // A few blocks of wobble either way, so the boundary reads
-            // as a change of rock rather than as a line someone drew.
-            const int wobble =
-                static_cast<int>(hashToFloat(hashCoords(wx, 0, wz, m_seed + 4411)) * 7.0f) - 3;
-            const int top = DEEPSLATE_TOP + wobble;
-
-            for (int y = 1; y <= top && y < Chunk::SY; ++y)
+            for (int y = Chunk::MIN_Y + 1; y <= DEEPSLATE_TOP; ++y)
             {
                 if (chunk.getBlock(lx, y, lz) != Blocks::Stone) continue;
-
+                if (y > 0 && hashToFloat(hashCoords(wx, y, wz, m_seed + 4410)) >= static_cast<float>(DEEPSLATE_TOP - y) / static_cast<float>(DEEPSLATE_TOP))
+                    continue;
                 BlockId rock = Blocks::Deepslate;
                 const float roll = hashToFloat(hashCoords(wx, y, wz, m_seed + 4412));
                 if (roll < 0.055f)      rock = Blocks::Tuff;
@@ -1791,42 +1787,30 @@ void WorldGen::placeOres(Chunk& chunk) const
     // --oreinfo prints what these actually produce, per thousand stone
     // blocks, by height. Tune against that rather than by eye.
     const OreSpec ORES[] = {
-        { Blocks::CoalOre,    5, 110, 0.0030f, 12, 1001 },
-        { Blocks::IronOre,    5,  64, 0.0026f,  9, 1002 },
-        { Blocks::GoldOre,    5,  32, 0.00040f, 7, 1003 },
-        { Blocks::DiamondOre, 5,  16, 0.00038f, 6, 1004 },
-        // The rarest thing in the ground, and the only one that comes
-        // in ones rather than seams -- a vein size of 1, as in
-        // Minecraft, which is what makes finding one worth saying out
-        // loud. Tuned against --oreinfo like the rest.
-        { Blocks::EmeraldOre, 5,  32, 0.00011f, 1, 1007 },
-        // Commoner than iron and deeper: in Minecraft redstone is the
-        // one seam you find more of than you can use, and the whole
-        // point of it is that there is plenty.
-        { Blocks::RedstoneOre, 5,  16, 0.0030f,  8, 1011 },
-        // Lapis, which is the only blue in the game. Minecraft puts
-        // it in a narrow band and in small seams, which is why it is
-        // the one ore nobody has a chest full of.
-        { Blocks::LapisOre,   5,  30, 0.00085f, 6, 1013 },
-        // Copper sits high and comes in fat seams: in Minecraft it is
-        // the one ore you find more of than you know what to do with.
-        { Blocks::CopperOre,  40, 110, 0.0024f, 16, 1012 },
-        { Blocks::CopperOre,   5, DEEPSLATE_TOP, 0.0010f, 10, 1014, true },
-        // The upper rock is not one grey block. These are deliberately
-        // fatter and commoner than any seam: they are scenery, not a
-        // find, and at a vein of thirty they read as the blotches
-        // vanilla cuts through its stone rather than as lumps.
-        { Blocks::Granite,   DEEPSLATE_TOP, 110, 0.0016f, 30, 1008 },
-        { Blocks::Diorite,   DEEPSLATE_TOP, 110, 0.0016f, 30, 1009 },
-        { Blocks::Andesite,  DEEPSLATE_TOP, 110, 0.0016f, 30, 1010 },
-        { Blocks::Gravel,    10, 100, 0.0035f, 14, 1005 },
-        { Blocks::Clay,      40,  66, 0.0030f, 10, 1006 },
-        { Blocks::Dirt,      DEEPSLATE_TOP, 100, 0.0012f, 30, 1015 },
+        { Blocks::CoalOre,      0, 190, 0.0030f,   12, 1001 },
+        { Blocks::IronOre,    -64,  72, 0.0012f,    9, 1002 },
+        { Blocks::IronOre,     80, 256, 0.0008f,    9, 1016 },
+        { Blocks::GoldOre,    -64,  32, 0.00012f,   7, 1003 },
+        { Blocks::DiamondOre, -64, -40, 0.00015f,   6, 1004 },
+        { Blocks::DiamondOre, -39,  16, 0.00005f,   6, 1017 },
+        { Blocks::EmeraldOre, -16, 256, 0.00003f,   1, 1007 },
+        { Blocks::RedstoneOre, -64, -32, 0.0012f,   8, 1011 },
+        { Blocks::RedstoneOre, -31,  15, 0.0004f,   8, 1018 },
+        { Blocks::LapisOre,   -32,  32, 0.0003f,    6, 1013 },
+        { Blocks::LapisOre,   -64, -33, 0.0001f,    6, 1019 },
+        { Blocks::CopperOre,  -16, 112, 0.0014f,   16, 1012 },
+        { Blocks::Granite,      0, 128, 0.0016f,   30, 1008 },
+        { Blocks::Diorite,      0, 128, 0.0016f,   30, 1009 },
+        { Blocks::Andesite,     0, 128, 0.0016f,   30, 1010 },
+        { Blocks::Gravel,     -64, 200, 0.0035f,   14, 1005 },
+        { Blocks::Clay,        40,  66, 0.0030f,   10, 1006 },
+        { Blocks::Dirt,         0, 160, 0.0012f,   30, 1015 },
+        { Blocks::Tuff,       -64,   0, 0.0010f,   30, 1020 },
     };
 
     for (const OreSpec& ore : ORES)
     {
-        for (int y = ore.minY; y <= ore.maxY && y < Chunk::SY; ++y)
+        for (int y = ore.minY; y <= ore.maxY && y < Chunk::MAX_Y; ++y)
         {
             for (int lx = 0; lx < Chunk::SX; ++lx)
             {
@@ -1880,7 +1864,7 @@ void WorldGen::placeOres(Chunk& chunk) const
         }
     };
     if (badlands) seams(Blocks::GoldOre, 12, 32, 79, 8, 1031);
-    if (dripstone) seams(Blocks::CopperOre, 8, DEEPSLATE_TOP, 80, 20, 1033);
+    if (dripstone) seams(Blocks::CopperOre, 8, 0, 60, 20, 1033);
     if (here != Biomes::Kind::WindsweptHills && here != Biomes::Kind::WindsweptGravellyHills &&
         here != Biomes::Kind::WindsweptForest)
         return;
@@ -1889,7 +1873,7 @@ void WorldGen::placeOres(Chunk& chunk) const
         const uint32_t h = hashCoords(baseX, seam, baseZ, m_seed + 1021);
         const int lx = static_cast<int>(h & 15u);
         const int lz = static_cast<int>((h >> 4) & 15u);
-        const int y = 1 + static_cast<int>((h >> 8) % 63u);
+        const int y = -16 + static_cast<int>((h >> 8) % 100u);
         for (int i = 0; i < 9; ++i)
         {
             const uint32_t g = hashCoords(baseX + seam, y + i, baseZ - i, m_seed + 1022);
@@ -2013,7 +1997,7 @@ void WorldGen::buildTree(Chunk& chunk, int worldX, int surfaceY, int worldZ, Tre
     for (int dy = -canopyDrop; dy <= 1; ++dy)
     {
         int y = topY + dy;
-        if (y < 0 || y >= Chunk::SY) continue;
+        if (y < Chunk::MIN_Y || y >= Chunk::MAX_Y) continue;
 
         // Flat on top and flat underneath: an acacia's plate does not
         // taper the way a broadleaf's crown does.
@@ -2178,7 +2162,7 @@ bool WorldGen::villageFits(const Village::Site& site) const
     // Sample the whole footprint, not just the middle: a village laid
     // across a slope ends up with some houses buried and some on
     // stilts, and the middle alone cannot tell you that.
-    int lowest = Chunk::SY;
+    int lowest = Chunk::MAX_Y;
     int highest = 0;
     for (int dz = -Village::MAX_RADIUS; dz <= Village::MAX_RADIUS; dz += 7)
         for (int dx = -Village::MAX_RADIUS; dx <= Village::MAX_RADIUS; dx += 7)
@@ -2657,7 +2641,7 @@ WorldGen::VillageTally WorldGen::surveyVillages(int fromX, int fromZ, int square
                 biome != Biome::Savanna)
             { ++tally.wrongBiome; continue; }
 
-            int lowest = Chunk::SY;
+            int lowest = Chunk::MAX_Y;
             int highest = 0;
             for (int dz = -Village::MAX_RADIUS; dz <= Village::MAX_RADIUS; dz += 7)
                 for (int dx = -Village::MAX_RADIUS; dx <= Village::MAX_RADIUS; dx += 7)
@@ -2835,7 +2819,7 @@ void WorldGen::buildTrialChambers(Chunk& chunk) const
 
             // The shaft is one block across, so the rock around it is
             // the wall the ladder hangs on.
-            for (int y = site.y + 1; y <= top && y < Chunk::SY; ++y)
+            for (int y = site.y + 1; y <= top && y < Chunk::MAX_Y; ++y)
                 chunk.setBlockRaw(lx, y, lz, Blocks::LadderNorth);
         }
 }
@@ -4267,7 +4251,7 @@ void WorldGen::buildMineshafts(Chunk& chunk) const
             const BlockId fence = plan.mesa ? fenceOfWood(5) : static_cast<BlockId>(Blocks::OakFence);
             auto inside = [&](int x, int z) { return x >= baseX && x < baseX + Chunk::SX && z >= baseZ && z < baseZ + Chunk::SZ; };
             auto cell = [&](int x, int y, int z) {
-                return inside(x, z) && y >= 0 && y < Chunk::SY ? chunk.getBlock(x - baseX, y, z - baseZ) : static_cast<BlockId>(Blocks::Stone);
+                return inside(x, z) && y >= Chunk::MIN_Y && y < Chunk::MAX_Y ? chunk.getBlock(x - baseX, y, z - baseZ) : static_cast<BlockId>(Blocks::Stone);
             };
             const glm::ivec3 o = plan.origin;
             if (std::abs(o.x - (baseX + 8)) < 14 && std::abs(o.z - (baseZ + 8)) < 14)
@@ -4614,7 +4598,7 @@ void WorldGen::buildStrongholds(Chunk& chunk) const
     const int shaftTop = surfaceHeight(shaftX, site.z);
     if (shaftTop <= SEA_LEVEL) return;
 
-    for (int y = site.y + 1; y <= shaftTop && y < Chunk::SY; ++y)
+    for (int y = site.y + 1; y <= shaftTop && y < Chunk::MAX_Y; ++y)
         chunk.setBlockRaw(sx, y, lz, Blocks::LadderNorth);
 }
 
@@ -5190,7 +5174,7 @@ void WorldGen::decorate(Chunk& chunk) const
             const int wz = baseZ + lz;
             const int surface = surfaceHeight(wx, wz);
             const int above = surface + 1;
-            if (above >= Chunk::SY) continue;
+            if (above >= Chunk::MAX_Y) continue;
             if (chunk.getBlock(lx, above, lz) != Blocks::Air) continue;
 
             const BlockId ground = chunk.getBlock(lx, surface, lz);
@@ -5204,7 +5188,7 @@ void WorldGen::decorate(Chunk& chunk) const
                 if (roll < 0.004f)
                 {
                     int cactusHeight = 1 + static_cast<int>(hashToFloat(hashCoords(wx, 4, wz, m_seed + 778)) * 3.0f);
-                    for (int i = 0; i < cactusHeight && above + i < Chunk::SY; ++i)
+                    for (int i = 0; i < cactusHeight && above + i < Chunk::MAX_Y; ++i)
                         chunk.setBlockRaw(lx, above + i, lz, Blocks::Cactus);
                 }
                 else if (roll < 0.016f)
@@ -5230,7 +5214,7 @@ void WorldGen::decorate(Chunk& chunk) const
                 {
                     const int canes = 1 + static_cast<int>(
                         hashToFloat(hashCoords(wx, 6, wz, m_seed + 992)) * 3.0f);
-                    for (int i = 0; i < canes && above + i < Chunk::SY; ++i)
+                    for (int i = 0; i < canes && above + i < Chunk::MAX_Y; ++i)
                         chunk.setBlockRaw(lx, above + i, lz, Blocks::SugarCane);
                     continue;
                 }
@@ -5290,7 +5274,7 @@ void WorldGen::decorate(Chunk& chunk) const
                 {
                     const int canes = 5 + static_cast<int>(
                         hashToFloat(hashCoords(wx, 9, wz, m_seed + 5501)) * 7.0f);
-                    for (int i = 0; i < canes && above + i < Chunk::SY; ++i)
+                    for (int i = 0; i < canes && above + i < Chunk::MAX_Y; ++i)
                         chunk.setBlockRaw(lx, above + i, lz, Blocks::Bamboo);
                     continue;
                 }
@@ -5312,7 +5296,7 @@ void WorldGen::decorate(Chunk& chunk) const
             const bool ferny = biome == Biome::Snowy || biome == Biome::Mountains || biome == Biome::Jungle || variant == Biomes::Kind::Taiga ||
                                variant == Biomes::Kind::OldGrowthPineTaiga || variant == Biomes::Kind::OldGrowthSpruceTaiga;
             auto tall = [&](DoublePlant kind) {
-                if (above + 1 >= Chunk::SY) return;
+                if (above + 1 >= Chunk::MAX_Y) return;
                 chunk.setBlockRaw(lx, above, lz, doublePlantOf(kind, false));
                 chunk.setBlockRaw(lx, above + 1, lz, doublePlantOf(kind, true));
             };
@@ -5906,7 +5890,7 @@ bool WorldGen::dungeonIn(int chunkX, int chunkZ, int& x, int& y, int& z) const
     const uint32_t h = hashCoords(chunkX, 31, chunkZ, m_seed + SALT);
     x = chunkX * Chunk::SX + 4 + static_cast<int>(h % 8u);
     z = chunkZ * Chunk::SZ + 4 + static_cast<int>((h >> 4) % 8u);
-    y = 8 + static_cast<int>((h >> 8) % 42u);
+    y = -58 + static_cast<int>((h >> 8) % 110u);
     return true;
 }
 
@@ -6067,7 +6051,7 @@ void WorldGen::placeLavaLakes(Chunk& chunk) const
     const int baseX = cx * Chunk::SX, baseZ = cz * Chunk::SZ;
     const uint32_t h = hashCoords(cx, 61, cz, m_seed + SALT);
     const int lx = 5 + static_cast<int>(h % 6u), lz = 5 + static_cast<int>((h >> 4) % 6u);
-    const int y = 6 + static_cast<int>((h >> 8) % 30u);
+    const int y = -50 + static_cast<int>((h >> 8) % 86u);
     if (y + 4 >= surfaceHeight(baseX + lx, baseZ + lz) - 4) return;
     for (int dx = -4; dx <= 4; ++dx)
         for (int dy = -2; dy <= 2; ++dy)
@@ -6090,7 +6074,7 @@ void WorldGen::placeOreVeins(Chunk& chunk) const
     const uint32_t h = hashCoords(cx, 71, cz, m_seed + SALT);
     const bool copper = (h & 1u) != 0;
     int x = 2 + static_cast<int>((h >> 1) % 12u), z = 2 + static_cast<int>((h >> 5) % 12u);
-    int y = copper ? 22 + static_cast<int>((h >> 9) % 28u) : 2 + static_cast<int>((h >> 9) % 14u);
+    int y = copper ? static_cast<int>((h >> 9) % 50u) : -60 + static_cast<int>((h >> 9) % 52u);
     const BlockId filler = copper ? Blocks::Granite : Blocks::Tuff;
     const BlockId raw = copper ? Blocks::RawCopperBlock : Blocks::RawIronBlock;
     for (int step = 0; step < 56; ++step)
@@ -6442,7 +6426,7 @@ void WorldGen::placeIceSpikes(Chunk& chunk) const
             if (ground <= SEA_LEVEL) continue;
             const float size = hashToFloat(hashCoords(wx, 21, wz, m_seed + 6611));
             const bool huge = size > 0.92f;
-            const int tall = std::min(Chunk::SY - ground - 2, huge ? 30 + static_cast<int>(size * 20.0f) : 6 + static_cast<int>(size * size * 14.0f));
+            const int tall = std::min(Chunk::MAX_Y - ground - 2, huge ? 30 + static_cast<int>(size * 20.0f) : 6 + static_cast<int>(size * size * 14.0f));
             const float base = huge ? 3.2f : 1.0f + size * 1.6f;
             for (int k = -3; k < tall; ++k)
             {
@@ -6473,7 +6457,7 @@ void WorldGen::growLargeDripstone(Chunk& chunk) const
             const int wx = baseX + lx, wz = baseZ + lz;
             if (caveKindAt(wx, wz) != CaveKind::Dripstone) continue;
             if (hashToFloat(hashCoords(wx, 31, wz, m_seed + 7711)) >= 0.012f) continue;
-            const int top = std::min(surfaceHeight(wx, wz) - 6, Chunk::SY - 2);
+            const int top = std::min(surfaceHeight(wx, wz) - 6, Chunk::MAX_Y - 2);
             for (int y = 6; y < top; ++y)
             {
                 if (chunk.getBlock(lx, y, lz) != Blocks::Air || !isSolid(chunk.getBlock(lx, y - 1, lz))) continue;
@@ -6533,7 +6517,7 @@ void WorldGen::spreadSculkPatches(Chunk& chunk) const
                     strength = std::max(strength, 1.0f - d / r);
                 }
             if (strength <= -0.25f) continue;
-            for (int y = 2; y <= CITY_FLOOR + 16; ++y)
+            for (int y = Chunk::MIN_Y + 2; y <= CITY_FLOOR + 16; ++y)
             {
                 if (chunk.getBlock(lx, y, lz) != Blocks::Air) continue;
                 const BlockId under = chunk.getBlock(lx, y - 1, lz);
@@ -7219,7 +7203,7 @@ int WorldGen::endGroundAt(int worldX, int worldZ) const
     const int lx = worldX - probe.position().x * Chunk::SX;
     const int lz = worldZ - probe.position().z * Chunk::SZ;
 
-    for (int y = Chunk::SY - 1; y > 0; --y)
+    for (int y = Chunk::MAX_Y - 1; y > 0; --y)
         if (probe.getBlock(lx, y, lz) == Blocks::EndStone) return y;
 
     return -1;
@@ -7787,7 +7771,7 @@ void WorldGen::plantChorus(Chunk& chunk) const
 
             // The first end stone from the top, with nothing on it.
             int ground = -1;
-            for (int y = Chunk::SY - 2; y > 1; --y)
+            for (int y = Chunk::MAX_Y - 2; y > 1; --y)
                 if (chunk.getBlock(lx, y, lz) == Blocks::EndStone &&
                     chunk.getBlock(lx, y + 1, lz) == Blocks::Air)
                 { ground = y; break; }
@@ -7802,7 +7786,7 @@ void WorldGen::plantChorus(Chunk& chunk) const
                 return h;
             };
             auto free = [&](int x, int y, int z) {
-                return x >= 0 && x < Chunk::SX && z >= 0 && z < Chunk::SZ && y > 0 && y < Chunk::SY - 1 && chunk.getBlock(x, y, z) == Blocks::Air;
+                return x >= 0 && x < Chunk::SX && z >= 0 && z < Chunk::SZ && y > 0 && y < Chunk::MAX_Y - 1 && chunk.getBlock(x, y, z) == Blocks::Air;
             };
             static const int SIDES[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
             struct Stem { int x, y, z, depth; };
@@ -7944,7 +7928,7 @@ void WorldGen::buildGeodes(Chunk& chunk) const
                         const int wx = midX + ox;
                         const int wy = midY + oy;
                         const int wz = midZ + oz;
-                        if (wy < 2 || wy >= Chunk::SY) continue;
+                        if (wy < Chunk::MIN_Y + 2 || wy >= Chunk::MAX_Y) continue;
 
                         BlockId block;
                         if (away > inner + 1.5f)      block = Blocks::SmoothBasalt;

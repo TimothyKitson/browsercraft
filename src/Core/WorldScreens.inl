@@ -355,6 +355,7 @@ WorldGen::Options Application::generatorOptions(const Worlds::Meta& meta) const
 {
     WorldGen::Options options;
     options.structures = meta.structures;
+    options.flatBase = meta.height == 128 ? 0 : Chunk::MIN_Y;
     switch (meta.type)
     {
         case Worlds::Type::Flat:

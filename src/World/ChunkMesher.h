@@ -14,6 +14,8 @@ struct MeshSnapshot
     static constexpr int PY = Chunk::SY;
 
     ChunkPos pos{};
+    int lowest = Chunk::MIN_Y;
+    int highest = Chunk::MAX_Y - 1;
     std::vector<BlockId> blocks = std::vector<BlockId>(PX * PY * PZ, Blocks::Air);
     std::vector<uint8_t> light = std::vector<uint8_t>(PX * PY * PZ, 0);
     std::vector<uint32_t> grass = std::vector<uint32_t>(PX * PZ, 0);
@@ -23,27 +25,27 @@ struct MeshSnapshot
     // x and z are chunk-local and may be -1 .. SX (inclusive).
     static int index(int x, int y, int z)
     {
-        return ((y * PZ) + (z + PAD)) * PX + (x + PAD);
+        return (((y - Chunk::MIN_Y) * PZ) + (z + PAD)) * PX + (x + PAD);
     }
 
     static bool inRange(int x, int y, int z)
     {
         return x >= -PAD && x < Chunk::SX + PAD &&
                z >= -PAD && z < Chunk::SZ + PAD &&
-               y >= 0 && y < PY;
+               y >= Chunk::MIN_Y && y < Chunk::MAX_Y;
     }
 
     BlockId block(int x, int y, int z) const
     {
-        if (y < 0) return Blocks::Stone;         // below the world: never draw downward faces
-        if (y >= PY) return Blocks::Air;         // above the world: open sky
+        if (y < Chunk::MIN_Y) return Blocks::Stone;
+        if (y >= Chunk::MAX_Y) return Blocks::Air;
         if (!inRange(x, y, z)) return Blocks::Air;
         return static_cast<BlockId>(blocks[index(x, y, z)] & ~WATERLOGGED);
     }
 
     bool wet(int x, int y, int z) const
     {
-        return y >= 0 && y < PY && inRange(x, y, z) && (blocks[index(x, y, z)] & WATERLOGGED) != 0;
+        return inRange(x, y, z) && (blocks[index(x, y, z)] & WATERLOGGED) != 0;
     }
 
     BlockId fluid(int x, int y, int z) const
@@ -53,14 +55,14 @@ struct MeshSnapshot
 
     uint8_t skyLight(int x, int y, int z) const
     {
-        if (y >= PY) return 15;
-        if (y < 0 || !inRange(x, y, z)) return 0;
+        if (y >= Chunk::MAX_Y) return 15;
+        if (!inRange(x, y, z)) return 0;
         return static_cast<uint8_t>(light[index(x, y, z)] >> 4);
     }
 
     uint8_t blockLight(int x, int y, int z) const
     {
-        if (y < 0 || y >= PY || !inRange(x, y, z)) return 0;
+        if (!inRange(x, y, z)) return 0;
         return static_cast<uint8_t>(light[index(x, y, z)] & 0x0F);
     }
 };

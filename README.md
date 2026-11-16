@@ -14,7 +14,7 @@ are all in this repo and all readable in an afternoon.
 **World**
 - Infinite streaming terrain — chunks generate, light and mesh on worker
   threads as you walk, and unload behind you.
-- 16 x 128 x 16 chunks, sea level at y=62.
+- 16 x 384 x 16 chunks from y=-64 to 319, sea level at y=62.
 - Seven biomes (ocean, beach, plains, forest, desert, mountains, snowy)
   chosen from continent / temperature / humidity noise fields.
 - Perlin-noise terrain with rolling hills and ridged mountain spines,

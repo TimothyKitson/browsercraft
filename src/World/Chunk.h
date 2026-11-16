@@ -34,23 +34,27 @@ enum class ChunkState : uint8_t
     Lit          // terrain + light ready; can be meshed
 };
 
-// A 16 x 128 x 16 column of blocks plus its light data and GPU meshes.
+// A 16 x 384 x 16 column of blocks, y from -64 to 319, plus its light data and GPU meshes.
 class Chunk
 {
 public:
     static constexpr int SX = 16;
-    static constexpr int SY = 128;
+    static constexpr int SY = 384;
     static constexpr int SZ = 16;
+    static constexpr int MIN_Y = -64;
+    static constexpr int MAX_Y = MIN_Y + SY;
     static constexpr int BLOCK_COUNT = SX * SY * SZ;
+    static constexpr int LAYER = SX * SZ;
 
     explicit Chunk(ChunkPos position);
 
     static bool inBounds(int x, int y, int z)
     {
-        return x >= 0 && x < SX && y >= 0 && y < SY && z >= 0 && z < SZ;
+        return x >= 0 && x < SX && y >= MIN_Y && y < MAX_Y && z >= 0 && z < SZ;
     }
 
-    static int index(int x, int y, int z) { return (y * SZ + z) * SX + x; }
+    static int index(int x, int y, int z) { return ((y - MIN_Y) * SZ + z) * SX + x; }
+    static int yOfIndex(int i) { return i / LAYER + MIN_Y; }
 
     BlockId getBlock(int x, int y, int z) const
     {
@@ -118,8 +122,8 @@ public:
 
     ChunkPos position() const { return m_position; }
     glm::vec3 worldOrigin() const { return glm::vec3(m_position.x * SX, 0.0f, m_position.z * SZ); }
-    glm::vec3 aabbMin() const { return worldOrigin(); }
-    glm::vec3 aabbMax() const { return worldOrigin() + glm::vec3(SX, SY, SZ); }
+    glm::vec3 aabbMin() const { return worldOrigin() + glm::vec3(0.0f, static_cast<float>(MIN_Y), 0.0f); }
+    glm::vec3 aabbMax() const { return worldOrigin() + glm::vec3(SX, MAX_Y, SZ); }
 
     std::atomic<ChunkState> state{ ChunkState::Empty };
     bool meshDirty = true;      // geometry needs rebuilding
