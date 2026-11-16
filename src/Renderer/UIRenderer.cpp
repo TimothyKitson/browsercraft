@@ -120,6 +120,15 @@ void UIRenderer::setAdditive(bool on)
     else    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+void UIRenderer::setPremultiplied(bool on)
+{
+    if (on == m_premultiplied) return;
+    flush();
+    m_premultiplied = on;
+    if (on) glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    else    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
 void UIRenderer::beginGlint(unsigned int glintTexture, float x, float y, float w, float h, const glm::vec2& shift)
 {
     flush();

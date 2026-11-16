@@ -44,6 +44,7 @@ PFNGLUNIFORMMATRIX4FVPROC glUniformMatrix4fv = nullptr;
 
 PFNGLACTIVETEXTUREPROC glActiveTexture = nullptr;
 PFNGLGENERATEMIPMAPPROC glGenerateMipmap = nullptr;
+PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate = nullptr;
 
 PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = nullptr;
 PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = nullptr;
@@ -111,6 +112,7 @@ bool LoadGLFunctions()
 
     LOAD(glActiveTexture);
     LOAD(glGenerateMipmap);
+    LOAD(glBlendFuncSeparate);
     LOAD(glGenFramebuffers);
     LOAD(glDeleteFramebuffers);
     LOAD(glBindFramebuffer);

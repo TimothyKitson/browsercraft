@@ -86,6 +86,7 @@ typedef void(APIENTRY* PFNGLUNIFORMMATRIX4FVPROC)(GLint location, GLsizei count,
 // --- Textures beyond GL 1.1 ---
 typedef void(APIENTRY* PFNGLACTIVETEXTUREPROC)(GLenum texture);
 typedef void(APIENTRY* PFNGLGENERATEMIPMAPPROC)(GLenum target);
+typedef void(APIENTRY* PFNGLBLENDFUNCSEPARATEPROC)(GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha);
 
 typedef void(APIENTRY* PFNGLGENFRAMEBUFFERSPROC)(GLsizei n, GLuint* framebuffers);
 typedef void(APIENTRY* PFNGLDELETEFRAMEBUFFERSPROC)(GLsizei n, const GLuint* framebuffers);
@@ -133,6 +134,7 @@ extern PFNGLUNIFORMMATRIX4FVPROC glUniformMatrix4fv;
 
 extern PFNGLACTIVETEXTUREPROC glActiveTexture;
 extern PFNGLGENERATEMIPMAPPROC glGenerateMipmap;
+extern PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
 
 extern PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
 extern PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;

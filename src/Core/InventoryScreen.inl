@@ -867,8 +867,151 @@ bool Application::drawShapedIcon(float x, float y, float size, StackId id, const
     return true;
 }
 
-bool Application::drawBlockIcon(float x, float y, float size, StackId id,
-                                const glm::vec4& tint)
+bool Application::drawBlockIcon(float x, float y, float size, StackId id, const glm::vec4& tint)
+{
+    if (isItem(id) || m_iconBaking || m_iconOverride >= 0) return drawBlockIconDirect(x, y, size, id, tint);
+    const uint64_t key = static_cast<uint64_t>(static_cast<uint32_t>(id));
+    if (drawCachedIcon(key, x, y, size, tint)) return true;
+    const auto known = m_iconCache.find(key);
+    if (known != m_iconCache.end() && known->second.ready && !known->second.shaped) return false;
+    return drawBlockIconDirect(x, y, size, id, tint);
+}
+
+bool Application::drawCachedIcon(uint64_t key, float x, float y, float size, const glm::vec4& tint)
+{
+    auto found = m_iconCache.find(key);
+    if (found == m_iconCache.end() || !found->second.ready)
+    {
+        m_iconWants.push_back(key);
+        return false;
+    }
+    CachedIcon& icon = found->second;
+    icon.lastUsed = m_iconFrame;
+    if (!icon.shaped || icon.texture == 0) return false;
+    if (icon.moving) m_iconWants.push_back(key);
+    const float scale = m_ui.scale();
+    const float left = std::round(x * scale) / scale;
+    const float top = std::round(y * scale) / scale;
+    const float edge = std::round((x + size) * scale) / scale;
+    m_ui.setPremultiplied(true);
+    m_ui.texturedQuad(icon.texture, left, top, edge - left, edge - left, 0.0f, 1.0f, 1.0f, 0.0f,
+                      glm::vec4(tint.r * tint.a, tint.g * tint.a, tint.b * tint.a, tint.a));
+    m_ui.setPremultiplied(false);
+    return true;
+}
+
+bool Application::bakeIcon(uint64_t key, float size)
+{
+    const StackId id = static_cast<StackId>(key & 0xFFFFu);
+    const glm::vec4 white(1.0f);
+    if ((key >> 32) == 1u)
+    {
+        const int damage = static_cast<int>((key >> 16) & 0xFFFFu);
+        drawBannerIcon(0.0f, 0.0f, size, bannerColour(asBlock(id)), m_bannerLibrary.design(damage), white);
+        return true;
+    }
+    return drawBlockIconDirect(0.0f, 0.0f, size, id, white);
+}
+
+void Application::clearIconCache()
+{
+    for (auto& [key, icon] : m_iconCache)
+        if (icon.texture) glDeleteTextures(1, &icon.texture);
+    m_iconCache.clear();
+}
+
+void Application::bakeIcons()
+{
+    ++m_iconFrame;
+    if (m_iconWants.empty()) return;
+    const int display = 16 * std::max(1, guiScale());
+    const int cell = display > 64 ? 256 : 128;
+    const bool pbr = m_pbrEnabled && m_atlas.hasPbrMaps();
+    if (cell != m_iconCell || m_atlas.textureId() != m_iconAtlas || pbr != m_iconPbr)
+    {
+        clearIconCache();
+        m_iconCell = cell;
+        m_iconAtlas = m_atlas.textureId();
+        m_iconPbr = pbr;
+    }
+    std::vector<uint64_t> wants;
+    wants.swap(m_iconWants);
+    std::sort(wants.begin(), wants.end());
+    wants.erase(std::unique(wants.begin(), wants.end()), wants.end());
+
+    if (m_iconFbo == 0) glGenFramebuffers(1, &m_iconFbo);
+    GLint previousFbo = 0;
+    glGetIntegerv(0x8CA6, &previousFbo);
+    GLint viewport[4] = { 0, 0, m_window.width(), m_window.height() };
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_iconFbo);
+    glViewport(0, 0, cell, cell);
+    m_ui.setNormalAtlas(pbr ? m_atlas.normalTextureId() : 0);
+    m_iconBaking = true;
+    int baked = 0;
+    for (uint64_t key : wants)
+    {
+        if (baked >= 64) break;
+        CachedIcon& icon = m_iconCache[key];
+        if (icon.ready && icon.bakedFrame == m_iconFrame) continue;
+        if (icon.texture == 0)
+        {
+            glGenTextures(1, &icon.texture);
+            glBindTexture(GL_TEXTURE_2D, icon.texture);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, cell, cell, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, icon.texture, 0);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        m_ui.begin(cell, cell);
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+        const bool shaped = bakeIcon(key, static_cast<float>(cell));
+        m_ui.end();
+        icon.ready = true;
+        icon.shaped = shaped;
+        icon.bakedFrame = m_iconFrame;
+        icon.lastUsed = m_iconFrame;
+        if (shaped)
+        {
+            glBindTexture(GL_TEXTURE_2D, icon.texture);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            if ((key >> 32) == 0u)
+            {
+                const BlockInfo& info = blockInfo(asBlock(static_cast<StackId>(key & 0xFFFFu)));
+                icon.moving = m_atlas.isAnimated(info.tileTop) || m_atlas.isAnimated(info.tileSide) || m_atlas.isAnimated(info.tileBottom);
+            }
+        }
+        else
+        {
+            glDeleteTextures(1, &icon.texture);
+            icon.texture = 0;
+        }
+        ++baked;
+    }
+    m_iconBaking = false;
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(previousFbo));
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+
+    if (m_iconCache.size() > 320)
+    {
+        std::vector<std::pair<uint64_t, uint64_t>> ages;
+        for (const auto& [key, icon] : m_iconCache) ages.emplace_back(icon.lastUsed, key);
+        std::sort(ages.begin(), ages.end());
+        for (size_t k = 0; k + 256 < ages.size(); ++k)
+        {
+            CachedIcon& icon = m_iconCache[ages[k].second];
+            if (icon.texture) glDeleteTextures(1, &icon.texture);
+            m_iconCache.erase(ages[k].second);
+        }
+    }
+}
+
+bool Application::drawBlockIconDirect(float x, float y, float size, StackId id, const glm::vec4& tint)
 {
     if (isItem(id)) return false;
     if (drawShapedIcon(x, y, size, id, tint)) return true;
@@ -1065,7 +1208,9 @@ void Application::drawItem(float x, float y, float size, StackId id, int count,
     }
     else if (!isItem(id) && isBanner(asBlock(id)) && m_iconOverride < 0)
     {
-        drawBannerIcon(x, y, size, bannerColour(asBlock(id)), m_bannerLibrary.design(damage), tint);
+        const uint64_t key = (1ull << 32) | (static_cast<uint64_t>(damage & 0xFFFF) << 16) | static_cast<uint64_t>(id & 0xFFFF);
+        if (m_iconBaking || !drawCachedIcon(key, x, y, size, tint))
+            drawBannerIcon(x, y, size, bannerColour(asBlock(id)), m_bannerLibrary.design(damage), tint);
     }
     else if (const unsigned int face = shieldFace(id, enchantments))
     {

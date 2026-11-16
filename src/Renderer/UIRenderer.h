@@ -62,6 +62,7 @@ public:
     void setInvert(bool on);
     void setRedOnly(bool on);
     void setAdditive(bool on);
+    void setPremultiplied(bool on);
     void setClip(float x, float y, float w, float h);
     void clearClip();
 
@@ -132,6 +133,7 @@ private:
     bool m_invert = false;
     bool m_redOnly = false;
     bool m_additive = false;
+    bool m_premultiplied = false;
     float m_rotation = 0.0f;
     float m_pivotX = 0.0f;
     float m_pivotY = 0.0f;

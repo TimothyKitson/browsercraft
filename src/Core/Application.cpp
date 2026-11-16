@@ -21337,6 +21337,7 @@ void Application::useHand()
 
 void Application::render()
 {
+    bakeIcons();
     glViewport(0, 0, m_window.width(), m_window.height());
     const glm::vec3 clear = (m_world && inGame()) ? dimensionBackdrop()
                                                  : glm::vec3(0.5f, 0.72f, 0.95f);

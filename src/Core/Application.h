@@ -1292,6 +1292,28 @@ private:
     void drawBoxIcon(float x, float y, float size, const glm::vec3& from, const glm::vec3& to, int tile, const glm::vec4& upUV,
                      const glm::vec4& eastUV, const glm::vec4& northUV, const glm::vec4& tint);
     bool drawBlockIcon(float x, float y, float size, StackId id, const glm::vec4& tint);
+    bool drawBlockIconDirect(float x, float y, float size, StackId id, const glm::vec4& tint);
+    struct CachedIcon
+    {
+        unsigned int texture = 0;
+        uint64_t lastUsed = 0;
+        uint64_t bakedFrame = 0;
+        bool ready = false;
+        bool shaped = false;
+        bool moving = false;
+    };
+    bool drawCachedIcon(uint64_t key, float x, float y, float size, const glm::vec4& tint);
+    bool bakeIcon(uint64_t key, float size);
+    void bakeIcons();
+    void clearIconCache();
+    std::unordered_map<uint64_t, CachedIcon> m_iconCache;
+    std::vector<uint64_t> m_iconWants;
+    unsigned int m_iconFbo = 0;
+    int m_iconCell = 0;
+    unsigned int m_iconAtlas = 0;
+    bool m_iconPbr = false;
+    bool m_iconBaking = false;
+    uint64_t m_iconFrame = 1;
     struct IconFace
     {
         int tile = -1;
