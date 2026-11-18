@@ -1,0 +1,38 @@
+name: Shader validation
+
+on:
+  pull_request:
+    paths:
+      - "assets/shaders/**"
+      - "src/Renderer/Shader*"
+      - "src/World/ChunkMesher.cpp"
+      - "tools/check-shaders.py"
+      - ".github/workflows/shaders.yml"
+  push:
+    branches:
+      - main
+      - fix/browser-assets-and-skins
+    paths:
+      - "assets/shaders/**"
+      - "src/Renderer/Shader*"
+      - "src/World/ChunkMesher.cpp"
+      - "tools/check-shaders.py"
+      - ".github/workflows/shaders.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  shader-programs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source (without downloading the large texture-pack LFS object)
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Install GLSL compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y glslang-tools
+      - name: Validate and link shader programs
+        run: python3 tools/check-shaders.py
