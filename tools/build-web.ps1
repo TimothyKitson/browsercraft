@@ -142,8 +142,8 @@ if ($SoundFiles -and (Test-Path -LiteralPath $soundDir -PathType Container)) {
     [void](Copy-DirectoryContents -Source $soundDir -Destination $soundStage)
     $soundFiles = @(Get-ChildItem -LiteralPath $soundStage -File -Recurse)
     Write-Output ("Staging {0} sound files" -f $soundFiles.Count)
-    if (Test-Path -LiteralPath (Join-Path $soundDir "CREDIT.txt")) {
-        Copy-Item -LiteralPath (Join-Path $soundDir "CREDIT.txt") -Destination (Join-Path $soundStage "CREDIT.txt") -Force
+    if (Test-Path -LiteralPath (Join-Path $soundStage "CREDIT.txt")) {
+        Write-Output ("Sound pack credited: {0}" -f (Get-Content -LiteralPath (Join-Path $soundStage "CREDIT.txt") -TotalCount 1))
     } else {
         Write-Warning "No assets/sounds/CREDIT.txt - check the sound pack's redistribution terms."
     }
