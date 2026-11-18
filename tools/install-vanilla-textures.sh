@@ -10,9 +10,9 @@
 # the entity sheets are picked out one at a time, because this engine
 # names its mobs after the species rather than after Mojang's file paths.
 #
-# Mojang's textures are Mojang's. They stay out of the repository -- the
-# three asset folders are gitignored for exactly this reason -- and out
-# of any build that goes on a public site.
+# Mojang's textures are Mojang's. The install folders are tracked by Git
+# now, but do not commit or publish these files unless you have permission
+# to redistribute them. The browser build must be built with care too.
 set -euo pipefail
 
 if [ $# -lt 1 ]; then
