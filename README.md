@@ -129,10 +129,10 @@ version — which is where Minecraft puts its own copyright notice. The
 web build stages that file alongside the textures, so a published build
 carries the credit with the art.
 
-The credit lives next to the pack rather than in the source, because the
-repository contains neither: install a different pack and the old name
-cannot be left behind. With no `CREDIT.txt` nothing is claimed, and
-`build-web.ps1` warns you before it publishes an uncredited pack.
+The credit lives next to the installed art so it stays tied to the pack
+that supplied it. Installing a different pack should replace the old
+credit. With no `CREDIT.txt` nothing is claimed, and the web build warns
+you to check the pack's licence before publishing it.
 
 ## HUD sprites
 
@@ -191,11 +191,11 @@ wool), pig, cow, chicken, zombie, skeleton, creeper, spider -- into
 paints for itself, so a half-populated folder is fine. Delete the folder
 to go back to painted hides everywhere.
 
-Like texture packs, these are not part of the project: `assets/skins` is
-gitignored. Unlike texture packs, the ones most people install are the
-vanilla entity textures, which are Mojang's and not yours to put on a
-website. `build-web.ps1` therefore leaves them out of the download unless
-you pass `-MobTextures`, and the published build uses painted hides.
+Player skins and mob sheets in `assets/skins` are now visible to Git so
+a clean clone can include them. Check each pack's terms before committing
+or publishing third-party art, especially Mojang's vanilla entity sheets.
+Public browser builds leave mob sheets out unless you pass `-MobTextures`
+and have permission to redistribute the sheets.
 
 Check each pack's own terms. The engine can prove a credit is shown; it
 cannot tell you whether that is the condition you actually have to meet.
