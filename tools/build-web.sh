@@ -16,6 +16,7 @@ set -euo pipefail
 EMSDK="${EMSDK:-$HOME/emsdk}"
 TEXTURE_DIR=""
 MOB_TEXTURES=0
+SOUND_FILES=0
 SERVE=0
 PORT=8080
 
@@ -24,6 +25,7 @@ while [ $# -gt 0 ]; do
         --emsdk)        EMSDK="$2"; shift 2 ;;
         --textures)     TEXTURE_DIR="$2"; shift 2 ;;
         --mob-textures) MOB_TEXTURES=1; shift ;;
+        --sound-files) SOUND_FILES=1; shift ;;
         --serve)        SERVE=1; shift ;;
         --port)         PORT="$2"; shift 2 ;;
         *) echo "unknown option: $1" >&2; exit 1 ;;
@@ -56,9 +58,7 @@ mkdir -p "$stage"
 cp -r "$root/assets/shaders" "$stage/shaders"
 
 if [ -z "$TEXTURE_DIR" ]; then
-    if   [ -d "$root/assets/textures/block32" ]; then TEXTURE_DIR="$root/assets/textures/block32"
-    elif [ -d "$root/assets/textures/block" ];   then TEXTURE_DIR="$root/assets/textures/block"
-    fi
+    if [ -d "$root/assets/textures/block" ]; then TEXTURE_DIR="$root/assets/textures/block"; fi
 fi
 
 if [ -n "$TEXTURE_DIR" ] && [ -d "$TEXTURE_DIR" ]; then
@@ -78,16 +78,22 @@ else
     echo "No block texture pack staged - the web build will use procedural block textures."
 fi
 
-# The renderer reads item icons, HUD sprites and entity sheets from their
-# own directories. They must be in the preloaded .data archive too.
-for category in item gui entity; do
-    source="$root/assets/textures/$category"
-    destination="$stage/textures/$category"
-    if copy_dir_contents "$source" "$destination"; then
-        count="$(find "$destination" -type f | wc -l | tr -d ' ')"
-        echo "Staging $count $category texture files"
-    fi
-done
+# Copy every other texture category the renderer can address (items,
+# GUI, entities, colormaps, particles, environment, etc). block32 is a
+# legacy staging directory and is not used as the default.
+textures_root="$root/assets/textures"
+if [ -d "$textures_root" ]; then
+    while IFS= read -r -d '' source; do
+        category="$(basename "$source")"
+        [ "$category" = "block" ] && continue
+        [ "$category" = "block32" ] && continue
+        destination="$stage/textures/$category"
+        if copy_dir_contents "$source" "$destination"; then
+            count="$(find "$destination" -type f | wc -l | tr -d ' ')"
+            echo "Staging $count $category texture files"
+        fi
+    done < <(find "$textures_root" -mindepth 1 -maxdepth 1 -type d -print0)
+fi
 
 # Player skins are user content, separate from the vanilla mob sheets.
 skin_root="$root/assets/skins"
@@ -128,6 +134,23 @@ if [ "$MOB_TEXTURES" = "1" ] && [ -d "$mob_dir" ]; then
     fi
 elif [ -d "$mob_dir" ]; then
     echo "Mob textures left out of the download (pass --mob-textures only when redistribution is permitted)."
+fi
+
+# Audio is optional because the engine synthesizes replacements. Keep
+# third-party/vanilla sound packs opt-in for public builds.
+sound_dir="$root/assets/sounds"
+if [ "$SOUND_FILES" = "1" ] && [ -d "$sound_dir" ]; then
+    sound_stage="$stage/sounds"
+    copy_dir_contents "$sound_dir" "$sound_stage"
+    sound_count="$(find "$sound_stage" -type f | wc -l | tr -d ' ')"
+    echo "Staging $sound_count sound files"
+    if [ -f "$sound_dir/CREDIT.txt" ]; then
+        cp "$sound_dir/CREDIT.txt" "$sound_stage/CREDIT.txt"
+    else
+        echo "WARNING: no assets/sounds/CREDIT.txt - check the sound pack's redistribution terms." >&2
+    fi
+elif [ -d "$sound_dir" ]; then
+    echo "Sound files left out of the download (pass --sound-files only when redistribution is permitted)."
 fi
 
 # shellcheck disable=SC1091
