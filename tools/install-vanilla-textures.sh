@@ -40,8 +40,9 @@ done
 mkdir -p "$root/assets/textures/block" "$root/assets/textures/item" \
          "$root/assets/textures/gui" "$root/assets/skins/mob"
 
-cp "$src"/block/*.png "$root/assets/textures/block/"
-cp "$src"/item/*.png "$root/assets/textures/item/"
+# Preserve nested textures and animation metadata as well as root PNGs.
+cp -a "$src/block/." "$root/assets/textures/block/"
+cp -a "$src/item/." "$root/assets/textures/item/"
 echo "Blocks: $(ls "$root/assets/textures/block" | wc -l), items: $(ls "$root/assets/textures/item" | wc -l)"
 
 # The HUD. Vanilla files are named by what they are inside a sprite
