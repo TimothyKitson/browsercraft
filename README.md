@@ -103,13 +103,16 @@ are all in this repo and all readable in an afternoon.
 
 ## Texture packs
 
-The game reads vanilla Minecraft texture names, so most resource packs
-drop straight in:
+The repository's `textures.zip.zip` resource pack is imported automatically
+by the browser build on its first run. To install it for a desktop build too:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\install-texture-pack.ps1 -Zip "C:\path\to\pack.zip" -Credit "Someone's Textures 32x"
+powershell -ExecutionPolicy Bypass -File tools\install-texture-pack.ps1 -Credit "Pack author"
 build.bat
 ```
+
+To use a different pack, pass its path with `-Zip "C:\path\to\pack.zip"`.
+The installer defaults to the ZIP already stored at the repository root.
 
 That copies the complete supported texture tree, including block and item
 textures, GUI sprites, entity sheets, particles, colormaps, animation
@@ -208,6 +211,11 @@ static site — no server-side anything, and no domain needed to test it.
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build-web.ps1 -Serve
 ```
+
+The script finds `textures.zip.zip` in the repository root and imports its
+supported textures and skins automatically before building. The archive is
+stored with Git LFS; if the file is only a small pointer after cloning, run
+`git lfs pull` once and build again.
 
 Then open `http://localhost:8080/index.html`. The output in `build-web/`
 (`index.html`, `.js`, `.wasm`, `.data`) is roughly 1.3 MB total and can be
