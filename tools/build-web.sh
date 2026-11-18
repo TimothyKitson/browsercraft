@@ -83,7 +83,8 @@ fi
 # legacy staging directory and is not used as the default.
 textures_root="$root/assets/textures"
 if [ -d "$textures_root" ]; then
-    while IFS= read -r -d '' source; do
+    for source in "$textures_root"/*/; do
+        [ -d "$source" ] || continue
         category="$(basename "$source")"
         [ "$category" = "block" ] && continue
         [ "$category" = "block32" ] && continue
@@ -92,7 +93,7 @@ if [ -d "$textures_root" ]; then
             count="$(find "$destination" -type f | wc -l | tr -d ' ')"
             echo "Staging $count $category texture files"
         fi
-    done < <(find "$textures_root" -mindepth 1 -maxdepth 1 -type d -print0)
+    done
 fi
 
 # Player skins are user content, separate from the vanilla mob sheets.
