@@ -48,7 +48,11 @@ $texturesDest = Join-Path $root "assets\textures"
 foreach ($dir in @("block", "item")) {
     $dest = Join-Path $texturesDest $dir
     New-Item -ItemType Directory -Force -Path $dest | Out-Null
-    Copy-Item -Path (Join-Path $src "$dir\*.png") -Destination $dest -Force
+    # Copy the complete tree, including nested PNGs and .mcmeta animation
+    # files. Copying only root-level *.png files left many modern tiles out.
+    Get-ChildItem -LiteralPath (Join-Path $src $dir) -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $dest -Recurse -Force
+    }
 }
 
 $guiDest = Join-Path $texturesDest "gui"
