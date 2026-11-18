@@ -8,8 +8,9 @@
 # of megabytes before anyone sees a single block.
 param(
     [string]$Emsdk = "C:\Users\TempAdmin\emsdk",
-    [string]$TextureDir = "",   # defaults to assets/textures/block32 when it exists
-    [switch]$MobTextures,       # see below: vanilla entity textures are not yours to publish
+    [string]$TextureDir = "",   # defaults to assets/textures/block (the installed pack)
+    [switch]$MobTextures,       # include assets/skins/mob when redistribution is permitted
+    [switch]$SoundFiles,        # include assets/sounds when redistribution is permitted
     [switch]$Serve,
     [int]$Port = 8080
 )
@@ -71,15 +72,21 @@ if ($TextureDir -ne "" -and (Test-Path -LiteralPath $TextureDir -PathType Contai
     Write-Output "No block texture pack staged - the web build will use procedural block textures."
 }
 
-# These categories are read separately by the renderer. Omitting them from
-# the .data package made installed item, HUD and entity textures fall back.
-foreach ($category in @("item", "gui", "entity")) {
-    $source = Join-Path $root ("assets\textures\" + $category)
-    $destination = Join-Path $stage ("textures\" + $category)
-    if (Copy-DirectoryContents -Source $source -Destination $destination) {
-        $files = @(Get-ChildItem -LiteralPath $destination -File -Recurse)
-        Write-Output ("Staging {0} {1} texture files" -f $files.Count, $category)
-    }
+# Copy every other texture category the renderer can address (items,
+# GUI, entities, colormaps, particles, environment, etc). block32 is a
+# legacy staging directory and is deliberately not used as the default.
+$texturesRoot = Join-Path $root "assets\textures"
+if (Test-Path -LiteralPath $texturesRoot -PathType Container) {
+    Get-ChildItem -LiteralPath $texturesRoot -Directory -Force |
+        Where-Object { $_.Name -notin @("block", "block32") } |
+        ForEach-Object {
+            $category = $_.Name
+            $destination = Join-Path (Join-Path $stage "textures") $category
+            if (Copy-DirectoryContents -Source $_.FullName -Destination $destination) {
+                $files = @(Get-ChildItem -LiteralPath $destination -File -Recurse)
+                Write-Output ("Staging {0} {1} texture files" -f $files.Count, $category)
+            }
+        }
 }
 
 # Player skins are user content, not the vanilla mob sheets. Include the
@@ -125,6 +132,23 @@ if ($MobTextures -and (Test-Path -LiteralPath $mobDir -PathType Container)) {
     }
 } elseif (Test-Path -LiteralPath $mobDir -PathType Container) {
     Write-Output "Mob textures left out of the download (pass -MobTextures only when redistribution is permitted)."
+}
+
+# Audio is optional because the engine synthesizes replacements. Keep
+# third-party/vanilla sound packs opt-in for public builds.
+$soundDir = Join-Path $root "assets\sounds"
+if ($SoundFiles -and (Test-Path -LiteralPath $soundDir -PathType Container)) {
+    $soundStage = Join-Path $stage "sounds"
+    [void](Copy-DirectoryContents -Source $soundDir -Destination $soundStage)
+    $soundFiles = @(Get-ChildItem -LiteralPath $soundStage -File -Recurse)
+    Write-Output ("Staging {0} sound files" -f $soundFiles.Count)
+    if (Test-Path -LiteralPath (Join-Path $soundDir "CREDIT.txt")) {
+        Copy-Item -LiteralPath (Join-Path $soundDir "CREDIT.txt") -Destination (Join-Path $soundStage "CREDIT.txt") -Force
+    } else {
+        Write-Warning "No assets/sounds/CREDIT.txt - check the sound pack's redistribution terms."
+    }
+} elseif (Test-Path -LiteralPath $soundDir -PathType Container) {
+    Write-Output "Sound files left out of the download (pass -SoundFiles only when redistribution is permitted)."
 }
 
 $stageRoot = (Resolve-Path (Join-Path $root "build-web\stage\assets")).Path.Replace('\','/')
