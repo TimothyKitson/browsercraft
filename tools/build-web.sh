@@ -40,7 +40,16 @@ if [ ! -f "$EMSDK/emsdk_env.sh" ]; then
     exit 1
 fi
 
-# Stage the assets that get baked into the download.
+# Copy directory contents into the matching runtime asset path. Keeping the
+# source directory's contents (rather than nesting its basename) matters:
+# Atlas and the entity renderers open exact assets/textures/... paths.
+copy_dir_contents() {
+    local source="$1" destination="$2"
+    [ -d "$source" ] || return 1
+    mkdir -p "$destination"
+    cp -a "$source/." "$destination/"
+}
+
 stage="$root/build-web/stage/assets"
 rm -rf "$stage"
 mkdir -p "$stage"
@@ -53,38 +62,72 @@ if [ -z "$TEXTURE_DIR" ]; then
 fi
 
 if [ -n "$TEXTURE_DIR" ] && [ -d "$TEXTURE_DIR" ]; then
-    mkdir -p "$stage/textures"
-    cp -r "$TEXTURE_DIR" "$stage/textures/block"
-    echo "Staging textures from $TEXTURE_DIR ($(du -sh "$stage/textures/block" | cut -f1))"
+    block_dest="$stage/textures/block"
+    copy_dir_contents "$TEXTURE_DIR" "$block_dest"
+    block_count="$(find "$block_dest" -type f | wc -l | tr -d ' ')"
+    echo "Staging $block_count block texture files from $TEXTURE_DIR ($(du -sh "$block_dest" | cut -f1))"
 
-    # The published build is the one that actually redistributes the art,
-    # so the credit has to go with it or the title screen credits nobody.
+    # The published build redistributes the art, so preserve its credit.
     if [ -f "$root/assets/textures/CREDIT.txt" ]; then
         cp "$root/assets/textures/CREDIT.txt" "$stage/textures/CREDIT.txt"
         echo "Crediting: $(head -n 1 "$root/assets/textures/CREDIT.txt")"
     else
-        echo "WARNING: no assets/textures/CREDIT.txt - the published build will credit nobody." >&2
-        echo "WARNING: most packs are free to redistribute only if their author is credited." >&2
+        echo "WARNING: no assets/textures/CREDIT.txt. Check the pack licence before publishing its textures." >&2
     fi
 else
-    echo "No texture pack staged - the web build will use procedural textures."
+    echo "No block texture pack staged - the web build will use procedural block textures."
 fi
 
-# Mob sheets are a separate decision from block textures. A block pack is
-# usually somebody's own work, passed on under their own terms; the
-# vanilla entity textures most people install here are Mojang's, and
-# putting them on a public site is republishing Mojang's art. So they
-# stay out of the download unless you say otherwise, and the game falls
-# back to the hides it paints for itself.
-mobDir="$root/assets/skins/mob"
-if [ "$MOB_TEXTURES" = "1" ] && [ -d "$mobDir" ]; then
-    mkdir -p "$stage/skins"
-    cp -r "$mobDir" "$stage/skins/mob"
-    [ -f "$root/assets/skins/shield.png" ] && cp "$root/assets/skins/shield.png" "$stage/skins/shield.png"
-    echo "Staging mob textures ($(du -sh "$stage/skins" | cut -f1))"
-    echo "WARNING: publishing mob textures. Make sure they are yours to pass on - the vanilla ones are not." >&2
-elif [ -d "$mobDir" ]; then
-    echo "Mob textures left out of the download (pass --mob-textures to include them)."
+# The renderer reads item icons, HUD sprites and entity sheets from their
+# own directories. They must be in the preloaded .data archive too.
+for category in item gui entity; do
+    source="$root/assets/textures/$category"
+    destination="$stage/textures/$category"
+    if copy_dir_contents "$source" "$destination"; then
+        count="$(find "$destination" -type f | wc -l | tr -d ' ')"
+        echo "Staging $count $category texture files"
+    fi
+done
+
+# Player skins are user content, separate from the vanilla mob sheets.
+skin_root="$root/assets/skins"
+skin_stage="$stage/skins"
+player_skin_count=0
+for style in wide slim; do
+    source="$skin_root/$style"
+    destination="$skin_stage/$style"
+    if copy_dir_contents "$source" "$destination"; then
+        count="$(find "$destination" -type f | wc -l | tr -d ' ')"
+        player_skin_count=$((player_skin_count + count))
+    fi
+done
+if [ -f "$skin_root/custom.png" ]; then
+    mkdir -p "$skin_stage"
+    cp "$skin_root/custom.png" "$skin_stage/custom.png"
+    player_skin_count=$((player_skin_count + 1))
+fi
+echo "Staging $player_skin_count player skin files"
+
+# Vanilla entity sheets are copyrighted separately from player skins.
+# Keep them opt-in for public builds; pass --mob-textures only when the
+# installed pack may legally be redistributed. Its credit file travels too.
+mob_dir="$skin_root/mob"
+if [ "$MOB_TEXTURES" = "1" ] && [ -d "$mob_dir" ]; then
+    mob_stage="$skin_stage/mob"
+    copy_dir_contents "$mob_dir" "$mob_stage"
+    mob_count="$(find "$mob_stage" -type f | wc -l | tr -d ' ')"
+    mob_size="$(du -sh "$mob_stage" | cut -f1)"
+    if [ -f "$skin_root/shield.png" ]; then
+        cp "$skin_root/shield.png" "$skin_stage/shield.png"
+    fi
+    echo "Staging $mob_count mob texture files ($mob_size)"
+    if [ -f "$mob_dir/CREDIT.txt" ]; then
+        echo "Mob textures credited: $(head -n 1 "$mob_dir/CREDIT.txt")"
+    else
+        echo "WARNING: no assets/skins/mob/CREDIT.txt - check the mob pack's redistribution terms." >&2
+    fi
+elif [ -d "$mob_dir" ]; then
+    echo "Mob textures left out of the download (pass --mob-textures only when redistribution is permitted)."
 fi
 
 # shellcheck disable=SC1091
