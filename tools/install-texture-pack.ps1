@@ -1,5 +1,6 @@
 # Installs the full texture tree from a Minecraft Java resource-pack ZIP.
 #
+#   powershell -ExecutionPolicy Bypass -File tools\install-texture-pack.ps1
 #   powershell -ExecutionPolicy Bypass -File tools\install-texture-pack.ps1 -Zip "C:\path\to\pack.zip" -Credit "Pack author"
 #
 # Older versions copied a short list of block/item names. Modern packs
@@ -7,15 +8,33 @@
 # silently fell back to procedural textures. This copies all used texture
 # categories plus PNG, animation metadata and PBR texture-set metadata.
 param(
-    [Parameter(Mandatory = $true)][string]$Zip,
+    [string]$Zip = "",
     [string]$Credit = "",
     [switch]$NoPbr
 )
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($Zip)) {
+    $Zip = Join-Path $root "textures.zip.zip"
+}
 if (-not (Test-Path -LiteralPath $Zip -PathType Leaf)) {
     Write-Error "Pack not found: $Zip"
+    exit 1
+}
+
+# A Git LFS pointer is a tiny text file, not the ZIP payload. Give a clear
+# error when the repo was cloned without downloading its LFS objects.
+$stream = [System.IO.File]::OpenRead((Resolve-Path -LiteralPath $Zip))
+try {
+    $magic = New-Object byte[] 4
+    $read = $stream.Read($magic, 0, 4)
+}
+finally {
+    $stream.Dispose()
+}
+if ($read -lt 4 -or $magic[0] -ne 0x50 -or $magic[1] -ne 0x4B) {
+    Write-Error "The archive at '$Zip' is not hydrated. Run 'git lfs pull' in the repository, then build again."
     exit 1
 }
 
