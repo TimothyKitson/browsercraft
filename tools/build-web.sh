@@ -42,6 +42,56 @@ if [ ! -f "$EMSDK/emsdk_env.sh" ]; then
     exit 1
 fi
 
+# The resource pack is stored at the repository root through Git LFS.
+# Import it before staging so a clean web build does not fall back to
+# procedural block textures. The PowerShell installer is cross-platform
+# when PowerShell 7 (pwsh) is installed.
+pack_archive="$root/textures.zip.zip"
+if [ -f "$pack_archive" ]; then
+    if ! command -v pwsh >/dev/null 2>&1; then
+        echo "Found textures.zip.zip, but PowerShell 7 (pwsh) is required to import it." >&2
+        echo "Install PowerShell 7, then rerun this build." >&2
+        exit 1
+    fi
+
+    # A Git LFS pointer is a small text file, not the actual ZIP archive.
+    if ! python3 - "$pack_archive" <<'PY'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1])
+with p.open("rb") as f:
+    if f.read(4)[:2] != b"PK":
+        raise SystemExit(1)
+PY
+    then
+        echo "textures.zip.zip is only a Git LFS pointer. Run 'git lfs pull' in the repository, then build again." >&2
+        exit 1
+    fi
+
+    pack_signature="$(stat -c '%s:%Y' "$pack_archive" 2>/dev/null || stat -f '%z:%m' "$pack_archive")"
+    pack_stamp="$root/.cache/textures-zip-installed.txt"
+    installed_signature=""
+    [ -f "$pack_stamp" ] && installed_signature="$(cat "$pack_stamp")"
+
+    if [ "$installed_signature" != "$pack_signature" ]; then
+        echo "Found textures.zip.zip in the repository. Importing its supported textures and skins..."
+        pwsh -NoProfile -ExecutionPolicy Bypass -File "$root/tools/install-texture-pack.ps1" -Zip "$pack_archive"
+        block_dir="$root/assets/textures/block"
+        block_count=0
+        [ -d "$block_dir" ] && block_count="$(find "$block_dir" -type f -iname '*.png' | wc -l | tr -d ' ')"
+        if [ "$block_count" -eq 0 ]; then
+            echo "The repository archive did not install any block textures." >&2
+            exit 1
+        fi
+        mkdir -p "$(dirname "$pack_stamp")"
+        printf '%s' "$pack_signature" > "$pack_stamp"
+    else
+        echo "Repository texture pack is already imported."
+    fi
+else
+    echo "WARNING: textures.zip.zip was not found at the repository root. The web build may use fallback textures." >&2
+fi
+
 # Copy directory contents into the matching runtime asset path. Keeping the
 # source directory's contents (rather than nesting its basename) matters:
 # Atlas and the entity renderers open exact assets/textures/... paths.
