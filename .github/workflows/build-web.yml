@@ -12,6 +12,15 @@ on:
       - "CMakeLists.txt"
       - "web/**"
       - ".github/workflows/build-web.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "assets/**"
+      - "tools/build-web.ps1"
+      - "tools/install-texture-pack.ps1"
+      - "CMakeLists.txt"
+      - "web/**"
+      - ".github/workflows/build-web.yml"
   workflow_dispatch:
 
 permissions:
