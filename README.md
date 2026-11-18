@@ -111,14 +111,14 @@ powershell -ExecutionPolicy Bypass -File tools\install-texture-pack.ps1 -Zip "C:
 build.bat
 ```
 
-That copies just the ~50 textures the game uses (plus any `_n`/`_s` PBR
-maps) into `assets/textures/block`. Delete that folder to go back to the
-built-in procedural textures. Tile resolution is detected automatically and
-capped at 256px per tile; packs above that are box-filtered down.
+That copies the complete supported texture tree, including block and item
+textures, GUI sprites, entity sheets, particles, colormaps, animation
+metadata, and optional LabPBR maps. The old hand-maintained list missed many
+modern block and item names, leaving them painted with fallback textures.
 
-Texture packs are *not* part of this project — they stay in
-`assets/textures/`, which is gitignored, so you don't accidentally
-redistribute someone else's art.
+Runtime texture and player-skin folders are no longer gitignored. Only
+commit art you own or have explicit permission to redistribute; a credit
+file does not by itself grant redistribution rights.
 
 ### Crediting a pack
 
@@ -213,15 +213,26 @@ Then open `http://localhost:8080/index.html`. The output in `build-web/`
 (`index.html`, `.js`, `.wasm`, `.data`) is roughly 1.3 MB total and can be
 dropped on GitHub Pages, itch.io, Netlify or Cloudflare Pages as-is.
 
-The web build differs from the native one in two deliberate ways:
+The web build differs from the native one in these ways:
 
 - **Single-threaded.** WebAssembly threads need `SharedArrayBuffer`, which
   requires COOP/COEP headers most static hosts don't send. Chunk work is
   queued and run against a per-frame time budget instead
   (`ThreadPool::runPending`), with a smaller render distance to match.
-- **Lower-resolution textures.** Everything is baked into the page
-  download, so `tools/build-web.ps1` stages the 32x set from
-  `assets/textures/block32` rather than whatever the desktop build uses.
+- **Lower-resolution atlas.** The web renderer caps block-tile resolution
+  at 32px and downsamples larger source textures while building the atlas.
+  It uses the same `assets/textures/block` directory as the desktop game;
+  it no longer prefers a separate `block32` folder that the installer did
+  not populate.
+- **Complete asset staging.** Other texture directories and player skins in
+  `assets/skins/wide`, `assets/skins/slim`, and `assets/skins/custom.png`
+  are copied into the WebAssembly data package. Mob sheets and audio packs
+  can be included only when redistribution is permitted:
+  `tools/build-web.ps1 -MobTextures -SoundFiles` or
+  `tools/build-web.sh --mob-textures --sound-files`.
+
+Audio packs remain gitignored because the engine has synthesized fallback
+sounds. The build scripts leave them out unless explicitly requested.
 
 ## Building
 
