@@ -24,6 +24,41 @@ if (-not (Test-Path -LiteralPath (Join-Path $Emsdk "emsdk_env.bat"))) {
     exit 1
 }
 
+# The resource pack is already stored at the repository root through Git LFS.
+# Import it automatically so a browser build never silently ships fallback art.
+$packArchive = Join-Path $root "textures.zip.zip"
+if (Test-Path -LiteralPath $packArchive -PathType Leaf) {
+    $packInfo = Get-Item -LiteralPath $packArchive
+    $packSignature = "{0}:{1}" -f $packInfo.Length, $packInfo.LastWriteTimeUtc.Ticks
+    $packStampDir = Join-Path $root ".cache"
+    $packStamp = Join-Path $packStampDir "textures-zip-installed.txt"
+    $installedSignature = ""
+    if (Test-Path -LiteralPath $packStamp -PathType Leaf) {
+        $installedSignature = (Get-Content -LiteralPath $packStamp -Raw).Trim()
+    }
+
+    if ($installedSignature -ne $packSignature) {
+        Write-Output "Found textures.zip.zip in the repository. Importing its supported textures and skins..."
+        $installer = Join-Path $PSScriptRoot "install-texture-pack.ps1"
+        & $installer -Zip $packArchive
+        $blockDir = Join-Path $root "assets\textures\block"
+        $installedBlocks = @()
+        if (Test-Path -LiteralPath $blockDir -PathType Container) {
+            $installedBlocks = @(Get-ChildItem -LiteralPath $blockDir -Filter *.png -File -Recurse)
+        }
+        if ($installedBlocks.Count -eq 0) {
+            throw "The repository archive did not install any block textures. Check that textures.zip.zip is a valid, hydrated Git LFS ZIP."
+        }
+        New-Item -ItemType Directory -Force -Path $packStampDir | Out-Null
+        [System.IO.File]::WriteAllText($packStamp, $packSignature,
+            (New-Object System.Text.UTF8Encoding($false)))
+    } else {
+        Write-Output "Repository texture pack is already imported."
+    }
+} else {
+    Write-Warning "textures.zip.zip was not found at the repository root. The web build may use fallback textures."
+}
+
 # Stage every asset category the runtime knows how to load. Copy the
 # contents of each source directory (not the source directory itself), so
 # the runtime paths remain assets/textures/block, item, gui and entity.
