@@ -88,14 +88,15 @@ def expand_includes(path: Path, errors: list[str]) -> str:
 
 def main() -> int:
     errors: list[str] = []
-    expanded_sources: list[tuple[str, str]] = []
+    expanded_programs: list[tuple[str, str, str, str]] = []
 
     for vertex_name, fragment_name in PROGRAMS:
-        for name, stage in ((vertex_name, "vert"), (fragment_name, "frag")):
-            # The fx shaders live in fx/; the base chunk shaders live one level up.
-            path = (FX_ROOT if name not in ("chunk.vert", "chunk.frag") else SHADER_ROOT) / name
-            source = expand_includes(path, errors)
-            expanded_sources.append((stage, source))
+        # The fx shaders live in fx/; the base chunk shaders live one level up.
+        vertex_path = (FX_ROOT if vertex_name != "chunk.vert" else SHADER_ROOT) / vertex_name
+        fragment_path = (FX_ROOT if fragment_name != "chunk.frag" else SHADER_ROOT) / fragment_name
+        vertex_source = expand_includes(vertex_path, errors)
+        fragment_source = expand_includes(fragment_path, errors)
+        expanded_programs.append((vertex_name, vertex_source, fragment_name, fragment_source))
 
     pipeline_cpp = ROOT / "src" / "Renderer" / "ShaderPipeline.cpp"
     shader_cpp = ROOT / "src" / "Renderer" / "Shader.cpp"
@@ -160,20 +161,25 @@ def main() -> int:
         return 0
 
     with tempfile.TemporaryDirectory(prefix="browsercraft-shaders-") as temp_dir:
-        for index, (stage, source) in enumerate(expanded_sources):
-            source_path = Path(temp_dir) / f"shader_{index}.{stage}"
-            source_path.write_text(source, encoding="utf-8")
+        for index, (vertex_name, vertex_source, fragment_name, fragment_source) in enumerate(expanded_programs):
+            vertex_path = Path(temp_dir) / f"program_{index}.vert"
+            fragment_path = Path(temp_dir) / f"program_{index}.frag"
+            vertex_path.write_text(vertex_source, encoding="utf-8")
+            fragment_path.write_text(fragment_source, encoding="utf-8")
             result = subprocess.run(
-                [compiler, "-S", stage, str(source_path)],
+                [compiler, "-l", str(vertex_path), str(fragment_path)],
                 capture_output=True,
                 text=True,
                 check=False,
             )
             if result.returncode:
-                fail(f"{source_path.name} did not compile:\n{result.stdout}{result.stderr}")
+                fail(
+                    f"{vertex_name} + {fragment_name} did not compile/link:\n"
+                    f"{result.stdout}{result.stderr}"
+                )
                 return 1
 
-    print(f"PASS: glslangValidator compiled {len(expanded_sources)} shader stages.")
+    print(f"PASS: glslangValidator compiled and linked all {len(expanded_programs)} shader programs.")
     return 0
 
 
