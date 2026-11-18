@@ -46,10 +46,8 @@ New-Item -ItemType Directory -Force -Path $stage | Out-Null
 Copy-Item -Recurse (Join-Path $root "assets\shaders") (Join-Path $stage "shaders")
 
 if ($TextureDir -eq "") {
-    $lowRes = Join-Path $root "assets\textures\block32"
     $normal = Join-Path $root "assets\textures\block"
-    if (Test-Path $lowRes -PathType Container) { $TextureDir = $lowRes }
-    elseif (Test-Path $normal -PathType Container) { $TextureDir = $normal }
+    if (Test-Path $normal -PathType Container) { $TextureDir = $normal }
 }
 
 if ($TextureDir -ne "" -and (Test-Path -LiteralPath $TextureDir -PathType Container)) {
