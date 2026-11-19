@@ -54,3 +54,26 @@ jobs:
             build-web/index.data
           if-no-files-found: error
           retention-days: 14
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        shell: pwsh
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+
+      - name: Capture updated first-person hand in the game
+        shell: pwsh
+        run: node tools/capture-web-preview.mjs
+
+      - name: Upload in-game screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: browsercraft-updated-hand-screenshot
+          path: browsercraft-updated-hand.png
+          if-no-files-found: error
+          retention-days: 14
