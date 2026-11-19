@@ -73,7 +73,9 @@ jobs:
       - name: Upload in-game screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: browsercraft-updated-hand-screenshot
-          path: browsercraft-updated-hand.png
+          name: browsercraft-all-ui-screenshots
+          path: |
+            browsercraft-updated-hand.png
+            browsercraft-ui-screenshots/
           if-no-files-found: error
           retention-days: 14
