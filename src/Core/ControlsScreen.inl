@@ -27,6 +27,7 @@ namespace
             { "Multiplayer", Action::PlayerList, "List Players" },
             { "Miscellaneous", Action::Advancements, "Advancements" }, { "Miscellaneous", Action::Screenshot, "Take Screenshot" },
             { "Miscellaneous", Action::Perspective, "Toggle Perspective" }, { "Miscellaneous", Action::Fullscreen, "Toggle Fullscreen" },
+            { "Miscellaneous", Action::PauseMenu, "Open Pause Menu" },
             { "Miscellaneous", Action::SmoothCamera, "Toggle Cinematic Camera" },
             { "Miscellaneous", Action::HideHud, "Hide HUD" }, { "Miscellaneous", Action::Debug, "Debug Screen" },
             { "Miscellaneous", Action::FancyLighting, "Fancy Lighting" }, { "Miscellaneous", Action::Mute, "Mute Sound" },

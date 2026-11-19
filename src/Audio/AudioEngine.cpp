@@ -779,7 +779,9 @@ void AudioEngine::buildSounds()
     {
         Synth s = make(Sound::DigStone);
         s.addNoise(0.11f, 2200.0f, 42.0f, 1.0f, false, 11);
+        s.addNoise(0.035f, 4200.0f, 125.0f, 0.34f, true, 111);
         s.addTone(0.09f, 115.0f, 95.0f, 55.0f, 0.30f);
+        s.addTone(0.035f, 310.0f, 185.0f, 85.0f, 0.16f, false, 0.012f);
         s.finish();
     }
     // Footsteps. These are loaded from assets/sounds when a real set is
@@ -791,7 +793,9 @@ void AudioEngine::buildSounds()
     {
         Synth s = make(Sound::StepStone);
         s.addNoise(0.055f, 2600.0f, 70.0f, 1.0f, false, 101);
+        s.addNoise(0.018f, 4400.0f, 150.0f, 0.25f, true, 1001);
         s.addTone(0.045f, 150.0f, 120.0f, 80.0f, 0.22f);
+        s.addTone(0.035f, 260.0f, 175.0f, 90.0f, 0.12f, false, 0.012f);
         s.finish(0.55f);
     }
     {
@@ -802,6 +806,8 @@ void AudioEngine::buildSounds()
     {
         Synth s = make(Sound::StepGrass);
         s.addNoise(0.070f, 1700.0f, 52.0f, 1.0f, true, 107);
+        s.addNoise(0.025f, 900.0f, 78.0f, 0.22f, false, 1007);
+        s.addTone(0.040f, 120.0f, 85.0f, 70.0f, 0.10f, false, 0.012f);
         s.finish(0.42f);
     }
     {
@@ -870,8 +876,10 @@ void AudioEngine::buildSounds()
     }
     {
         Synth s = make(Sound::Place);
-        s.addTone(0.10f, 95.0f, 80.0f, 45.0f, 0.6f);
-        s.addNoise(0.06f, 1200.0f, 80.0f, 0.5f, false, 99);
+        s.addTone(0.10f, 125.0f, 78.0f, 45.0f, 0.42f);
+        s.addNoise(0.06f, 1800.0f, 80.0f, 0.42f, false, 99);
+        s.addNoise(0.028f, 3600.0f, 120.0f, 0.38f, true, 1099);
+        s.addTone(0.045f, 290.0f, 175.0f, 90.0f, 0.20f, false, 0.010f);
         s.finish(0.8f);
     }
     {

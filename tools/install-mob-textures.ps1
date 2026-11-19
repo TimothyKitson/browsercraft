@@ -12,10 +12,10 @@
 # assets/skins/wide and assets/skins/slim, which is where the character
 # picker looks before falling back to the characters it paints itself.
 #
-# These are not part of this project. assets/skins is gitignored, and
-# vanilla entity textures are Mojang's -- they are fine on your own
-# machine and are not yours to publish, which is why build-web.ps1 leaves
-# them out unless you tell it otherwise.
+# Skin assets are tracked by Git so a repository can include its player
+# skins. Only commit art you own or may redistribute. Vanilla entity
+# textures are Mojang's, so public web builds leave mob sheets out unless
+# you explicitly opt in and have the necessary redistribution rights.
 param(
     [string]$Zip = "",
     [string]$Folder = "",

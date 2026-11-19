@@ -10,9 +10,9 @@
 # the entity sheets are picked out one at a time, because this engine
 # names its mobs after the species rather than after Mojang's file paths.
 #
-# Mojang's textures are Mojang's. They stay out of the repository -- the
-# three asset folders are gitignored for exactly this reason -- and out
-# of any build that goes on a public site.
+# Mojang's textures are Mojang's. The install folders are tracked by Git
+# now, but do not commit or publish these files unless you have permission
+# to redistribute them. The browser build must be built with care too.
 set -euo pipefail
 
 if [ $# -lt 1 ]; then
@@ -40,8 +40,9 @@ done
 mkdir -p "$root/assets/textures/block" "$root/assets/textures/item" \
          "$root/assets/textures/gui" "$root/assets/skins/mob"
 
-cp "$src"/block/*.png "$root/assets/textures/block/"
-cp "$src"/item/*.png "$root/assets/textures/item/"
+# Preserve nested textures and animation metadata as well as root PNGs.
+cp -a "$src/block/." "$root/assets/textures/block/"
+cp -a "$src/item/." "$root/assets/textures/item/"
 echo "Blocks: $(ls "$root/assets/textures/block" | wc -l), items: $(ls "$root/assets/textures/item" | wc -l)"
 
 # The HUD. Vanilla files are named by what they are inside a sprite

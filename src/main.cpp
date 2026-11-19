@@ -1531,6 +1531,7 @@ int main(int argc, char** argv)
     int height = 720;
     float autoShotDelay = 0.0f;
     bool pbr = true;
+    bool startCreative = false;
     int shaders = -1;
     float timeOverride = -1.0f;
     const char* startupScreen = nullptr;
@@ -1568,6 +1569,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--nopbr") == 0)
         {
             pbr = false;
+        }
+        else if (std::strcmp(argv[i], "--creative") == 0)
+        {
+            startCreative = true;
         }
         else if (std::strcmp(argv[i], "--shaders") == 0)
         {
@@ -1722,6 +1727,7 @@ int main(int argc, char** argv)
         if (buildTest) app.setBuildTest();
         if (mobTest) app.setMobTest();
         if (farmTest) app.setFarmTest();
+        if (startCreative) app.setStartupMode(GameMode::Creative);
         if (shopTest) app.setShopTest();
     if (swimTest) app.setSwimTest();
     if (startAt) app.setStartAt(startAt);

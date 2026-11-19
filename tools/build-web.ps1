@@ -8,8 +8,9 @@
 # of megabytes before anyone sees a single block.
 param(
     [string]$Emsdk = "C:\Users\TempAdmin\emsdk",
-    [string]$TextureDir = "",   # defaults to assets/textures/block32 when it exists
-    [switch]$MobTextures,       # see below: vanilla entity textures are not yours to publish
+    [string]$TextureDir = "",   # defaults to assets/textures/block (the installed pack)
+    [switch]$MobTextures,       # include assets/skins/mob when redistribution is permitted
+    [switch]$SoundFiles,        # include assets/sounds when redistribution is permitted
     [switch]$Serve,
     [int]$Port = 8080
 )
@@ -23,61 +24,164 @@ if (-not (Test-Path -LiteralPath (Join-Path $Emsdk "emsdk_env.bat"))) {
     exit 1
 }
 
-# Stage the assets that get baked into the download.
+# The resource pack is already stored at the repository root through Git LFS.
+# Import it automatically so a browser build never silently ships fallback art.
+$packArchive = Join-Path $root "textures.zip.zip"
+if (Test-Path -LiteralPath $packArchive -PathType Leaf) {
+    $packInfo = Get-Item -LiteralPath $packArchive
+    $packSignature = "{0}:{1}" -f $packInfo.Length, $packInfo.LastWriteTimeUtc.Ticks
+    $packStampDir = Join-Path $root ".cache"
+    $packStamp = Join-Path $packStampDir "textures-zip-installed.txt"
+    $installedSignature = ""
+    if (Test-Path -LiteralPath $packStamp -PathType Leaf) {
+        $installedSignature = (Get-Content -LiteralPath $packStamp -Raw).Trim()
+    }
+
+    if ($installedSignature -ne $packSignature) {
+        Write-Output "Found textures.zip.zip in the repository. Importing its supported textures and skins..."
+        $installer = Join-Path $PSScriptRoot "install-texture-pack.ps1"
+        & $installer -Zip $packArchive
+        $blockDir = Join-Path $root "assets\textures\block"
+        $installedBlocks = @()
+        if (Test-Path -LiteralPath $blockDir -PathType Container) {
+            $installedBlocks = @(Get-ChildItem -LiteralPath $blockDir -Filter *.png -File -Recurse)
+        }
+        if ($installedBlocks.Count -eq 0) {
+            throw "The repository archive did not install any block textures. Check that textures.zip.zip is a valid, hydrated Git LFS ZIP."
+        }
+        New-Item -ItemType Directory -Force -Path $packStampDir | Out-Null
+        [System.IO.File]::WriteAllText($packStamp, $packSignature,
+            (New-Object System.Text.UTF8Encoding($false)))
+    } else {
+        Write-Output "Repository texture pack is already imported."
+    }
+} else {
+    Write-Warning "textures.zip.zip was not found at the repository root. The web build may use fallback textures."
+}
+
+# Stage every asset category the runtime knows how to load. Copy the
+# contents of each source directory (not the source directory itself), so
+# the runtime paths remain assets/textures/block, item, gui and entity.
+function Copy-DirectoryContents {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Destination
+    )
+    if (-not (Test-Path -LiteralPath $Source -PathType Container)) { return $false }
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    Get-ChildItem -LiteralPath $Source -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
+    }
+    return $true
+}
+
 $stage = Join-Path $root "build-web\stage\assets"
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 Copy-Item -Recurse (Join-Path $root "assets\shaders") (Join-Path $stage "shaders")
 
 if ($TextureDir -eq "") {
-    $lowRes = Join-Path $root "assets\textures\block32"
     $normal = Join-Path $root "assets\textures\block"
-    if (Test-Path $lowRes) { $TextureDir = $lowRes }
-    elseif (Test-Path $normal) { $TextureDir = $normal }
+    if (Test-Path $normal -PathType Container) { $TextureDir = $normal }
 }
 
-if ($TextureDir -ne "" -and (Test-Path -LiteralPath $TextureDir)) {
-    New-Item -ItemType Directory -Force -Path (Join-Path $stage "textures") | Out-Null
-    Copy-Item -Recurse -LiteralPath $TextureDir (Join-Path $stage "textures\block")
-    $bytes = (Get-ChildItem (Join-Path $stage "textures\block") -File | Measure-Object -Property Length -Sum).Sum
-    Write-Output ("Staging textures from {0} ({1:N1} MB)" -f $TextureDir, ($bytes / 1MB))
+if ($TextureDir -ne "" -and (Test-Path -LiteralPath $TextureDir -PathType Container)) {
+    $blockDest = Join-Path $stage "textures\block"
+    [void](Copy-DirectoryContents -Source $TextureDir -Destination $blockDest)
+    $blockFiles = @(Get-ChildItem -LiteralPath $blockDest -File -Recurse)
+    $bytes = ($blockFiles | Measure-Object -Property Length -Sum).Sum
+    if ($null -eq $bytes) { $bytes = 0 }
+    Write-Output ("Staging {0} block texture files from {1} ({2:N1} MB)" -f $blockFiles.Count, $TextureDir, ($bytes / 1MB))
 
-    # The published build is the one that actually redistributes the art,
-    # so the credit has to go with it or the title screen credits nobody.
+    # The published build redistributes the art, so preserve its credit.
     $credit = Join-Path $root "assets\textures\CREDIT.txt"
     if (Test-Path -LiteralPath $credit) {
         Copy-Item -LiteralPath $credit (Join-Path $stage "textures\CREDIT.txt")
         Write-Output ("Crediting: {0}" -f (Get-Content -LiteralPath $credit -TotalCount 1))
     } else {
-        Write-Warning "No assets/textures/CREDIT.txt - the published build will credit nobody."
-        Write-Warning "Most packs are free to redistribute only if their author is credited."
+        Write-Warning "No assets/textures/CREDIT.txt. Check the pack licence before publishing its textures."
     }
 } else {
-    Write-Output "No texture pack staged - the web build will use procedural textures."
+    Write-Output "No block texture pack staged - the web build will use procedural block textures."
 }
 
-# Mob sheets are a separate decision from block textures. A block pack is
-# usually somebody's own work, passed on under their own terms; the
-# vanilla entity textures most people install here are Mojang's, and
-# putting them on a public site is republishing Mojang's art. So they
-# stay out of the download unless you say otherwise, and the game falls
-# back to the hides it paints for itself.
-$mobDir = Join-Path $root "assets\skins\mob"
-if ($MobTextures -and (Test-Path -LiteralPath $mobDir)) {
-    New-Item -ItemType Directory -Force -Path (Join-Path $stage "skins") | Out-Null
-    Copy-Item -Recurse -LiteralPath $mobDir (Join-Path $stage "skins\mob")
-    $mobBytes = (Get-ChildItem (Join-Path $stage "skins\mob") -File | Measure-Object -Property Length -Sum).Sum
-    Write-Output ("Staging mob textures ({0:N0} KB)" -f ($mobBytes / 1KB))
-    Write-Warning "Publishing mob textures. Make sure they are yours to pass on - the vanilla ones are not."
+# Copy every other texture category the renderer can address (items,
+# GUI, entities, colormaps, particles, environment, etc). block32 is a
+# legacy staging directory and is deliberately not used as the default.
+$texturesRoot = Join-Path $root "assets\textures"
+if (Test-Path -LiteralPath $texturesRoot -PathType Container) {
+    Get-ChildItem -LiteralPath $texturesRoot -Directory -Force |
+        Where-Object { $_.Name -notin @("block", "block32") } |
+        ForEach-Object {
+            $category = $_.Name
+            $destination = Join-Path (Join-Path $stage "textures") $category
+            if (Copy-DirectoryContents -Source $_.FullName -Destination $destination) {
+                $files = @(Get-ChildItem -LiteralPath $destination -File -Recurse)
+                Write-Output ("Staging {0} {1} texture files" -f $files.Count, $category)
+            }
+        }
+}
 
+# Player skins are user content, not the vanilla mob sheets. Include the
+# selected wide/slim skins and the custom skin when present.
+$skinRoot = Join-Path $root "assets\skins"
+$skinStage = Join-Path $stage "skins"
+$playerSkinCount = 0
+foreach ($style in @("wide", "slim")) {
+    $source = Join-Path $skinRoot $style
+    $destination = Join-Path $skinStage $style
+    if (Copy-DirectoryContents -Source $source -Destination $destination) {
+        $playerSkinCount += @(Get-ChildItem -LiteralPath $destination -File -Recurse).Count
+    }
+}
+$customSkin = Join-Path $skinRoot "custom.png"
+if (Test-Path -LiteralPath $customSkin -PathType Leaf) {
+    New-Item -ItemType Directory -Force -Path $skinStage | Out-Null
+    Copy-Item -LiteralPath $customSkin -Destination (Join-Path $skinStage "custom.png") -Force
+    $playerSkinCount++
+}
+Write-Output ("Staging {0} player skin files" -f $playerSkinCount)
+
+# Vanilla entity sheets are copyrighted separately from player skins.
+# Keep them opt-in for public builds; only pass -MobTextures when the pack
+# may legally be redistributed. Its credit file travels with the sheets.
+$mobDir = Join-Path $skinRoot "mob"
+if ($MobTextures -and (Test-Path -LiteralPath $mobDir -PathType Container)) {
+    $mobStage = Join-Path $skinStage "mob"
+    [void](Copy-DirectoryContents -Source $mobDir -Destination $mobStage)
+    $mobFiles = @(Get-ChildItem -LiteralPath $mobStage -File -Recurse)
+    $mobBytes = ($mobFiles | Measure-Object -Property Length -Sum).Sum
+    if ($null -eq $mobBytes) { $mobBytes = 0 }
+    $shield = Join-Path $skinRoot "shield.png"
+    if (Test-Path -LiteralPath $shield -PathType Leaf) {
+        Copy-Item -LiteralPath $shield -Destination (Join-Path $skinStage "shield.png") -Force
+    }
+    Write-Output ("Staging {0} mob texture files ({1:N0} KB)" -f $mobFiles.Count, ($mobBytes / 1KB))
     $mobCredit = Join-Path $mobDir "CREDIT.txt"
     if (Test-Path -LiteralPath $mobCredit) {
         Write-Output ("Mob textures credited: {0}" -f (Get-Content -LiteralPath $mobCredit -TotalCount 1))
     } else {
-        Write-Warning "No assets/skins/mob/CREDIT.txt - the published mobs will credit nobody."
+        Write-Warning "No assets/skins/mob/CREDIT.txt - check the mob pack's redistribution terms."
     }
-} elseif (Test-Path -LiteralPath $mobDir) {
-    Write-Output "Mob textures left out of the download (pass -MobTextures to include them)."
+} elseif (Test-Path -LiteralPath $mobDir -PathType Container) {
+    Write-Output "Mob textures left out of the download (pass -MobTextures only when redistribution is permitted)."
+}
+
+# Audio is optional because the engine synthesizes replacements. Keep
+# third-party/vanilla sound packs opt-in for public builds.
+$soundDir = Join-Path $root "assets\sounds"
+if ($SoundFiles -and (Test-Path -LiteralPath $soundDir -PathType Container)) {
+    $soundStage = Join-Path $stage "sounds"
+    [void](Copy-DirectoryContents -Source $soundDir -Destination $soundStage)
+    $soundFiles = @(Get-ChildItem -LiteralPath $soundStage -File -Recurse)
+    Write-Output ("Staging {0} sound files" -f $soundFiles.Count)
+    if (Test-Path -LiteralPath (Join-Path $soundStage "CREDIT.txt")) {
+        Write-Output ("Sound pack credited: {0}" -f (Get-Content -LiteralPath (Join-Path $soundStage "CREDIT.txt") -TotalCount 1))
+    } else {
+        Write-Warning "No assets/sounds/CREDIT.txt - check the sound pack's redistribution terms."
+    }
+} elseif (Test-Path -LiteralPath $soundDir -PathType Container) {
+    Write-Output "Sound files left out of the download (pass -SoundFiles only when redistribution is permitted)."
 }
 
 $stageRoot = (Resolve-Path (Join-Path $root "build-web\stage\assets")).Path.Replace('\','/')

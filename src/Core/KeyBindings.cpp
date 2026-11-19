@@ -48,6 +48,7 @@ namespace
         { Action::Debug,     "DEBUG INFO",       "debug",     key(SDL_SCANCODE_F3) },
         { Action::HideHud,   "HIDE HUD",         "hidehud",   key(SDL_SCANCODE_F1) },
         { Action::Fullscreen,"FULLSCREEN",       "fullscreen",key(SDL_SCANCODE_F11) },
+        { Action::PauseMenu, "OPEN PAUSE MENU", "pause", key(SDL_SCANCODE_GRAVE) },
         { Action::FancyLighting, "FANCY LIGHTING", "pbr",     key(SDL_SCANCODE_P) },
         { Action::Mute,      "MUTE SOUND",       "mute",      key(SDL_SCANCODE_M) },
         { Action::RenderDistanceDown, "RENDER DISTANCE -", "distdown", key(SDL_SCANCODE_LEFTBRACKET) },
@@ -138,6 +139,9 @@ std::string KeyBindings::describe(const Binding& binding)
             default:                return "MOUSE " + std::to_string(binding.code);
         }
     }
+
+    // The backtick and tilde share one physical key. No Shift is needed.
+    if (binding.code == SDL_SCANCODE_GRAVE) return "~";
 
     // SDL's own name is already close to what a player expects ("Left
     // Shift", "F3", "Space"); it only needs upper-casing for this font.

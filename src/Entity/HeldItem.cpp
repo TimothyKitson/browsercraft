@@ -62,8 +62,8 @@ namespace
     // bottom corner -- about a tenth of the screen across -- long
     // enough that the shoulder runs off the bottom edge, so only the
     // fist end is ever in shot.
-    constexpr float ARM_HALF_WIDTH = 0.100f;
-    constexpr float ARM_HALF_DEPTH = 0.100f;
+    constexpr float ARM_HALF_WIDTH = 0.125f;
+    constexpr float ARM_HALF_DEPTH = 0.125f;
 
     // An arm's texture patch is four pixels across and twelve tall, so
     // the box has to be three times as long as it is wide or the texels

@@ -1,0 +1,81 @@
+name: Build fresh browser game
+
+on:
+  push:
+    branches:
+      - fix/browser-assets-and-skins
+    paths:
+      - "src/**"
+      - "assets/**"
+      - "tools/build-web.ps1"
+      - "tools/install-texture-pack.ps1"
+      - "CMakeLists.txt"
+      - "web/**"
+      - ".github/workflows/build-web.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "assets/**"
+      - "tools/build-web.ps1"
+      - "tools/install-texture-pack.ps1"
+      - "CMakeLists.txt"
+      - "web/**"
+      - ".github/workflows/build-web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-web:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source and resource-pack LFS files
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+
+      - name: Build WebAssembly game
+        shell: pwsh
+        run: |
+          ./tools/build-web.ps1 -Emsdk "$env:EMSDK"
+
+      - name: Upload fresh browser build
+        uses: actions/upload-artifact@v4
+        with:
+          name: browsercraft-new-html
+          path: |
+            build-web/index.html
+            build-web/index.js
+            build-web/index.wasm
+            build-web/index.data
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        shell: pwsh
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+
+      - name: Capture updated first-person hand in the game
+        shell: pwsh
+        run: node tools/capture-web-preview.mjs
+
+      - name: Upload in-game screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: browsercraft-all-ui-screenshots
+          path: |
+            browsercraft-updated-hand.png
+            browsercraft-ui-screenshots/
+          if-no-files-found: error
+          retention-days: 14

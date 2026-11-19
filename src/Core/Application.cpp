@@ -9412,6 +9412,24 @@ void Application::handleEvents()
 #ifndef __EMSCRIPTEN__
 #endif
 
+    // Minecraft-style direct pause key: the physical ` / ~ key works
+    // without holding Shift. Escape keeps its normal close/back behavior.
+    if (m_keys.pressed(m_input, Action::PauseMenu))
+    {
+        if (m_screen == Screen::Playing && !m_inventoryOpen && !overlayOpen())
+        {
+            m_screen = Screen::Paused;
+            setMouseCaptured(false);
+            return;
+        }
+        if (m_screen == Screen::Paused)
+        {
+            m_screen = Screen::Playing;
+            setMouseCaptured(true);
+            return;
+        }
+    }
+
     if (m_input.wasKeyPressed(SDL_SCANCODE_ESCAPE))
     {
         if (m_chatOpen && playing())
@@ -29173,13 +29191,7 @@ bool Application::guiNineSlice(const char* path, float x, float y, float w, floa
 
 bool Application::menuButton(const Rect& rect, const std::string& label, bool enabled)
 {
-    // Menus are hit-tested during drawing, which bypasses the input gate in
-    // handleEvents -- without this an automated capture would still react
-    // to whatever the real cursor is doing.
     const bool acceptClicks = !m_automated;
-
-    // The rect is in whatever units the screen is being drawn in, so
-    // the cursor has to be read in them too.
     const float mouseX = static_cast<float>(m_input.mouseX()) / m_ui.scale();
     const float mouseY = static_cast<float>(m_input.mouseY()) / m_ui.scale();
     const bool hovered = enabled &&
@@ -29188,7 +29200,6 @@ bool Application::menuButton(const Rect& rect, const std::string& label, bool en
 
     const glm::vec4 face = !enabled ? BUTTON_FACE_OFF
                                     : (hovered ? BUTTON_FACE_HOVER : BUTTON_FACE);
-
     const float unit = static_cast<float>(guiScale()) / m_ui.scale();
     const bool packed = guiNineSlice(!enabled ? "sprites/widget/button_disabled"
                                      : hovered ? "sprites/widget/button_highlighted"
@@ -29201,15 +29212,33 @@ bool Application::menuButton(const Rect& rect, const std::string& label, bool en
         bevel(rect.x, rect.y, rect.w, rect.h, face, BUTTON_LIGHT, BUTTON_DARK, 2.0f);
     }
 
-    const float scale = PANEL_TEXT;
     const glm::vec4 textColour = packed ? (!enabled ? glm::vec4(0.627f, 0.627f, 0.627f, 1.0f) : TEXT_COLOR)
                                : !enabled ? BUTTON_TEXT_OFF
                                           : (hovered ? BUTTON_TEXT_HOVER : TEXT_COLOR);
-    m_ui.textWithShadow(label,
-                        rect.x + rect.w * 0.5f - UIRenderer::textWidth(label, scale) * 0.5f,
-                        rect.y + rect.h * 0.5f - UIRenderer::textHeight(scale) * 0.5f,
-                        scale, textColour);
+    if (!label.empty())
+    {
+        // Long labels used to spill past their Minecraft button sprites.
+        // Keep the vanilla font when it fits; gently shrink only when needed.
+        const float maxWidth = std::max(8.0f, rect.w - 12.0f);
+        const float maxHeight = std::max(8.0f, rect.h - 8.0f);
+        const float naturalWidth = std::max(1.0f, UIRenderer::textWidth(label, 1.0f));
+        const float naturalHeight = std::max(1.0f, UIRenderer::textHeight(1.0f));
+        float textScale = std::min(PANEL_TEXT, std::min(maxWidth / naturalWidth, maxHeight / naturalHeight));
+        textScale = std::max(0.8f, textScale);
 
+        std::string fitted = label;
+        if (UIRenderer::textWidth(fitted, textScale) > maxWidth)
+        {
+            const float available = maxWidth / textScale;
+            const float dots = UIRenderer::textWidth("...", 1.0f);
+            fitted = UIRenderer::trimToWidth(label, std::max(0.0f, available - dots)) + "...";
+        }
+
+        m_ui.textWithShadow(fitted,
+                            rect.x + rect.w * 0.5f - UIRenderer::textWidth(fitted, textScale) * 0.5f,
+                            rect.y + rect.h * 0.5f - UIRenderer::textHeight(textScale) * 0.5f,
+                            textScale, textColour);
+    }
     return acceptClicks && hovered && m_input.wasMouseButtonPressed(SDL_BUTTON_LEFT);
 }
 
