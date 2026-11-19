@@ -17,7 +17,7 @@ enum class Action
     Chat, SlashCommand,
     Fly,
     Perspective,
-    Screenshot, Debug, HideHud, Fullscreen,
+    Screenshot, Debug, HideHud, Fullscreen, PauseMenu,
     FancyLighting, Mute,
     RenderDistanceDown, RenderDistanceUp,
     SwapHands,
