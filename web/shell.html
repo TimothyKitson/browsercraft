@@ -130,7 +130,8 @@
 
   var Module = {
     canvas: canvas,
-    arguments: [],
+    // Deterministic gameplay scene for the automated in-game screenshot workflow.
+    arguments: new URLSearchParams(window.location.search).get('capture') === '1' ? ['--farmtest', '--seed', '12345'] : [],
     locateFile: function (path, prefix) { return prefix + path + '?v=__BUILD__'; },
     preRun: [mountSaveStorage],
     postRun: [],
