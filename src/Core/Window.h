@@ -16,7 +16,7 @@ public:
     void setRelativeMouseMode(bool enabled);
     void setTitle(const std::string& title);
     void toggleFullscreen();
-    bool fullscreen() const { return m_fullscreen; }
+    bool fullscreen() const;
 
     int width() const { return m_width; }
     int height() const { return m_height; }
