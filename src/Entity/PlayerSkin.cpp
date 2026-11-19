@@ -304,7 +304,7 @@ void PlayerSkin::paint(int variant)
     canvas.cloth(44, 16, arm, 4, p.shirt, 31u);                     // top
     canvas.cloth(44 + arm, 16, arm, 4, skinDark, 32u);              // hand underside
     for (int face = 0; face < 4; ++face)
-        canvas.cloth(40 + arm * face, 20, arm, 12, p.skin, 33u + face);
+        canvas.rect(40 + arm * face, 20, arm, 12, p.skin);
 
     // A short sleeve over the top four rows, a darker cuff where it
     // ends, and a slightly darker hand so the wrist reads.
