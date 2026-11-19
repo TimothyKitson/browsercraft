@@ -2,6 +2,9 @@
 #include "GLFunctions.h"
 #include <stdexcept>
 #include <cstdio>
+#ifdef __EMSCRIPTEN__
+#include <emscripten/html5.h>
+#endif
 
 Window::Window(const std::string& title, int width, int height)
     : m_width(width), m_height(height)
@@ -62,19 +65,33 @@ void Window::setRelativeMouseMode(bool enabled)
     SDL_ShowCursor(enabled ? SDL_DISABLE : SDL_ENABLE);
 }
 
+bool Window::fullscreen() const
+{
+#ifdef __EMSCRIPTEN__
+    EmscriptenFullscreenChangeEvent state{};
+    return emscripten_get_fullscreen_status(&state) == EMSCRIPTEN_RESULT_SUCCESS && state.isFullscreen;
+#else
+    return m_fullscreen;
+#endif
+}
+
 void Window::toggleFullscreen()
 {
 #ifdef __EMSCRIPTEN__
-    // The browser already owns F11, and the per-frame canvas resize
-    // would fight anything SDL did here. Leave it to the page.
-    return;
+    // Web fullscreen must be requested on the page's canvas. SDL's
+    // window fullscreen API is a no-op in the browser build.
+    if (fullscreen())
+        emscripten_exit_fullscreen();
+    else
+        emscripten_request_fullscreen("#canvas", EM_TRUE);
 #else
-    m_fullscreen = !m_fullscreen;
-    // Borderless desktop rather than a true mode switch: it is instant,
-    // and it never leaves the player staring at a black screen while the
-    // monitor re-syncs. The browser build ignores this entirely -- the
-    // page is in charge of its own size there.
-    SDL_SetWindowFullscreen(m_window, m_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    const bool wantFullscreen = (SDL_GetWindowFlags(m_window) & SDL_WINDOW_FULLSCREEN) == 0;
+    if (SDL_SetWindowFullscreen(m_window, wantFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) != 0)
+    {
+        std::printf("Fullscreen toggle failed: %s\n", SDL_GetError());
+        return;
+    }
+    m_fullscreen = (SDL_GetWindowFlags(m_window) & SDL_WINDOW_FULLSCREEN) != 0;
 
     int w = 0, h = 0;
     SDL_GetWindowSize(m_window, &w, &h);
